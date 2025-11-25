@@ -169,6 +169,8 @@ const placeholders  = [
 
 
 
+
+
 const [displayedText, setDisplayedText] = useState("");
 const [placeholderIndex, setPlaceholderIndex] = useState(0);
 const [charIndex, setCharIndex] = useState(0);
