@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Nexus Tools",
+  "version": "2.2",
+  "description": "Your gateway to powerful and innovative digital tools with unmatched reliability!",
+  "permissions": [
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "cookies",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "webNavigation",
+    "management"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "host_permissions": [
+    "*://*.udemy.com/*",
+    "https://api.nexustoolz.com/*",
+    "<all_urls>"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "https://nexustoolz.com/*",
+      "https://app.nexustoolz.com/*",
+      "http://localhost:3000/*"
+    ]
+  },
+  "icons": {
+    "128": "./icons/icon.png"
+  },
+  "action": {
+    "default_title": "Click to open Nexus Tools",
+    "default_icon": {
+      "48": "./icons/icon.png"
+    }
+  }
+}
