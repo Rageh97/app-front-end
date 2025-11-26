@@ -989,136 +989,149 @@ setInterval(() => {
 }, 60 * 1000);
 
 
+async function decrypt(encryptedText, secret) {
+    if (!encryptedText || typeof encryptedText !== 'string') {
+        throw new Error('Invalid encrypted text: must be a non-empty string');
+    }
+
+    if (!secret || typeof secret !== 'string') {
+        throw new Error('Invalid secret: must be a non-empty string');
+    }
+
+    try {
+        return await decryptNewFormat(encryptedText, secret);
+    } catch (primaryError) {
+        console.warn('[DEBUG] New decrypt format failed, falling back to legacy handler', primaryError);
+        try {
+            return await decryptLegacyFormat(encryptedText, secret);
+        } catch (legacyError) {
+            console.error('[DEBUG] Legacy decrypt failed as well', legacyError);
+            throw primaryError;
+        }
+    }
+}
+
 /**
  * Updated decrypt function for new encryption format
- * Format: base64url string containing [IV(16)][Timestamp(4)][Encrypted Data][HMAC(32)]
+ * Format: prefix-base64url-suffix where base64url contains [IV(16)][Timestamp(4)][Encrypted][HMAC(32)]
  */
-async function decrypt(encryptedText, secret) {
-    try {
-        if (!encryptedText || typeof encryptedText !== 'string') {
-            throw new Error('Invalid encrypted text: must be a non-empty string');
-        }
-        
-        if (!secret || typeof secret !== 'string') {
-            throw new Error('Invalid secret: must be a non-empty string');
-        }
-        
-        // Remove obfuscation: extract the actual base64url data between separators
-        // Format: prefix-base64url-suffix (looks like: abc123def-encrypteddata-xyz789uvw)
-        const parts = encryptedText.split('-');
-        if (parts.length < 3) {
-            console.error(`[DEBUG] Invalid format - parts.length: ${parts.length}, encryptedText preview: ${encryptedText.substring(0, 50)}`);
-            throw new Error('Invalid encrypted data format - expected prefix-data-suffix');
-        }
-        
-        // Extract the middle part (the actual encrypted data)
-        // Skip first part (prefix) and last part (suffix)
-        const base64url = parts.slice(1, -1).join('-'); // Rejoin in case there are multiple separators
-        
-        // Decode base64url back to base64
-        let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-        
-        // Add padding if needed
-        while (base64.length % 4) {
-            base64 += '=';
-        }
-        
-        // Convert base64 to Uint8Array
-        const binaryString = atob(base64);
-        const final = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            final[i] = binaryString.charCodeAt(i);
-        }
-        
-        // Extract components
-        const iv = final.slice(0, 16);
-        const timestamp = final.slice(16, 20);
-        const encrypted = final.slice(20, final.length - 32);
-        const receivedHmac = final.slice(final.length - 32);
-        
-        // Generate key from secret using SHA-256
-        const keyData = new TextEncoder().encode(secret);
-        const keyHash = await crypto.subtle.digest('SHA-256', keyData);
-        
-        // Verify HMAC integrity
-        const combined = new Uint8Array([...iv, ...timestamp, ...encrypted]);
-        
-        // Import key for HMAC
-        const hmacKey = await crypto.subtle.importKey(
-            'raw',
-            keyHash,
-            { name: 'HMAC', hash: 'SHA-256' },
-            false,
-            ['sign']
-        );
-        
-        // Compute expected HMAC
-        const expectedHmacBuffer = await crypto.subtle.sign('HMAC', hmacKey, combined);
-        const expectedHmac = new Uint8Array(expectedHmacBuffer);
-        
-        // Constant-time comparison to prevent timing attacks
-        if (!timingSafeEqual(receivedHmac, expectedHmac)) {
-            throw new Error('HMAC verification failed - data may have been tampered with');
-        }
-        
-        // Check timestamp (prevent replay attacks - data expires after 5 minutes)
-        const dataTimestamp = readUInt32BE(timestamp);
-        const currentTimestamp = Math.floor(Date.now() / 1000);
-        const timeDiff = currentTimestamp - dataTimestamp;
-        
-        if (timeDiff > 300) { // 5 minutes = 300 seconds
-            throw new Error('Data expired - timestamp too old');
-        }
-        
-        if (timeDiff < 0) {
-            throw new Error('Invalid timestamp - future date');
-        }
-        
-        // Decrypt the data using AES-256-CBC
-        const aesKey = await crypto.subtle.importKey(
-            'raw',
-            keyHash,
-            { name: 'AES-CBC', length: 256 },
-            false,
-            ['decrypt']
-        );
-        
-        const decrypted = await crypto.subtle.decrypt(
-            { name: 'AES-CBC', iv: iv },
-            aesKey,
-            encrypted
-        );
-        
-        if (!decrypted || decrypted.byteLength === 0) {
-            throw new Error('Decryption returned empty buffer');
-        }
-        
-        const result = new TextDecoder().decode(decrypted);
-        
-        if (result === undefined || result === null) {
-            throw new Error('TextDecoder returned undefined/null');
-        }
-        
-        if (typeof result !== 'string') {
-            throw new Error('TextDecoder returned non-string: ' + typeof result);
-        }
-        
-        if (result.trim() === '') {
-            throw new Error('Decryption returned empty result');
-        }
-        
-        console.log(`[DEBUG] Decrypt function returning result, length: ${result.length}`);
-        return result;
-    } catch (error) {
-        console.error('[DEBUG] Decryption failed:', error);
-        console.error('[DEBUG] Error type:', typeof error);
-        console.error('[DEBUG] Error message:', error.message);
-        console.error('[DEBUG] Error stack:', error.stack);
-        console.error('[DEBUG] Encrypted text length:', encryptedText ? encryptedText.length : 'null');
-        console.error('[DEBUG] Encrypted text preview:', encryptedText ? encryptedText.substring(0, 50) : 'null');
-        console.error('[DEBUG] Secret length:', secret ? secret.length : 'null');
-        throw new Error('Decryption failed: ' + (error.message || String(error)));
+async function decryptNewFormat(encryptedText, secret) {
+    const parts = encryptedText.split('-');
+    if (parts.length < 3) {
+        throw new Error('Invalid encrypted data format - expected prefix-data-suffix');
     }
+
+    const base64url = parts.slice(1, -1).join('-');
+
+    let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+        base64 += '=';
+    }
+
+    const binaryString = atob(base64);
+    const final = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        final[i] = binaryString.charCodeAt(i);
+    }
+
+    const iv = final.slice(0, 16);
+    const timestamp = final.slice(16, 20);
+    const encrypted = final.slice(20, final.length - 32);
+    const receivedHmac = final.slice(final.length - 32);
+
+    const keyData = new TextEncoder().encode(secret);
+    const keyHash = await crypto.subtle.digest('SHA-256', keyData);
+
+    const combined = new Uint8Array([...iv, ...timestamp, ...encrypted]);
+    const hmacKey = await crypto.subtle.importKey(
+        'raw',
+        keyHash,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+    );
+
+    const expectedHmacBuffer = await crypto.subtle.sign('HMAC', hmacKey, combined);
+    const expectedHmac = new Uint8Array(expectedHmacBuffer);
+
+    if (!timingSafeEqual(receivedHmac, expectedHmac)) {
+        throw new Error('HMAC verification failed - data may have been tampered with');
+    }
+
+    const dataTimestamp = readUInt32BE(timestamp);
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const timeDiff = currentTimestamp - dataTimestamp;
+
+    if (timeDiff > 300) {
+        throw new Error('Data expired - timestamp too old');
+    }
+
+    if (timeDiff < 0) {
+        throw new Error('Invalid timestamp - future date');
+    }
+
+    const aesKey = await crypto.subtle.importKey(
+        'raw',
+        keyHash,
+        { name: 'AES-CBC', length: 256 },
+        false,
+        ['decrypt']
+    );
+
+    const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-CBC', iv: iv },
+        aesKey,
+        encrypted
+    );
+
+    if (!decrypted || decrypted.byteLength === 0) {
+        throw new Error('Decryption returned empty buffer');
+    }
+
+    const result = new TextDecoder().decode(decrypted);
+    if (!result || typeof result !== 'string' || !result.trim()) {
+        throw new Error('Decryption returned empty result');
+    }
+
+    console.log(`[DEBUG] Decrypt function returning result, length: ${result.length}`);
+    return result;
+}
+
+/**
+ * Legacy format fallback: ivHex:encryptedHex (AES-256-CBC)
+ */
+async function decryptLegacyFormat(encryptedText, secret) {
+    const parts = encryptedText.split(':');
+    if (parts.length !== 2) {
+        throw new Error('Legacy format invalid');
+    }
+
+    const iv = hexToUint8Array(parts[0]);
+    const encrypted = hexToUint8Array(parts[1]);
+
+    const keyData = new TextEncoder().encode(secret);
+    const keyHash = await crypto.subtle.digest('SHA-256', keyData);
+
+    const aesKey = await crypto.subtle.importKey(
+        'raw',
+        keyHash,
+        { name: 'AES-CBC', length: 256 },
+        false,
+        ['decrypt']
+    );
+
+    const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-CBC', iv },
+        aesKey,
+        encrypted
+    );
+
+    const result = new TextDecoder().decode(decrypted);
+    if (!result || !result.trim()) {
+        throw new Error('Legacy decrypt returned empty result');
+    }
+
+    return result;
 }
 
 /**
@@ -1142,4 +1155,17 @@ function timingSafeEqual(a, b) {
     }
     
     return result === 0;
+}
+
+function hexToUint8Array(hex) {
+    if (!hex || hex.length % 2 !== 0) {
+        throw new Error('Invalid hex string');
+    }
+
+    const array = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < array.length; i++) {
+        array[i] = parseInt(hex.substr(i * 2, 2), 16);
+    }
+
+    return array;
 }
