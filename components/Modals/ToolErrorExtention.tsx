@@ -39,7 +39,7 @@ const ToolErrorModal: React.FC<
             {title ? title : "UNABLE TO LAUNCH THIS APP"}
           </Dialog.Title>
           <div className="mb-5">
-            <p>{t('subscriptions.errorModal1')} <a className="text-[#3C50E0] underline" href="https://github.com/Rageh97/nt-extension/releases/tag/v2/nt-extension.rar">{t('subscriptions.here')}</a>{t('subscriptions.errorModal2')}</p>
+            <p>{t('subscriptions.errorModal1')} <a className="text-[#3C50E0] underline" href="https://github.com/Rageh97/nx-extension/releases/download/v1/nx-extension.rar">{t('subscriptions.here')}</a>{t('subscriptions.errorModal2')}</p>
           </div>
           <div className="w-full px-3 2xsm:w-1/2">
             <ModalActionButton
