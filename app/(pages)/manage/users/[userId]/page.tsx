@@ -24,6 +24,11 @@ import { useEnableUserPlan } from "@/utils/user-plan/enableUserPlan";
 import { useDisableUserPack } from "@/utils/user-pack/disableUserPack";
 import { useEnableUserPack } from "@/utils/user-pack/enableUserPack";
 import { useTranslation } from 'react-i18next';
+import { useUpdateUserToolExpiry } from "@/utils/user-tool/updateUserToolExpiry";
+import { useUpdateUserPlanExpiry } from "@/utils/user-plan/updateUserPlanExpiry";
+import { useUpdateUserPackExpiry } from "@/utils/user-pack/updateUserPackExpiry";
+import { getEditExpiryModal } from "@/components/Modals/EditExpiryModal";
+import PencilSquare from "@/components/icons/PencilSquare";
 
 type Props = {
   params: { userId: string };
@@ -116,6 +121,10 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
     isSuccess: isEnabledUserPack,
   } = useEnableUserPack(parseInt(userId));
 
+  const { mutate: updateUserToolExpiry, isLoading: isUpdatingUserToolExpiry } = useUpdateUserToolExpiry();
+  const { mutate: updateUserPlanExpiry, isLoading: isUpdatingUserPlanExpiry } = useUpdateUserPlanExpiry();
+  const { mutate: updateUserPackExpiry, isLoading: isUpdatingUserPackExpiry } = useUpdateUserPackExpiry();
+
   useEffect(() => {
     refetchUser();
   }, [isEnabled, isDisabled]);
@@ -193,6 +202,8 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
       title: t('userDetails.enableUserPack'),
     })
   );
+
+  const { open: openEditExpiryModal } = useModal(getEditExpiryModal());
 
   return (
     <>
@@ -276,7 +287,29 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                   <DetailCell
                     ignoreIfEmpty={true}
                     label={t('userDetails.endedAt')}
-                    value={fullDateTimeFormat(item.endedAt) || "none"}
+                    value={
+                      <div className="flex items-center gap-2">
+                        <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
+                        <button
+                          onClick={() => {
+                            openEditExpiryModal({
+                              title: "تعديل المدة",
+                              currentDate: item.endedAt,
+                              onConfirm: (newDate: string) => {
+                                updateUserPackExpiry({
+                                  userPackId: item.users_packs_id,
+                                  endedAt: newDate
+                                });
+                              },
+                              isLoading: isUpdatingUserPackExpiry
+                            });
+                          }}
+                          className="text-primary hover:text-primary/80 cursor-pointer"
+                        >
+                          <PencilSquare className="w-6 h-6" />
+                        </button>
+                      </div>
+                    }
                   />
                   <DetailCell
                     ignoreIfEmpty={true}
@@ -405,7 +438,29 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                   <DetailCell
                     ignoreIfEmpty={true}
                     label={t('userDetails.endedAt')}
-                    value={fullDateTimeFormat(item.endedAt) || "none"}
+                    value={
+                      <div className="flex items-center gap-2">
+                        <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
+                        <button
+                          onClick={() => {
+                            openEditExpiryModal({
+                              title: "تعديل المدة",
+                              currentDate: item.endedAt,
+                              onConfirm: (newDate: string) => {
+                                updateUserPlanExpiry({
+                                  userPlanId: item.users_plans_id,
+                                  endedAt: newDate
+                                });
+                              },
+                              isLoading: isUpdatingUserPlanExpiry
+                            });
+                          }}
+                          className="text-primary hover:text-primary/80 cursor-pointer"
+                        >
+                          <PencilSquare className="w-6 h-6" />
+                        </button>
+                      </div>
+                    }
                   />
                   <DetailCell
                     ignoreIfEmpty={true}
@@ -536,7 +591,29 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                   <DetailCell
                     ignoreIfEmpty={true}
                     label={t('userDetails.endedAt')}
-                    value={fullDateTimeFormat(item.endedAt) || "none"}
+                    value={
+                      <div className="flex items-center gap-2">
+                        <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
+                        <button
+                          onClick={() => {
+                            openEditExpiryModal({
+                              title: "تعديل المدة",
+                              currentDate: item.endedAt,
+                              onConfirm: (newDate: string) => {
+                                updateUserToolExpiry({
+                                  userToolId: item.users_tools_id,
+                                  endedAt: newDate
+                                });
+                              },
+                              isLoading: isUpdatingUserToolExpiry
+                            });
+                          }}
+                          className="text-primary hover:text-primary/80 cursor-pointer"
+                        >
+                          <PencilSquare className="w-6 h-6" />
+                        </button>
+                      </div>
+                    }
                   />
                   <DetailCell
                     ignoreIfEmpty={true}

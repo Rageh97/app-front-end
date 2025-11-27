@@ -25,9 +25,9 @@ const FormModal: FunctionComponent<Props> = ({
         </Dialog.Title>
         <button
           onClick={onClose}
-          className="absolute right-1 top-1 sm:right-5 sm:top-5"
+          className="absolute right-1 top-1 sm:right-2 sm:top-5 bg-red rounded-full w-6 h-6"
         >
-          <XMarkIcon className="w-8 h-8 stroke-2" />
+          <XMarkIcon className="w-6 h-6 stroke-2 text-white cursor-pointer " />
         </button>
         {children}
       </Dialog.Panel>
