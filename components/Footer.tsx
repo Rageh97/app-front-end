@@ -140,7 +140,8 @@ const Footer = () => {
 <Link href={"/Policy"}>            <p className="text-xs md:text-lg bg-[linear-gradient(135deg,#00c48c,_#4f008c,_#190237)] px-1 sm:px-3 lg:px-7 py-1 rounded-md text-center">{t('footer.returnPolicy')}</p>
 </Link>
           </div>
-          <img className="w-50 md:w-100" src={displayLogoUrl} alt="Site Logo"/>
+          <img className="w-50 md:w-100" src="/images/logoN.png" alt="Site Logo"/>
+          {/* {displayLogoUrl?<img className="w-50 md:w-100" src={displayLogoUrl} alt="Site Logo"/>:<img className="w-50 md:w-100" src="/images/logoN.png" alt="Site Logo"/>} */}
           <div className="flex flex-col gap-6 text-white">
           <div className="flex items-center bg-[linear-gradient(135deg,#00c48c,_#4f008c,_#190237)] px-8 py-1 rounded-md text-center">
           <a className="flex items-center" href="https://wa.me/9647702930873" target="_blank">

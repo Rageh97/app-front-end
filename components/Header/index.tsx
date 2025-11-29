@@ -196,11 +196,21 @@ useEffect(() => {
         
         {/* Logo - centered on mobile */}
         <Link href="/dashboard" className="md:ml-0">
-          <img 
+
+<img 
+            className="object-contain h-12 w-32 lg:h-20 lg:w-40 mx-auto md:mx-0" 
+            src={"/images/logoN.png"} 
+            alt="Site Logo" 
+          />
+{/* {displayLogoUrl?<img 
             className="object-contain h-12 w-32 lg:h-20 lg:w-40 mx-auto md:mx-0" 
             src={displayLogoUrl} 
             alt="Site Logo" 
-          />
+          />:<img 
+            className="object-contain h-12 w-32 lg:h-20 lg:w-40 mx-auto md:mx-0" 
+            src={"/images/logoN.png"} 
+            alt="Site Logo" 
+          />} */}
         </Link> 
         
         {/* Upgrade button - hidden on mobile */}

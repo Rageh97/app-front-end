@@ -51,15 +51,16 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
 
       <div className="w-full relative flex justify-center h-[125px]">
         <div className="absolute flex items-center justify-center gradient-border-3 text-3xl font-bold bottom-15 z-1 w-15 h-15 bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)] rounded-full text-black">
-          {subLogoUrl ? (
+        <img src="/images/icon.png.png" alt="Sub Logo" className="w-full h-full object-contain" />
+          {/* {subLogoUrl ? (
             <img 
               src={subLogoUrl} 
               alt="Sub Logo" 
               className="w-full h-full object-contain"
             />
           ) : (
-            9
-          )}
+            <img src="/images/icon.png.png" alt="Sub Logo" className="w-full h-full object-contain" />
+          )} */}
         </div>
         <div className="pb-3 pt-6 flex flex-col justify-between  h-[150px]  bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)] absolute w-[97%] top-[-25px] rounded-[14px]  shadow-[0_-7px_15px_rgba(0,0,0,0.4)]">
           <p className="px-4 text-xl  font-bold text-white text-center truncate block capitalize">
