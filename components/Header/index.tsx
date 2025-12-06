@@ -6,8 +6,9 @@ import DropdownUser from "./DropdownUser";
 import Image from "next/image";
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import nexusLogo from "@/public/images/nexus-logo.png"
-import { Bell, ChevronDown, Globe, Menu, User, X } from "lucide-react";
+import { Bell, ChevronDown, Globe, Menu, User, X, House, Crown, ShoppingBag, ShoppingCart, Vibrate, ShieldCheck, ShieldUser, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useGetDevices } from "@/hooks/useGetDevices";
 
 const Header = (props: {
   sidebarOpen: string | boolean | undefined;
@@ -21,6 +22,7 @@ const Header = (props: {
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
   const { t, i18n } = useTranslation();
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const { devices, active_sessions } = useGetDevices();
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ar' : 'en';
@@ -108,6 +110,84 @@ useEffect(() => {
 }, []);
 
   const displayLogoUrl = dynamicLogoUrl || staticLogoPath;
+
+  // Simple check: if user logged in without device token, they are on main device
+  const isMainDevice = () => {
+    // Check if user data is loaded
+    if (!data) {
+      return false;
+    }
+    
+    // Check sessionStorage - if marked as additional device, don't show devices page
+    const isAdditionalDevice = sessionStorage.getItem('isAdditionalDevice') === 'true';
+    
+    // Return true if this is NOT an additional device
+    return !isAdditionalDevice;
+  };
+
+  // Menu items for mobile menu (same as sidebar)
+  const menuItems = [
+    {
+      completeHref: "/dashboard",
+      name: t('dashboard.Dashboard'),
+      icon: <House size={24} />,
+      permission: true,
+    },
+    {
+      completeHref: "/ai/text-to-image",
+      name: "Nexus Ai",
+      icon: "Ai",
+      permission: true,
+    },
+    {
+      completeHref: "/subscriptions",
+      name: t('dashboard.Subscriptions'),
+      icon: <Crown size={24} />,
+      permission: true,
+    },
+    {
+      completeHref: "/plans",
+      name: t('dashboard.Plans'),
+      icon: <ShoppingBag size={24} />,
+      permission: true,
+    },
+    {
+      completeHref: "/orders",
+      name: t('dashboard.Orders'),
+      icon: <ShoppingCart size={24} />,
+      permission: true,
+    },
+    {
+      completeHref: "/devices",
+      name: t('dashboard.Devices'),
+      icon: <Vibrate size={24} />,
+      permission: isMainDevice(),
+    },
+    {
+      completeHref: "/Policy",
+      name: t('footer.returnPolicy'),
+      icon: <ShieldCheck size={24} />,
+      permission: true,
+    },
+    {
+      completeHref: "/admin",
+      name: data?.userRole === "admin" ? t('dashboard.Admin') : t('admin.manage'),
+      icon: <ShieldUser size={24} />,
+      permission: data?.userRole === "admin" || data?.userRole === "manager" || data?.userRole === "supervisor" || data?.userRole === "employee" ? true : false,
+    },
+    {
+      completeHref: "/profile",
+      name: "الملف الشخصي",
+      icon: <User size={24} />,
+      permission: true,
+    },
+    {
+      completeHref: "/logout",
+      name: t('dashboard.Logout'),
+      icon: <LogOut size={24} />,
+      permission: true,
+    },
+  ];
 
   return (
     <div className="sticky  top-0 z-[9999] w-full inner-shadow-header bg-[linear-gradient(135deg,_#190237,_#190237,_#4f008c)]">
@@ -283,6 +363,29 @@ useEffect(() => {
                   <img className="w-6 h-6" src="/images/crown.png" alt="" />
                   {t('dashboard.upgrade')}
                 </Link>
+                
+                {/* Sidebar Menu Items */}
+                <div className="border-t border-gray-700 pt-4">
+                  <div className="flex flex-col space-y-2">
+                    {menuItems.map((item) => 
+                      item.permission && (
+                        <Link
+                          key={item.completeHref}
+                          href={item.completeHref}
+                          className="flex items-center gap-3 text-white py-2 px-3 rounded-lg hover:bg-[#00c48c]/20 transition-colors"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {typeof item.icon === 'string' ? (
+                            <span className="text-[#00c48c] font-bold">{item.icon}</span>
+                          ) : (
+                            <div className="text-[#00c48c]">{item.icon}</div>
+                          )}
+                          <span className="text-base">{item.name}</span>
+                        </Link>
+                      )
+                    )}
+                  </div>
+                </div>
                 
               </div>
             </div>

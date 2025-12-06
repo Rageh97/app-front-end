@@ -1,7 +1,8 @@
 import { FunctionComponent, useEffect, useState } from "react";
 import { NewToolsDto } from "@/types/tools/new-tools-dto";
 import { checkIfImageUrl } from "@/utils/imageValidator";
-import { ShoppingCart } from "lucide-react";
+import { Crown, ShoppingCart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface CardItemProps {
   onClick: Function;
@@ -11,6 +12,8 @@ interface CardItemProps {
 const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
   const [subLogoUrl, setSubLogoUrl] = useState<string | null>(null);
   const staticLogoPath = "/images/nexus-logo-22.png"; // Define static path
+  const { t } = useTranslation();
+  const isFree = !!toolData?.isFree;
 
   useEffect(() => {
     const fetchSubLogo = async () => {
@@ -37,7 +40,7 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
       }}
       className="w-96 mb-5 cursor-pointer bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] border-2 border-[#ff7702] shadow-xl rounded-[20px] duration-500 hover:scale-95 hover:shadow-xl"
     >
-      <div className="h-[230px]  flex justify-center items-center">
+      <div className="h-[230px]  flex justify-center items-center relative">
         <img
           src={
             checkIfImageUrl(toolData?.tool_image)
@@ -47,6 +50,14 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
           alt="Product"
           className="h-full w-full  rounded-[18px]"
         />
+        <div
+          className={`absolute flex items-center gap-4 top-0 left-1/2 -translate-x-1/2 px-10 py-1 rounded-b-lg text-xs font-semibold shadow-lg ${
+            isFree ? "bg-[#00c48c]/90 text-black" : "bg-[#ff7702]/90 text-white"
+          }`}
+        >
+          {isFree ? t("dashboard.free") : t("dashboard.pro")}
+         {!isFree && <Crown size={18} color="#ffffff" />}
+        </div>
       </div>
 
       <div className="w-full relative flex justify-center h-[125px]">
@@ -71,16 +82,22 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
           </div>
           <div className="px-2 flex items-center gap-5 justify-center w-full ">
             <div className="w-50 flex bg-[#ff7702] items-center justify-center gap-2 border border-[#00c48c] bg-inherit text-white rounded-md px-2 py-2 font-bold text-md">
-              INFORMATION
+              {t("dashboard.information")}
             </div>
-            <div className="w-50   flex gap-1.5 items-center justify-center gradient-border-3 bg-inherit text-[#00c48c] rounded-md px-2 py-2 font-bold text-md">
-              Buy
-              <p className="text-white">${toolData?.tool_month_price}</p>
-              <del>
-                <p className="text-[#ff7702]">
-                  ${toolData?.tool_none_price_month}
-                </p>
-              </del>
+            <div className="w-50   flex gap-1 items-center justify-center gradient-border-3 bg-inherit text-[#00c48c] rounded-md px-2 py-2 font-bold text-xs">
+              {isFree ? t("dashboard.useNow") : t("dashboard.buyNow")}
+              <p className="text-white">
+                {isFree
+                  ? t("dashboard.free")
+                  : `$${toolData?.tool_month_price ?? "--"}`}
+              </p>
+              {!isFree && (
+                <del>
+                  <p className="text-[#ff7702]">
+                    ${toolData?.tool_none_price_month}
+                  </p>
+                </del>
+              )}
               <ShoppingCart size={18} color="#ffffff" />
             </div>
           </div>

@@ -118,7 +118,7 @@ useEffect(() => {
               {/* <div className="lg:ml-60 ml-20"> */}
                 <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
               <main>
-                <div className="mx-auto px-0 sm:px-15 lg:px-25 sm:ml-15 lg:ml-30 ml-0 "> 
+                <div className="mx-auto px-0 sm:px-5 md:px-10 lg:px-15 sm:ml-5 md:ml-10 lg:ml-15 ml-0 "> 
 
                   {children}
                 <MostQuestions/>

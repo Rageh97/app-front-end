@@ -159,7 +159,7 @@ const Footer = () => {
             <div className="w-full flex items-center justify-center gap-1">
               <img className="w-[50%] md:w-[30%]" src="/images/payments.png" />
             </div>
-            <div className="text-xs mb-18 md:mb-0 sm:text-lg w-[80%] md:w-[50%] text-center bg-[linear-gradient(135deg,#00c48c,_#4f008c,_#190237)] rounded-t-3xl py-2 px-5 font-bold mt-3">
+            <div className="text-xs  md:mb-0 sm:text-lg w-[80%] md:w-[50%] text-center bg-[linear-gradient(135deg,#00c48c,_#4f008c,_#190237)] rounded-t-3xl py-2 px-5 font-bold mt-3">
           <span className="text-[#00c48c]">2025 © </span> {t('footer.allRightsReserved')}<span className="text-orange font-bold mb-0"> {t('footer.nexus')}</span> 
             </div>
         </div>

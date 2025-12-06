@@ -137,6 +137,20 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
           ) || "none",
       },
       {
+        accessorKey: "isFree",
+        header: () => t("toolsTable.accessType"),
+        cell: (info) => (
+          <div
+            className="px-3 py-1 rounded-lg text-white text-sm text-center"
+            style={{
+              backgroundColor: info.getValue() === true ? "#00c48c" : "#ff7702",
+            }}
+          >
+            {info.getValue() === true ? t("toolsTable.freeTool") : t("toolsTable.proTool")}
+          </div>
+        ),
+      },
+      {
         accessorKey: "tool_id",
         header: () => t("toolsTable.actions"),
         cell: (info) => (

@@ -47,6 +47,7 @@ const initialValues: FormType = {
   isActive: true,
   isStable: true,
   isLink: true,
+  isFree: false,
   additional_device_price: "5",
   max_devices: 11,
   cookie_1: "",
@@ -135,6 +136,7 @@ export const goalsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
   isLink: Yup.boolean(),
   isActive: Yup.boolean(),
   isStable: Yup.boolean(),
+  isFree: Yup.boolean(),
   additional_device_price: Yup.string(),
   max_devices: Yup.number(),
   cookie_1: Yup.string(),
@@ -696,6 +698,42 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
                 {errors.tool_mode.toString()}
               </p>
             ) : null}
+
+            <div className="mb-6">
+              <p className="text-white font-semibold mb-2 flex items-center gap-2">
+                {t('toolsForm.accessType')}
+                <span className="text-xs text-white/70">
+                  ({values.isFree ? t('toolsForm.freeTool') : t('toolsForm.proTool')})
+                </span>
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFieldValue("isFree", false)}
+                  className={`px-4 py-2 rounded-full border transition ${
+                    values.isFree
+                      ? "border-white/30 text-white/70"
+                      : "border-[#00c48c] bg-[#00c48c] text-black font-semibold"
+                  }`}
+                >
+                  {t('toolsForm.proTool')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFieldValue("isFree", true)}
+                  className={`px-4 py-2 rounded-full border transition ${
+                    values.isFree
+                      ? "border-[#ff7702] bg-[#ff7702] text-white font-semibold"
+                      : "border-white/30 text-white/70"
+                  }`}
+                >
+                  {t('toolsForm.freeTool')}
+                </button>
+              </div>
+              <p className="text-xs text-white/60 mt-2">
+                {values.isFree ? t('toolsForm.freeHint') : t('toolsForm.proHint')}
+              </p>
+            </div>
 
             <div className="flex flex-col gap-3">
               <FormikCheckboxItem

@@ -23,6 +23,7 @@ export type NewToolsDto = {
   isActive?: boolean;
   isStable?: boolean;
   isLink?: boolean;
+  isFree?: boolean;
   additional_device_price?: string;
   max_devices?: number;
   cookie_1?: string;

@@ -4,6 +4,7 @@ import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { checkIfImageUrl } from "@/utils/imageValidator";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface CloudLaunchCardProps {
   toolData: NewToolsDto;
@@ -16,6 +17,8 @@ const CloudLaunchCard: FunctionComponent<CloudLaunchCardProps> = ({
   endedAt,
   content,
 }) => {
+  const { t } = useTranslation();
+  const isFree = !!toolData?.isFree;
   return (
     <Link
       href={`/cloud-tool?toolId=${toolData.tool_id}&toolName=${encodeURIComponent(toolData.tool_name)}&toolUrl=${encodeURIComponent(toolData.tool_url)}&toolDescription=${encodeURIComponent(toolData.tool_description || '')}`}
@@ -31,6 +34,13 @@ const CloudLaunchCard: FunctionComponent<CloudLaunchCardProps> = ({
           alt="Product"
           className="h-full w-full object-cover rounded-[24px]"
         />
+        <div
+          className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold shadow ${
+            isFree ? "bg-[#00c48c]/90 text-black" : "bg-[#ff7702]/90 text-white"
+          }`}
+        >
+          {isFree ? t("dashboard.free") : t("dashboard.pro")}
+        </div>
         {/* Cloud Tool Badge */}
         <div className="absolute top-2 right-2 bg-[#00c48c] text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center">
           <ExternalLink className="w-3 h-3 mr-1" />

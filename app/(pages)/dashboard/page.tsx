@@ -14,6 +14,7 @@ import { useSearchToolByName } from "@/utils/tool/getToolByName";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import i18n from "@/i18n";
+import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
@@ -41,6 +42,12 @@ const Dashboard: FunctionComponent = () => {
   const [openPaymentModal, setOpenPaymentModal] = useState<boolean>(false);
   const [seachedTool, setSearchedTool] = useState<string>("");
   const [stabilityFilter, setStabilityFilter] = useState<'all' | boolean>('all');
+  const [accessFilter, setAccessFilter] = useState<'all' | 'free' | 'pro'>('all');
+  const [extensionDetected, setExtensionDetected] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return !!global.freeToolsExtensionDetected;
+  });
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [showCihBankOrderDetailsInfoModal, setShowCihBankOrderDetailsInfoModal] = useState<boolean>(false);
   const [showTijariBankOrderDetailsInfoModal, setShowTijariBankOrderDetailsInfoModal] = useState<boolean>(false);
   const [showNoResults, setShowNoResults] = useState(false);
@@ -61,10 +68,16 @@ const Dashboard: FunctionComponent = () => {
   // Filter tools based on search and stability
   const filteredTools = (seachedTool.trim() !== "" ? (searchedData || []) : (toolsData || []))
     .filter(tool => {
-      // If 'all' is selected, show all tools regardless of stability
-      if (stabilityFilter === 'all') return true;
-      // Otherwise, filter by stability
-      return tool.isStable === stabilityFilter;
+      if (stabilityFilter !== 'all' && tool.isStable !== stabilityFilter) {
+        return false;
+      }
+      if (accessFilter === 'free' && !tool.isFree) {
+        return false;
+      }
+      if (accessFilter === 'pro' && tool.isFree) {
+        return false;
+      }
+      return true;
     });
 
   const shuffleArray = async (array: any) => {
@@ -87,6 +100,28 @@ const Dashboard: FunctionComponent = () => {
       global.shuffleArray = true;
     }
   }
+
+  useEffect(() => {
+    const handleExtensionPing = (event: MessageEvent) => {
+      if (
+        event.data?.type === "FROM_EXTENSION" &&
+        event.data?.data?.m === "Hello from the extension!"
+      ) {
+        setExtensionDetected(true);
+        global.freeToolsExtensionDetected = true;
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("message", handleExtensionPing);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("message", handleExtensionPing);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     document.title = 'Toolz & Apps';
@@ -196,11 +231,27 @@ useEffect(() => {
   }
 }, [charIndex, placeholderIndex]);
 
+  const handleToolCardClick = (item: NewToolsDto) => {
+    if (item?.isFree) {
+      if (!extensionDetected) {
+        setShowExtensionModal(true);
+        return;
+      }
+      if (item?.tool_url && typeof window !== "undefined") {
+        window.open(item.tool_url, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+    setPeriod("month");
+    setToolData(item);
+    setOpenDetailModal(true);
+  };
+
   return (
     <>
 
     <div className="mt-5 mb-0 xxl:mb-5 flex flex-col xl:flex-row items-center justify-between gap-2 lg:gap-0">
-          <div className="flex items-center mb-5 xl:mb-0 gap-15 lg:gap-20">
+          <div className="flex items-center mb-5 xl:mb-0 gap-10 lg:gap-2">
            
             <div onClick={() => setOpenReviewModal(true)} className={`cursor-pointer ml-0 ${i18n.language === 'ar' ? 'lg:mr-7' :'lg:ml-7'} px-3 py-2 lg:px-8 lg:py-2 flex items-center justify-center gap-1 lg:gap-5 bg-[#35214f] inner-shadow rounded-xl`}>
                 <h1 className="text-white text-lg lg:text-2xl">{t('dashboard.rateUs')}</h1>
@@ -209,7 +260,7 @@ useEffect(() => {
     
           
 
-            <div className="flex items-center border-1 border-[#ff7702] bg-[#190237] rounded-xl cursor-pointer">
+            <div className="flex items-center border-1 border-[#ff7702] bg-[#190237] rounded-xl cursor-pointer ">
                 <div 
                   onClick={() => setStabilityFilter('all')} 
                   className={`px-2 lg:px-5 py-3 lg:py-3 ${stabilityFilter === 'all' ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-sm sm:text-2xl ${i18n.language === 'ar'?" rounded-r-xl" :"rounded-l-xl"} lg:text-2xl  cursor-pointer`}>
@@ -217,13 +268,31 @@ useEffect(() => {
                 </div>
                 <div 
                   onClick={() => setStabilityFilter(false)} 
-                  className={`px-2 lg:px-5 py-3 lg:py-3 ${stabilityFilter === false ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white ${i18n.language === 'ar' ? 'text-sm lg:text-lg xxl:text-xl' : 'text-sm sm:text-2xl'}   cursor-pointer`}>
+                  className={`px-2 lg:px-10 py-3 lg:py-2  ${stabilityFilter === false ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white ${i18n.language === 'ar' ? 'text-sm lg:text-md xxl:text-xl' : 'text-sm sm:text-2xl'}   cursor-pointer`}>
                   {t('dashboard.unstable')}
                 </div>
                 <div 
                   onClick={() => setStabilityFilter(true)}
                   className={`px-2 lg:px-5 py-3 lg:py-3 ${stabilityFilter === true ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-sm sm:text-2xl lg:text-2xl ${i18n.language === 'ar'?" rounded-l-xl " :"rounded-r-xl"} cursor-pointer`}>
                   {t('dashboard.stable')}
+                </div>
+            </div>
+
+            <div className="flex items-center border-1 border-[#00c48c] bg-[#190237] rounded-xl cursor-pointer ">
+                <div 
+                  onClick={() => setAccessFilter('all')} 
+                  className={`px-3 lg:px-5 py-3 ${accessFilter === 'all' ? 'bg-[#123645]' : 'bg-transparent'} text-white text-sm sm:text-2xl ${i18n.language === 'ar' ? 'rounded-r-xl' : 'rounded-l-xl'}`}>
+                  {t('dashboard.all')}
+                </div>
+                <div 
+                  onClick={() => setAccessFilter('free')} 
+                  className={`px-3 lg:px-5 py-3 ${accessFilter === 'free' ? 'bg-[#00c48c]' : 'bg-transparent'} text-sm sm:text-2xl text-white`}>
+                  {t('dashboard.free')}
+                </div>
+                <div 
+                  onClick={() => setAccessFilter('pro')} 
+                  className={`px-3 lg:px-5 py-3 ${accessFilter === 'pro' ? 'bg-[#ff7702]' : 'bg-transparent'} text-sm sm:text-2xl text-white ${i18n.language === 'ar' ? 'rounded-l-xl' : 'rounded-r-xl'}`}>
+                  {t('dashboard.pro')}
                 </div>
             </div>
            
@@ -428,11 +497,7 @@ useEffect(() => {
   ) : filteredTools && filteredTools.length > 0 ? (
     filteredTools.map((item: NewToolsDto, index: number) => (
       <CardItem
-        onClick={() => {
-          setPeriod("month");
-          setToolData(item);
-          setOpenDetailModal(true);
-        }}
+        onClick={() => handleToolCardClick(item)}
         key={`${item.tool_id}-${index}`} // Better key using item.id if available
         toolData={item}
       />
@@ -501,6 +566,12 @@ useEffect(() => {
         setModalOpen={setOpenTijariDetailsModal}
         toolData={toolData}
         period={period}
+      />
+      <ToolErrorExtention
+        modalOpen={showExtensionModal}
+        setModalOpen={setShowExtensionModal}
+        message={t('subscriptions.extensionNotDetected')}
+        title={t('subscriptions.extensionNotDetected')}
       />
     </>
   );

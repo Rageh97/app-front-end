@@ -106,7 +106,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     <aside
       ref={sidebar}
       className="fixed z-[999] flex overflow-y-hidden duration-300 ease-linear
-      bottom-0 left-0 w-full flex-row items-center justify-center  
+      bottom-0 left-0 w-full hidden md:flex flex-row items-center justify-center  
       md:top-0 md:bottom-auto md:mt-50 md:h-auto md:w-auto md:flex-col md:items-start md:justify-between"
       
     >

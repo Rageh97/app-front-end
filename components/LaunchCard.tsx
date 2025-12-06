@@ -3,6 +3,7 @@ import { NewToolsDto } from "@/types/tools/new-tools-dto";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { checkIfImageUrl } from "@/utils/imageValidator";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 interface LaunchCardProps {
   onClick: Function;
@@ -23,6 +24,8 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
 }) => {
   // Check if this is a cloud tool
   const isCloudTool = toolData?.tool_mode === "cloud";
+  const { t } = useTranslation();
+  const isFree = !!toolData?.isFree;
 
 
   // If it's a cloud tool, render as a link to the cloud tool page
@@ -32,7 +35,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
         href={`/cloud-tool?toolId=${toolData.tool_id}&toolName=${encodeURIComponent(toolData.tool_name)}&toolUrl=${encodeURIComponent(toolData.tool_url)}&toolDescription=${encodeURIComponent(content || '')}&toolImage=${encodeURIComponent(toolData.tool_image || '')}`}
         className="flex flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-[330px] gradient-border-3 relative rounded-[21px] cursor-pointer bg-[#190237] shadow-xl duration-500 hover:scale-105 hover:shadow-xl"
       >
-        <div className="h-[200px]  flex justify-center items-center ">
+        <div className="h-[200px]  flex justify-center items-center relative">
           <img
             src={
               checkIfImageUrl(toolData?.tool_image)
@@ -42,6 +45,13 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
             alt="Product"
             className="h-full w-full object-cover rounded-[24px]"
           />
+          <div
+            className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold shadow ${
+              isFree ? "bg-[#00c48c]/90 text-black" : "bg-[#ff7702]/90 text-white"
+            }`}
+          >
+            {isFree ? t("dashboard.free") : t("dashboard.pro")}
+          </div>
         </div>
 
         <div className="px-4 -mt-6 h-[100px] rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)]">
@@ -65,7 +75,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
       }}
       className="flex flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-[330px] gradient-border-3 relative rounded-[21px] cursor-pointer bg-[#190237] shadow-xl duration-500 hover:scale-105 hover:shadow-xl"
     >
-      <div className="h-[200px]  flex justify-center items-center ">
+      <div className="h-[200px]  flex justify-center items-center relative">
         <img
           src={
             checkIfImageUrl(toolData?.tool_image)
@@ -75,6 +85,13 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
           alt="Product"
           className="h-full w-full object-cover rounded-[24px]"
         />
+        <div
+          className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold shadow ${
+            isFree ? "bg-[#00c48c]/90 text-black" : "bg-[#ff7702]/90 text-white"
+          }`}
+        >
+          {isFree ? t("dashboard.free") : t("dashboard.pro")}
+        </div>
       </div>
 
       <div className="px-4 -mt-6 h-[100px] rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)]">

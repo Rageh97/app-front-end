@@ -25,6 +25,7 @@ const ToolModalDetails: React.FC<
   }
 > = ({ modalOpen, setModalOpen, setPeriod, period, onBuy, toolData }) => {
   const { t } = useTranslation();
+  const isFree = !!toolData?.isFree;
 
   return (
     <Dialog
@@ -133,40 +134,59 @@ const ToolModalDetails: React.FC<
               )}
             </div>
 
-<div className="flex flex-col md:flex-row items-center justify-between gap-0 md:gap-30 mt-3">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-0 md:gap-30 mt-3">
 <div className="flex text-sm md:text-lg items-center justify-center border border-white font-bold text-white rounded-xl  bg-[#00c48c] gap-1 px-1 py-1">
-            
-              <LoadingButton
-                className="text-sm "
-                onClick={() => {
-                  onBuy();
-                }}
-                title={t('toolModal.buyNow')}
+            {isFree ? (
+              <a
+                className="text-sm flex items-center gap-1"
+                href={toolData?.tool_url || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                {t('toolModal.buyNow')}
-              </LoadingButton>
-              <ChevronRight />
+                {t('toolModal.launchForFree')}
+                <ChevronRight />
+              </a>
+            ) : (
+              <>
+                <LoadingButton
+                  className="text-sm "
+                  onClick={() => {
+                    onBuy();
+                  }}
+                  title={t('toolModal.buyNow')}
+                >
+                  {t('toolModal.buyNow')}
+                </LoadingButton>
+                <ChevronRight />
+              </>
+            )}
             </div>
 
 
-            <p className="text-white text-md font-extrabold py-2 flex gap-1">
-              <span>{t('toolModal.total')}</span>
-              <span className="flex justify-center items-center gap-1">
-                <span className="text-[#F0D09C] text-sm line-through decoration-[#8E8E8E]">
-                  {period === "month"
-                    ? "$" + toolData?.tool_none_price_month
-                    : null}
-                  {period === "year"
-                    ? "$" + toolData?.tool_none_price_year
-                    : null}
+            {isFree ? (
+              <p className="text-[#00c48c] text-md font-extrabold py-2">
+                {t('toolModal.freeAccess')}
+              </p>
+            ) : (
+              <p className="text-white text-md font-extrabold py-2 flex gap-1">
+                <span>{t('toolModal.total')}</span>
+                <span className="flex justify-center items-center gap-1">
+                  <span className="text-[#F0D09C] text-sm line-through decoration-[#8E8E8E]">
+                    {period === "month"
+                      ? "$" + toolData?.tool_none_price_month
+                      : null}
+                    {period === "year"
+                      ? "$" + toolData?.tool_none_price_year
+                      : null}
+                  </span>
+                  <span className="text-white text-[17px]">
+                    {period === "day" ? "$" + toolData?.tool_day_price : null}
+                    {period === "month" ? "$" + toolData?.tool_month_price : null}
+                    {period === "year" ? "$" + toolData?.tool_year_price : null}
+                  </span>
                 </span>
-                <span className="text-white text-[17px]">
-                  {period === "day" ? "$" + toolData?.tool_day_price : null}
-                  {period === "month" ? "$" + toolData?.tool_month_price : null}
-                  {period === "year" ? "$" + toolData?.tool_year_price : null}
-                </span>
-              </span>
-            </p>
+              </p>
+            )}
            
              
            
