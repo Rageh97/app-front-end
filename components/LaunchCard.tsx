@@ -54,8 +54,8 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
           </div>
         </div>
 
-        <div className="px-4 -mt-6 h-[100px] rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)]">
-          <p className="text-lg font-bold text-white truncate block capitalize">
+        <div className="px-4 -mt-6 h-full rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)]">
+          <p className="text-lg mt-3 font-bold text-white truncate block capitalize">
             {toolData?.tool_name}
           </p>
           <span className="text-white mr-3 text-sm break-words">
@@ -73,7 +73,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
       onClick={() => {
         onClick();
       }}
-      className="flex flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-[330px] gradient-border-3 relative rounded-[21px] cursor-pointer bg-[#190237] shadow-xl duration-500 hover:scale-105 hover:shadow-xl"
+      className="flex mt-5 flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-[330px] gradient-border-3 relative rounded-[21px] cursor-pointer bg-[#190237] shadow-xl duration-500 hover:scale-105 hover:shadow-xl"
     >
       <div className="h-[200px]  flex justify-center items-center relative">
         <img
@@ -94,7 +94,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
         </div>
       </div>
 
-      <div className="px-4 -mt-6 h-[100px] rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)]">
+      <div className="px-4 -mt-3 h-full rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)]">
         <p className="text-lg font-bold text-white truncate block capitalize">
           {toolData?.tool_name}
         </p>

@@ -21,6 +21,8 @@ type FormType = NewPacksReqDto & {
   credit_plan_id?: number;
   monthly_credit_plan_id?: number;
   yearly_credit_plan_id?: number;
+  media_downloads_limit: number;
+  media_downloads_limit_yearly: number;
 };
 
 const initialValues: FormType = {
@@ -34,6 +36,8 @@ const initialValues: FormType = {
   credit_plan_id: undefined,
   monthly_credit_plan_id: undefined,
   yearly_credit_plan_id: undefined,
+  media_downloads_limit: 0,
+  media_downloads_limit_yearly: 0,
 };
 
 export const packsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
@@ -44,7 +48,14 @@ export const packsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
   yearly_price: Yup.number().required("Please enter yearly price.").min(1, "Price must be at least 1"),
   additional_device_price: Yup.number().required("Please enter additional device price."),
   max_devices: Yup.number().required("Please enter max devices."),
+  media_downloads_limit: Yup.number().default(0),
+  media_downloads_limit_yearly: Yup.number().default(0),
   isActive: Yup.boolean(),
+  // Optional fields to match FormType
+  pack_price: Yup.number().optional(),
+  credit_plan_id: Yup.number().nullable().optional(),
+  monthly_credit_plan_id: Yup.number().nullable().optional(),
+  yearly_credit_plan_id: Yup.number().nullable().optional(),
 });
 
 type PropsType = {
@@ -90,8 +101,25 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
     loadCreditPlans();
   }, [apiBase]);
 
+  useEffect(() => {
+    if (mode === "edit" && packData?.pack_tools) {
+      try {
+        const tools = typeof packData.pack_tools === 'string' 
+          ? JSON.parse(packData.pack_tools) 
+          : packData.pack_tools;
+        setCheckedTools(tools || []);
+      } catch (e) {
+        console.error("Error parsing pack tools:", e);
+        setCheckedTools([]);
+      }
+    }
+  }, [mode, packData]);
+
   const onSubmit = useCallback(
     (values: FormType, { resetForm }: FormikHelpers<FormType>) => {
+      console.log("onSubmit reached. Submission started...");
+      console.log("Values to submit:", values);
+      console.log("Checked Tools:", checkedTools);
 
       if (checkedTools.length === 0) {
         setIsToolsError(true)
@@ -101,23 +129,26 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
         setIsToolsError(false)
       }
 
-      values.pack_tools = JSON.stringify(checkedTools);
+      const submissionValues = {
+        ...values,
+        pack_tools: JSON.stringify(checkedTools),
+      };
 
       if (mode === "edit") {
         update(
           {
-            ...values,
+            ...submissionValues,
             pack_id: packId,
           },
           {
             onSuccess: () => {
-              resetForm;
+              resetForm();
               router.push(`/admin/packs`);
             },
           }
         );
       } else if (mode === "new") {
-        create(values, {
+        create(submissionValues, {
           onSuccess: () => {
             resetForm();
             router.push(`/admin/packs`);
@@ -125,7 +156,7 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
         });
       }
     },
-    [create, checkedTools]
+    [create, update, checkedTools, mode, packId, router]
   );
 
   const handleCheckboxChange = (toolId: number) => {
@@ -136,36 +167,54 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
     );
   };
 
-  const pastData = (data: any) => {
-    if (checkedTools.length === 0 && data?.pack_tools) {
-      data.pack_tools = typeof data?.pack_tools === 'string' ? data?.pack_tools : ""
-      setCheckedTools(typeof data?.pack_tools === 'string' ? JSON.parse(data?.pack_tools) : data?.pack_tools)
-    }
+  const getInitialValues = (data: any): FormType => {
+    if (!data) return initialValues;
+
+    const formatted = { ...data };
 
     // For backward compatibility, if we have old pack_price, use it for monthly_price
-    if (data?.pack_price && !data.monthly_price) {
-      data.monthly_price = data.pack_price;
-      // Set a default yearly price if not provided
-      data.yearly_price = data.pack_price * 10; // 10 months for yearly as a default
+    if (formatted.pack_price && !formatted.monthly_price) {
+      formatted.monthly_price = formatted.pack_price;
+    }
+    
+    // Set default yearly price if missing (10x monthly)
+    if (!formatted.yearly_price) {
+      formatted.yearly_price = (formatted.monthly_price || formatted.pack_price || 1) * 10;
     }
 
-    return data as FormType;
+    // Ensure new fields have defaults if they don't exist in DB yet
+    if (formatted.media_downloads_limit === undefined || formatted.media_downloads_limit === null) {
+      formatted.media_downloads_limit = 0;
+    }
+    if (formatted.media_downloads_limit_yearly === undefined || formatted.media_downloads_limit_yearly === null) {
+      formatted.media_downloads_limit_yearly = 0;
+    }
+
+    return formatted as FormType;
   }
 
   return (
     <Formik
       enableReinitialize={true}
       initialValues={
-        mode === "edit"
-          && packData
-          ? pastData(packData)
+        mode === "edit" && packData
+          ? getInitialValues(packData)
           : initialValues
       }
       onSubmit={onSubmit}
       validationSchema={packsSchema}
     >
-      {({ values, handleChange, handleBlur, handleSubmit, errors, touched }) => (
-        <form onSubmit={handleSubmit} className="flex">
+      {({ values, handleChange, handleBlur, handleSubmit, errors, touched }) => {
+        // Debugging logs
+        if (Object.keys(errors).length > 0) {
+          console.log("Formik Validation Errors:", errors);
+        }
+        
+        return (
+        <form onSubmit={(e) => {
+          console.log("Form submit triggered");
+          handleSubmit(e);
+        }} className="flex">
           <div className="p-6.5 w-full">
             {
               mode === "edit" && isDataLoading ? (
@@ -273,6 +322,37 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4.5">
+                  <InputField
+                    className={"w-full"}
+                    required={true}
+                    id={"media_downloads_limit"}
+                    label={"Media Downloads Limit (Per Month)"}
+                    type={"number"}
+                    min={0}
+                    max={1000}
+                    placeholder={"Enter allowed downloads count"}
+                    value={values.media_downloads_limit}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.media_downloads_limit && errors.media_downloads_limit}
+                  />
+                  <InputField
+                    className={"w-full"}
+                    required={true}
+                    id={"media_downloads_limit_yearly"}
+                    label={"Media Downloads Limit (Per Year)"}
+                    type={"number"}
+                    min={0}
+                    max={10000}
+                    placeholder={"Enter allowed downloads count"}
+                    value={values.media_downloads_limit_yearly}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.media_downloads_limit_yearly && errors.media_downloads_limit_yearly}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4.5">
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">
                       {t('packsForm.monthlyCreditPlan')}
@@ -341,7 +421,8 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
               </>}
           </div>
         </form>
-      )}
+        );
+      }}
     </Formik>
   );
 };

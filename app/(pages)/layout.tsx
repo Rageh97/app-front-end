@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         .then((fp) => fp.get())
         .then((result) => {
           global.clientId1328 = result.visitorId;
+          localStorage.setItem("clientId1328", result.visitorId);
         });
 
       ws.onopen = function () {
@@ -100,8 +101,15 @@ useEffect(() => {
 }, []);
   return (
     <I18nextProvider i18n={i18n}>
-    <div >
-      <PrivateRoutes>
+      <Toaster 
+        position="top-right" 
+        reverseOrder={false} 
+        containerStyle={{
+          zIndex: 99999,
+        }}
+      />
+      <div>
+        <PrivateRoutes>
 
         {/* <div className=""> */}
           <div className="flex h-screen overflow-hidden ">

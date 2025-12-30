@@ -10,7 +10,7 @@ const UpdatePack = async (data: NewPacksReqDto) => {
     pack_price: data.monthly_price,
   };
   
-  const response = await api.post(`api/admin/update-pack/`, requestData);
+  const response = await api.post(`/api/admin/update-pack`, requestData);
   return response.data;
 };
 

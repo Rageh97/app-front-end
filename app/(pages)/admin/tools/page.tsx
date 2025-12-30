@@ -16,6 +16,8 @@ import PencilSquare from "@/components/icons/PencilSquare";
 import { checkIfImageUrl } from "@/utils/imageValidator";
 import { useSearchToolByName } from "@/utils/tool/getToolByName";
 import { useTranslation } from "react-i18next";
+import { useUpdateTool } from "@/utils/tool/updateTool";
+import { toast } from "react-hot-toast";
 
 import { Search } from "lucide-react";
 type Props = {
@@ -23,9 +25,62 @@ type Props = {
 };
 
 const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
-  const { isLoading, isError, data } = useToolsList();
+  const { isLoading, isError, data, refetch } = useToolsList();
   const [seachedTool, setSearchedTool] = useState<string>(null);
   const { t } = useTranslation();
+
+  const { mutate: updateTool } = useUpdateTool();
+
+  const handleToggleActive = (tool: any) => {
+    const updatedTool = {
+      ...tool,
+      isActive: !tool.isActive,
+    };
+
+    updateTool(updatedTool, {
+      onSuccess: () => {
+        toast.success(`${t("toolsForm.updateTool")}: ${updatedTool.isActive ? t("toolsTable.isActive") : t("toolsTable.isInactive")} 👍`);
+        refetch();
+      },
+      onError: () => {
+        toast.error(t("admin.failedToUpdateRole"));
+      }
+    });
+  };
+
+  const handleToggleStable = (tool: any) => {
+    const updatedTool = {
+      ...tool,
+      isStable: !tool.isStable,
+    };
+
+    updateTool(updatedTool, {
+      onSuccess: () => {
+        toast.success(`${t("toolsForm.updateTool")}: ${updatedTool.isStable ? t("toolsTable.isStable") : t("toolsTable.isInStable")} 👍`);
+        refetch();
+      },
+      onError: () => {
+        toast.error(t("admin.failedToUpdateRole"));
+      }
+    });
+  };
+
+  const handleToggleFree = (tool: any) => {
+    const updatedTool = {
+      ...tool,
+      isFree: !tool.isFree,
+    };
+
+    updateTool(updatedTool, {
+      onSuccess: () => {
+        toast.success(`${t("toolsForm.updateTool")}: ${updatedTool.isFree ? t("toolsTable.freeTool") : t("toolsTable.proTool")} 👍`);
+        refetch();
+      },
+      onError: () => {
+        toast.error(t("admin.failedToUpdateRole"));
+      }
+    });
+  };
 
   const {
     mutate: deleteTool,
@@ -54,7 +109,7 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
         cell: (info) => (
           <div>
             <img
-              className="rounded-lg"
+              className="rounded-lg w-12 h-12 object-cover"
               src={
                 checkIfImageUrl(info.getValue())
                   ? info.getValue()
@@ -80,21 +135,21 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
         header: () => t("toolsTable.dPrice"),
         cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
       },
-      {
-        accessorKey: "tool_none_price_month",
-        header: () => t("toolsTable.mNonePrice"),
-        cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
-      },
+      // {
+      //   accessorKey: "tool_none_price_month",
+      //   header: () => t("toolsTable.mNonePrice"),
+      //   cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
+      // },
       {
         accessorKey: "tool_month_price",
         header: () => t("toolsTable.mPrice"),
         cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
       },
-      {
-        accessorKey: "tool_none_price_year",
-        header: () => t("toolsTable.yNonePrice"),
-        cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
-      },
+      // {
+      //   accessorKey: "tool_none_price_year",
+      //   header: () => t("toolsTable.yNonePrice"),
+      //   cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
+      // },
       {
         accessorKey: "tool_year_price",
         header: () => t("toolsTable.yPrice"),
@@ -103,52 +158,83 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
       {
         accessorKey: "isActive",
         header: () => t("toolsTable.isActive"),
-        cell: (info) =>
-          (
-            <div
-              style={{
-                backgroundColor:
-                  info.getValue() === true
-                    ? "green"
-                    : info.getValue() === false && "#A020F0",
-              }}
-              className="px-3 py-1 rounded-lg text-white text-sm text-center"
-            >
-              {info.getValue() === true ? t("toolsTable.isActive") : t("toolsTable.isInactive")}
+        cell: (info) => {
+          const tool = info.row.original;
+          const isActive = info.getValue() as boolean;
+          return (
+            <div className="flex items-center justify-center">
+              <label 
+                className="relative inline-flex items-center cursor-pointer group"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isActive}
+                  onChange={() => handleToggleActive(tool)}
+                />
+                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00c48c] hover:ring-4 hover:ring-white/10 transition-shadow"></div>
+                <span className="ms-3 text-xs font-medium text-white/70 select-none hidden md:inline-block">
+                  {isActive ? t("toolsTable.isActive") : t("toolsTable.isInactive")}
+                </span>
+              </label>
             </div>
-          ) || "none",
+          );
+        },
       },
       {
         accessorKey: "isStable",
         header: () => t("toolsTable.isStable"),
-        cell: (info) =>
-          (
-            <div
-              style={{
-                backgroundColor:
-                  info.getValue() === true
-                    ? "green"
-                    : info.getValue() === false && "#A020F0",
-              }}
-              className="px-3 py-1 rounded-lg text-white text-sm text-center"
-            >
-              {info.getValue() === true ? t("toolsTable.isStable") : t("toolsTable.isInStable")}
+        cell: (info) => {
+          const tool = info.row.original;
+          const isStable = info.getValue() as boolean;
+          return (
+            <div className="flex items-center justify-center">
+              <label 
+                className="relative inline-flex items-center cursor-pointer group"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isStable}
+                  onChange={() => handleToggleStable(tool)}
+                />
+                <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00c48c] hover:ring-4 hover:ring-white/10 transition-shadow"></div>
+                <span className="ms-3 text-xs font-medium text-white/70 select-none hidden md:inline-block">
+                  {isStable ? t("toolsTable.isStable") : t("toolsTable.isInStable")}
+                </span>
+              </label>
             </div>
-          ) || "none",
+          );
+        },
       },
       {
         accessorKey: "isFree",
         header: () => t("toolsTable.accessType"),
-        cell: (info) => (
-          <div
-            className="px-3 py-1 rounded-lg text-white text-sm text-center"
-            style={{
-              backgroundColor: info.getValue() === true ? "#00c48c" : "#ff7702",
-            }}
-          >
-            {info.getValue() === true ? t("toolsTable.freeTool") : t("toolsTable.proTool")}
-          </div>
-        ),
+        cell: (info) => {
+          const tool = info.row.original;
+          const isFree = info.getValue() as boolean;
+          return (
+            <div className="flex items-center justify-center">
+              <label 
+                className="relative inline-flex items-center cursor-pointer group"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isFree}
+                  onChange={() => handleToggleFree(tool)}
+                />
+                <div className="w-11 h-6 bg-[#ff7702] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00c48c] hover:ring-4 hover:ring-white/10 transition-shadow"></div>
+                <span className="ms-3 text-xs font-medium text-white/70 select-none hidden md:inline-block">
+                  {isFree ? t("toolsTable.freeTool") : t("toolsTable.proTool")}
+                </span>
+              </label>
+            </div>
+          );
+        },
       },
       {
         accessorKey: "tool_id",
@@ -183,7 +269,7 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
         ),
       },
     ];
-  }, []);
+  }, [data]);
 
   return (
     <Panel

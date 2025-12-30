@@ -7,10 +7,21 @@ import axios, { InternalAxiosRequestConfig } from "axios";
 
 // Ensure visitorId is available before making requests
 async function authRequestInterceptor(config: InternalAxiosRequestConfig) {
-  // Wait for visitorId to be resolved
+  // Try to get clientId from global or localStorage
   if (!global.clientId1328) {
-    return
+    const savedId = localStorage.getItem("clientId1328");
+    if (savedId) {
+      global.clientId1328 = savedId;
+    }
   }
+
+  // Wait for visitorId to be resolved if it's not available yet (only if not found in localStorage)
+  let retries = 0;
+  while (!global.clientId1328 && retries < 40) { // Increased wait time slightly as fallback
+    await new Promise(resolve => setTimeout(resolve, 100));
+    retries++;
+  }
+
   // Attach the visitorId to the headers
   if (global.clientId1328) {
     config.headers["User-Client"] = global.clientId1328;

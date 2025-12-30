@@ -30,7 +30,7 @@ import SignOutIcon from "../svg/SignOutIcon";
 import AffiliateIcon from "../svg/AffiliateIcon";
 import RocketIcon from "../svg/RocketIcon";
 import { Crown, Download, House, ListOrdered, LogOut, ShieldCheck, ShieldUser, ShoppingBag, ShoppingCart, UsersRound, Vibrate, Video, Bell, User, MessageCircleMore, ImageDown } from "lucide-react";
-import axios from "axios";
+import axios from "@/utils/api";
 import { useGetDevices } from "@/hooks/useGetDevices";
 
 interface SidebarProps {
@@ -107,7 +107,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       ref={sidebar}
       className="fixed z-[999] flex overflow-y-hidden duration-300 ease-linear
       bottom-0 left-0 w-full hidden md:flex flex-row items-center justify-center  
-      md:top-0 md:bottom-auto md:mt-50 md:h-auto md:w-auto md:flex-col md:items-start md:justify-between"
+      md:top-0 md:bottom-auto md:mt-40 md:h-auto md:w-auto md:flex-col md:items-start md:justify-between"
       
     >
       
@@ -421,6 +421,40 @@ const GlobalMenu: FunctionComponent = () => {
     const { t } = useTranslation();
   
   const { devices, active_sessions } = useGetDevices();
+
+  const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get("/api/admin/settings/media_hub_enabled");
+        // Ensure accurate boolean conversion regardless of API response format
+        setIsMediaHubEnabled(String(res.data.value) !== 'false');
+      } catch (error) {
+        console.error("Failed to fetch media hub setting:", error);
+      }
+    };
+
+    fetchSettings();
+
+    // Listen for real-time updates from Admin Page
+    const handleSettingsChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.key === 'media_hub_enabled') {
+        setIsMediaHubEnabled(customEvent.detail.value);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('settingsChanged', handleSettingsChange);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('settingsChanged', handleSettingsChange);
+      }
+    };
+  }, []);
  
 // Simple check: if user logged in without device token, they are on main device
 // Device token is stored in sessionStorage during additional device login
@@ -538,6 +572,13 @@ const hasActiveSubscription = () => {
             children: "",
             permission: true,
           },
+            {
+            completeHref: "/media-hub",
+            name: "مكتبة الميديا",
+            icon: <Video size={28} />,
+            children: "",
+            permission: isMediaHubEnabled,
+          },
           {
             completeHref: "/subscriptions",
             name: t('dashboard.Subscriptions'),
@@ -567,6 +608,7 @@ const hasActiveSubscription = () => {
             children: "",
             permission: isMainDevice()
           },
+        
         
           
           // ...(hasMainDevice ? [{

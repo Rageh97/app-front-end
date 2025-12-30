@@ -11,4 +11,6 @@ export type NewPacksDto = {
   credit_plan_id?: number;
   monthly_credit_plan_id?: number;
   yearly_credit_plan_id?: number;
+  media_downloads_limit: number;
+  media_downloads_limit_yearly: number;
 };

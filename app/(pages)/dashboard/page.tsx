@@ -1,5 +1,6 @@
 "use client";
 import CardItem from "@/components/CardItem";
+import PremiumLoader from "@/components/PremiumLoader";
 import { FunctionComponent, useEffect, useState } from "react";
 import { NewToolsDto } from "@/types/tools/new-tools-dto";
 import ToolModalDetails from "@/components/Modals/ToolModalDetails";
@@ -12,7 +13,7 @@ import { AlignJustify, Search, ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchToolByName } from "@/utils/tool/getToolByName";
 import { useTranslation } from "react-i18next";
-import axios from "axios";
+import axios from "@/utils/api";
 import i18n from "@/i18n";
 import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -34,6 +35,7 @@ const Dashboard: FunctionComponent = () => {
 
   const { t } = useTranslation();
   const { data } = useMyInfo();
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [openChatModal, setOpenChatModal] = useState<boolean>(false);
   const [toolsData, setToolsData] = useState(global.globalToolsData);
   const [toolData, setToolData] = useState<NewToolsDto>(null);
@@ -59,6 +61,52 @@ const Dashboard: FunctionComponent = () => {
   const [period, setPeriod] = useState<Period>("month");
   const [openCihDetailsModal, setOpenCihDetailsModal] = useState<boolean>(false);
   const [openTijariDetailsModal, setOpenTijariDetailsModal] = useState<boolean>(false);
+  
+  // Media Hub Visibility State
+  const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get("/api/admin/settings/media_hub_enabled");
+        setIsMediaHubEnabled(String(res.data.value) !== 'false');
+      } catch (error) {
+        console.error("Failed to fetch media hub setting:", error);
+      }
+    };
+    fetchSettings();
+
+    const handleSettingsChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.key === 'media_hub_enabled') {
+        setIsMediaHubEnabled(customEvent.detail.value);
+      }
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
+
+  interface MediaCategoryDashboard {
+    category_id: number;
+    name: string;
+    description: string;
+    filesCount: number;
+    cover_image: string | null;
+  }
+  const [mediaCategories, setMediaCategories] = useState<MediaCategoryDashboard[]>([]);
+
+  useEffect(() => {
+    const fetchMediaCategories = async () => {
+      try {
+        const response = await axios.get(`/api/media/categories?t=${Date.now()}`);
+        setMediaCategories(response.data);
+      } catch (error) {
+        console.error("Failed to fetch media categories", error);
+      }
+    };
+    fetchMediaCategories();
+  }, []);
 
   const {
     isLoading: isSearching,
@@ -231,6 +279,13 @@ useEffect(() => {
   }
 }, [charIndex, placeholderIndex]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoadingPage(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleToolCardClick = (item: NewToolsDto) => {
     if (item?.isFree) {
       if (!extensionDetected) {
@@ -247,13 +302,17 @@ useEffect(() => {
     setOpenDetailModal(true);
   };
 
+  if (isLoadingPage) {
+    return <PremiumLoader />;
+  }
+
   return (
     <>
 
     <div className="mt-5 mb-0 xxl:mb-5 flex flex-col xl:flex-row items-center justify-between gap-2 lg:gap-0">
           <div className="flex items-center mb-5 xl:mb-0 gap-10 lg:gap-2">
            
-            <div onClick={() => setOpenReviewModal(true)} className={`cursor-pointer ml-0 ${i18n.language === 'ar' ? 'lg:mr-7' :'lg:ml-7'} px-3 py-2 lg:px-8 lg:py-2 flex items-center justify-center gap-1 lg:gap-5 bg-[#35214f] inner-shadow rounded-xl`}>
+          <div onClick={() => setOpenReviewModal(true)} className={`cursor-pointer hidden md:flex ml-0 ${i18n.language === 'ar' ? 'lg:mr-7' :'lg:ml-7'} px-3 py-2 lg:px-8 lg:py-2 flex items-center justify-center gap-1 lg:gap-5 bg-[#35214f] inner-shadow rounded-xl`}>
                 <h1 className="text-white text-lg lg:text-2xl">{t('dashboard.rateUs')}</h1>
                 <img className="w-7 md:w-12" src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTl4czFqbnc2YjQyOXpjejU5NHZ6cnhka20yNGh3dWxldWttcXd0biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/C4b6GwFKbYxK8/giphy.gif"/>
             </div>
@@ -334,6 +393,7 @@ useEffect(() => {
 
               dir={i18n.language === "ar" ? "rtl" : "rtl"}
               
+              
 
         
 
@@ -346,14 +406,14 @@ useEffect(() => {
                       <img 
                       
                         className="w-full rounded-2xl h-full object-cover" 
-                        src={`${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} 
+                        src={banner.image_url?.startsWith('http') ? banner.image_url : `${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} 
                         alt={banner.title || 'Banner'} />
                     </a>
                   ) : (
                     <img 
                     
                       className="w-full rounded-2xl h-full object-cover" 
-                      src={`${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} 
+                      src={banner.image_url?.startsWith('http') ? banner.image_url : `${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} 
                       alt={banner.title || 'Banner'} />
                   )}
                 </SwiperSlide>
@@ -365,6 +425,80 @@ useEffect(() => {
         !bannerError && <p className="text-center text-white my-3">{t('dashboard.loading')}</p>
       )}
       {/* ............................... */}
+
+      {/* Media Categories Swiper Section */}
+      {isMediaHubEnabled && mediaCategories.length > 0 && (
+        <div className="mb-8 px-1 lg:px-5 mt-5">
+            {/* <div className="flex items-center gap-2 mb-4 px-2">
+               <div className="w-1 h-6 bg-[#ff7702] rounded-full"></div>
+               <h2 className="text-xl font-bold text-white">Media Categories</h2>
+            </div> */}
+            
+            {/* 
+              Swiper Loop Fix:
+              Swiper requires the number of slides to be >= slidesPerView * 2 (roughly) for loop to work smoothly without visual glitches.
+              We duplicate the array to ensure we have enough items.
+            */}
+            {(() => {
+               // Ensure we have enough items for the largest breakpoint (6 slides)
+               let loopedCategories = [...mediaCategories];
+               while (loopedCategories.length < 12 && loopedCategories.length > 0) {
+                 loopedCategories = [...loopedCategories, ...mediaCategories];
+               }
+               
+               return (
+                <Swiper
+                  key={`${loopedCategories.length}-${i18n.language}`} 
+                  dir={i18n.language === "ar" ? "rtl" : "ltr"}
+                  modules={[Navigation, Autoplay]}
+                  spaceBetween={15}
+                  slidesPerView={2}
+                  loop={true}
+                  autoplay={{ delay: 2000, disableOnInteraction: false }}
+                  breakpoints={{
+                    640: { slidesPerView: 3 },
+                    768: { slidesPerView: 4 },
+                    1024: { slidesPerView: 5 },
+                    1280: { slidesPerView: 6 },
+                  }}
+                  className="w-full py-4 pl-1"
+                >
+                  {loopedCategories.map((category, index) => (
+                    <SwiperSlide key={`${category.category_id}-${index}`}>
+                      <Link href={`/media-hub?cat=${category.category_id}`}>
+                        <div 
+                          className="cursor-pointer h-40 rounded-2xl relative overflow-hidden group shadow-lg transition-all duration-300  hover:shadow-[#ff7702]/30"
+                        >
+                          {/* Background Image */}
+                          {category.cover_image ? (
+                            <img 
+                              src={category.cover_image} 
+                              alt={category.name} 
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 "
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#35214f] to-[#190237]"></div>
+                          )}
+                          
+                          {/* Overlay Gradient */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#00c48c40] via-black/40 to-transparent group-hover:via-black/60 transition-colors duration-300"></div>
+
+                          {/* Content */}
+                          <div className="absolute inset-0 flex flex-col justify-end p-4">
+                              <h3 className="text-white font-bold text-lg md:text-xl leading-tight drop-shadow-md transform translate-y-0 transition-transform duration-300">
+                                {category.name}
+                              </h3>
+                              {/* <p className="text-gray-300 text-xs mt-1 opacity-80">{category.filesCount || 0} items</p> */}
+                          </div>
+                        </div>
+                      </Link>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+               );
+            })()}
+        </div>
+      )}
 
 
 

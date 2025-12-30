@@ -80,6 +80,10 @@ const AdminTabs: FunctionComponent = () => {
           label: t('admin.releases'),
           href: `/admin/releases`,
         },
+        {
+          label: t('admin.Media'),
+          href: `/admin/media`,
+        },
       ];
     }
     
@@ -135,6 +139,10 @@ const AdminTabs: FunctionComponent = () => {
           label: t('admin.ManageUsers'),
           href: `/admin/manage-users`,
         },
+        {
+          label: t('admin.Media'),
+          href: `/admin/media`,
+        },
         // {
         //   label: t('admin.issues'),
         //   href: `/admin/issues`,
@@ -185,6 +193,10 @@ const AdminTabs: FunctionComponent = () => {
         {
           label: t('admin.addVideo'),
           href: `/admin/videos`,
+        },
+         {
+          label: t('admin.Media'),
+          href: `/admin/media`,
         },
         // {
         //   label: t('admin.issues'),

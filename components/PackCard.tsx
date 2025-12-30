@@ -93,6 +93,14 @@ const PackCard: FunctionComponent<PackCardProps> = ({
 
           <div className="pb-2">
             <p className="text-[#00c48c] text-sm font-bold mb-2"> {t("packs.included")}:</p>
+            
+            <div className="flex items-center mb-1">
+                <CircleCheckBig strokeWidth={3} size={20} color={"#00c48c"} />
+                <p className="px-2 text-[14px] font-semibold text-[#ACADB1]">
+                  {period === 'month' ? packData.media_downloads_limit : (packData.media_downloads_limit_yearly || 100)} {period === 'month' ? "Monthly" : "Yearly"} Media Downloads
+                </p>
+            </div>
+
             {JSON.parse(packData.pack_tools)?.map((item: any, index: number) =>
               <div className="flex items-center" style={{ display: getToolNameById(item) ? "flex" : "none" }} key={index}>
                 <CircleCheckBig strokeWidth={3} size={20} color={"#00c48c"} />

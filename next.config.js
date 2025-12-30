@@ -26,6 +26,12 @@ const nextConfig = {
         hostname: "healtystorages.s3.amazonaws.com" ,
         port: "",
       },
+      {
+        protocol: "https",
+        hostname: "nexustools.b-cdn.net", 
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };

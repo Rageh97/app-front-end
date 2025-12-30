@@ -236,7 +236,7 @@ const BannersPage = () => {
             {banners.map(banner => (
               <tr className="border-b border-gray-500 bg-[linear-gradient(135deg,rgba(79,0,140,0.7),rgba(25,2,55,0.7),rgba(25,2,55,0.5))]" key={banner.id}>
                 <td className="p-3 text-white text-center text-xs md:text-sm">
-                  <img className='w-50 h-auto' src={`${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} alt={banner.title || t('banners.untitled')} />
+                  <img className='w-50 h-auto' src={banner.image_url?.startsWith('http') ? banner.image_url : `${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} alt={banner.title || t('banners.untitled')} />
                 </td>
                 <td className="p-3 text-white text-center text-xs md:text-sm">{banner.title || t('banners.untitled')}</td>
                 <td className="p-3 text-white text-center text-xs md:text-sm">{banner.display_order}</td>
