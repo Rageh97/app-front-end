@@ -15,7 +15,7 @@ interface Category {
 
 interface Variant {
   file: File | null;
-  type: "image" | "video";
+  type: "image" | "video" | "prores" | "png_sequence" | "archive";
   label: string;
 }
 
@@ -91,8 +91,9 @@ const MediaAdminPage = () => {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
-  const [mainType, setMainType] = useState<"video" | "image">("image");
+  const [mainFileType, setMainFileType] = useState<"video" | "image">("image");
   const [mainFile, setMainFile] = useState<File | null>(null);
+  const [previewVideo, setPreviewVideo] = useState<File | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -236,8 +237,10 @@ const MediaAdminPage = () => {
     }
   };
 
-  const addVariant = (label = "", type: "image" | "video" = "image") => {
-    setVariants([...variants, { file: null, type, label }]);
+  const addVariant = (label = "", type: Variant['type'] = "image") => {
+    // Default to mainType if none specified
+    const finalType = type || (mainFileType as Variant['type']);
+    setVariants([...variants, { file: null, type: finalType, label }]);
   };
 
   const removeVariant = (index: number) => {
@@ -259,26 +262,33 @@ const MediaAdminPage = () => {
     setUploading(true);
 
     try {
-      const mainBase64 = await toBase64(mainFile);
-      
-      const processedVariants = await Promise.all(variants.map(async (v) => {
-        if (!v.file) return null;
-        return {
-          file: await toBase64(v.file),
-          fileName: v.file.name, // Send original filename
-          type: v.type,
-          label: v.label || v.type.toUpperCase()
-        };
-      }));
+      const formData = new FormData();
+      formData.append("categoryId", uploadCategory);
+      formData.append("title", uploadTitle);
+      formData.append("description", uploadDesc);
+      formData.append("mainFileType", mainFileType);
+      formData.append("mainFile", mainFile);
+      if (previewVideo) {
+        formData.append("previewVideo", previewVideo);
+      }
 
-      await axios.post("/api/media/upload", {
-        categoryId: uploadCategory,
-        title: uploadTitle,
-        description: uploadDesc,
-        mainFile: mainBase64,
-        mainFileName: mainFile.name, // Send original filename
-        mainFileType: mainType,
-        variants: processedVariants.filter(v => v !== null)
+      const variantMetadata: any[] = [];
+      variants.forEach((v) => {
+        if (v.file) {
+          formData.append("variantFiles", v.file);
+          variantMetadata.push({
+            type: v.type,
+            label: v.label || v.type.toUpperCase(),
+          });
+        }
+      });
+
+      formData.append("variantsMetadata", JSON.stringify(variantMetadata));
+
+      await axios.post("/api/media/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       toast.success(t('mediaAdmin.successUpload'));
@@ -286,6 +296,7 @@ const MediaAdminPage = () => {
       setUploadTitle("");
       setUploadDesc("");
       setMainFile(null);
+      setPreviewVideo(null);
       setVariants([]);
     } catch (err: any) {
       console.error(err);
@@ -503,28 +514,40 @@ const MediaAdminPage = () => {
               </div>
             </div>
 
-            {/* Main File */}
-            <div className="border border-orange/30 bg-orange/5 p-4 rounded-lg">
-              <h3 className="font-bold mb-3 flex items-center gap-2 text-white"><ImageIcon size={18} /> {t('mediaAdmin.mainFile')}</h3>
-              
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                 <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainType === 'image' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
-                    <input type="radio" name="mainType" value="image" className="hidden" checked={mainType === 'image'} onChange={() => setMainType('image')} />
-                    <span className="text-sm text-white">{t('mediaAdmin.image')}</span>
-                 </label>
-                 <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainType === 'video' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
-                    <input type="radio" name="mainType" value="video" className="hidden" checked={mainType === 'video'} onChange={() => setMainType('video')} />
-                    <span className="text-sm text-white">{t('mediaAdmin.video')}</span>
-                 </label>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="border border-orange/30 bg-orange/5 p-4 rounded-lg">
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-white"><ImageIcon size={18} /> {t('mediaAdmin.mainFile')}</h3>
+                
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                   <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'image' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
+                      <input type="radio" name="mainType" value="image" className="hidden" checked={mainFileType === 'image'} onChange={() => setMainFileType('image')} />
+                      <span className="text-sm text-white">{t('mediaAdmin.image')}</span>
+                   </label>
+                   <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'video' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
+                      <input type="radio" name="mainType" value="video" className="hidden" checked={mainFileType === 'video'} onChange={() => setMainFileType('video')} />
+                      <span className="text-sm text-white">{t('mediaAdmin.video')}</span>
+                   </label>
+                </div>
+
+                <input 
+                  type="file" 
+                  accept={mainFileType === 'video' ? 'video/*,.mov,.prores,.mxf,.zip,.rar,.7z' : 'image/*,.zip,.rar,.7z'}
+                  onChange={handleMainFileChange}
+                  required
+                  className="w-full text-sm text-white"
+                />
               </div>
 
-              <input 
-                type="file" 
-                accept={mainType === 'video' ? 'video/*' : 'image/*'}
-                onChange={handleMainFileChange}
-                required
-                className="w-full text-sm text-white"
-              />
+              <div className="border border-[#00c48c]/30 bg-[#00c48c]/5 p-4 rounded-lg">
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-white"><Film size={18} /> Hover Video Preview </h3>
+                
+                <input 
+                  type="file" 
+                  accept="video/*"
+                  onChange={(e) => setPreviewVideo(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-white mt-10"
+                />
+              </div>
             </div>
 
             {/* Variants */}
@@ -569,9 +592,9 @@ const MediaAdminPage = () => {
                 {/* Format Presets */}
                 <div className="flex flex-wrap gap-2 items-center bg-black/30 p-3 rounded-lg border border-white/10">
                    <span className="text-xs text-white/60 font-medium">{t('mediaAdmin.quickAdd')}</span>
-                   <button type="button" onClick={() => addVariant("PRORES", "video")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
-                   <button type="button" onClick={() => addVariant("MP4", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
-                   <button type="button" onClick={() => addVariant("PNG SEQ.", "image")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ PNG SEQ.</button>
+                   <button type="button" onClick={() => addVariant("4K PRORES", "prores")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
+                   <button type="button" onClick={() => addVariant("MP4 (PREVIEW)", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
+                   <button type="button" onClick={() => addVariant("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ PNG SEQ.</button>
                    <button type="button" onClick={() => addVariant("MOV", "video")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ MOV</button>
                 </div>
               </div>
@@ -599,10 +622,13 @@ const MediaAdminPage = () => {
                     <select 
                       className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange"
                       value={v.type}
-                      onChange={(e) => updateVariant(idx, 'type', e.target.value)}
+                      onChange={(e) => updateVariant(idx, 'type', e.target.value as Variant['type'])}
                     >
-                      <option value="image">{t('mediaAdmin.image')}</option>
                       <option value="video">{t('mediaAdmin.video')}</option>
+                      <option value="image">{t('mediaAdmin.image')}</option>
+                      <option value="prores">PRORES</option>
+                      <option value="png_sequence">PNG SEQ.</option>
+                      <option value="archive">ZIP/RAR</option>
                     </select>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -610,6 +636,7 @@ const MediaAdminPage = () => {
                      <div className="relative"> 
                         <input 
                           type="file" 
+                          accept={v.type === 'video' ? 'video/*,.mov,.prores,.mxf,.zip,.rar,.7z' : 'image/*,.zip,.rar,.7z'}
                           className="w-full text-xs text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20"
                           onChange={(e) => updateVariant(idx, 'file', e.target.files ? e.target.files[0] : null)}
                         />

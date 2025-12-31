@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "@/utils/api";
-import { Folder, Video, Image as ImageIcon, Download, Lock, ChevronRight, ArrowLeft, Play, LayoutGrid, X, ArrowLeftCircle, Search } from "lucide-react";
+import { Folder, Video, Image as ImageIcon, Download, Lock, ChevronRight, ArrowLeft, Play, LayoutGrid, X, ArrowLeftCircle, Search, Film } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -33,6 +33,7 @@ interface FileItem {
   file_type: string;
   storage_url: string;
   thumbnail_url: string;
+  preview_video_url?: string;
   variants: Variant[];
   isWatermarked?: boolean;
   extension: string;
@@ -207,25 +208,40 @@ const MediaHubContent = () => {
 
       // 4. Trigger Download
       try {
-        const response = await fetch(downloadUrl);
+        const response = await fetch(downloadUrl, { mode: 'cors' });
+        if (!response.ok) throw new Error('Fetch failed');
+        
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
+        link.style.display = 'none';
         link.href = blobUrl;
         
-        // Construct filename with correct extension
-        const cleanTitle = title.replace(/[^a-zA-Z0-9-_]/g, '_');
+        // Construct filename: Use original title + proper extension
+        const cleanTitle = title.replace(/[^a-zA-Z0-9-_ ]/g, '').replace(/\s+/g, '_');
         link.download = `${cleanTitle}.${extension}`;
         
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(blobUrl);
+        
+        // Cleanup
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+        }, 100);
+        
+        toast.success("Download started");
       } catch (e) {
-        // Fallback
-        window.open(downloadUrl, '_blank');
+        console.error("Blob download failed, falling back to direct link", e);
+        // Fallback that tries to trigger download without opening a new tab if supported
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = title;
+        link.target = "_self"; // Force same tab
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
-      toast.success("Download started");
 
     } catch (err: any) {
         console.error(err);
@@ -494,8 +510,20 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
   
   // Calculate current preview based on selection
   const currentVariant = activeVariantId ? file.variants.find(v => v.variant_id === activeVariantId) : null;
-  const previewUrl = currentVariant ? currentVariant.storage_url : file.storage_url;
-  const previewType = currentVariant ? currentVariant.file_type : file.file_type;
+  const previewUrl = currentVariant ? currentVariant.storage_url : (file.preview_video_url || file.storage_url);
+  const previewType = currentVariant ? currentVariant.file_type : (file.preview_video_url ? 'video' : file.file_type);
+
+  // Helper to get the right icon for a type
+  const getTypeIcon = (type: string, size = 18) => {
+    switch(type) {
+      case 'video': return <Video size={size} />;
+      case 'prores': return <Film size={size} />;
+      case 'image': return <ImageIcon size={size} />;
+      case 'png_sequence': 
+      case 'archive': return <Folder size={size} />;
+      default: return <Download size={size} />;
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[50] flex items-center justify-center bg-[#19023750] backdrop-blur-xl p-4 md:p-10 animate-in zoom-in duration-300">
@@ -516,13 +544,23 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
                 loop 
                 className="w-full h-full object-contain transition-all duration-500 animate-in fade-in"
               />
-            ) : (
+            ) : previewType === 'image' ? (
               <img 
                 key={previewUrl}
                 src={previewUrl} 
                 alt={file.title} 
                 className="max-w-full max-h-full object-contain shadow-2xl shadow-[#00c48c]/20 transition-all duration-500 animate-in zoom-in-95"
               />
+            ) : (
+              <div className="flex flex-col items-center gap-6 animate-in zoom-in-95">
+                 <div className="w-32 h-32 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-[#00c48c] shadow-[0_0_50px_rgba(0,196,140,0.1)]">
+                    <Folder size={64} />
+                 </div>
+                 <div className="text-center">
+                    <p className="text-white font-bold text-xl uppercase tracking-widest">{previewType.replace('_', ' ')}</p>
+                    <p className="text-white/40 text-sm mt-1">Professional Asset Package</p>
+                 </div>
+              </div>
             )}
             
             {/* Watermark Overlay for Modal */}
@@ -573,13 +611,13 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
                     onClick={() => setActiveVariantId(null)}
                     className={`flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group ${
                       activeVariantId === null 
-                        ? "bg-orange/10 border-[#00c48c] text-white " 
+                        ? "bg-orange/10 border-orange text-white " 
                         : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10"
                     }`}
                   >
                     <div className="flex items-center gap-4">
                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeVariantId === null ? "bg-orange text-black" : "bg-white/10 text-white"}`}>
-                          {file.file_type === 'video' ? <Video size={18} /> : <ImageIcon size={18} />}
+                          {getTypeIcon(file.file_type)}
                        </div>
                        <div className="text-left">
                           <p className="font-bold text-sm">Original File</p>
@@ -602,7 +640,7 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
                     >
                       <div className="flex items-center gap-4">
                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${activeVariantId === v.variant_id ? "bg-[#00c48c] text-black" : "bg-white/10 text-white"}`}>
-                            {v.file_type === 'video' ? <Video size={18} /> : <ImageIcon size={18} />}
+                            {getTypeIcon(v.file_type)}
                          </div>
                          <div className="text-left">
                             <p className="font-bold text-sm uppercase">{v.label}</p>
@@ -644,7 +682,10 @@ const MediaCard = ({ file, onDownload, onOpen }: { file: FileItem, onDownload: (
   const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
-    if (file.file_type === 'video' && videoRef.current) {
+    const hasPreviewVideo = !!file.preview_video_url;
+    const isMainVideo = file.file_type === 'video';
+    
+    if ((hasPreviewVideo || isMainVideo) && videoRef.current) {
       if (isHovering) {
         videoRef.current.play().catch(() => {});
       } else {
@@ -652,7 +693,10 @@ const MediaCard = ({ file, onDownload, onOpen }: { file: FileItem, onDownload: (
         videoRef.current.currentTime = 0;
       }
     }
-  }, [isHovering, file.file_type]);
+  }, [isHovering, file.file_type, file.preview_video_url]);
+
+  const showHoverVideo = !!file.preview_video_url || file.file_type === 'video';
+  const hoverVideoUrl = file.preview_video_url || file.storage_url;
 
   return (
     <div 
@@ -665,32 +709,32 @@ const MediaCard = ({ file, onDownload, onOpen }: { file: FileItem, onDownload: (
     >
       {/* Media Display */}
       <div className="aspect-[4/3] w-full relative rounded overflow-hidden bg-[#1f1f1f] shadow-lg group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-shadow duration-500">
-        {file.file_type === 'video' ? (
-          <>
-            <img 
-              src={file.thumbnail_url} 
-              alt={file.title} 
-              className={`w-full h-full object-cover transition-opacity duration-300 ${isHovering ? 'opacity-0' : 'opacity-100'}`}
-            />
-            <video
-              ref={videoRef}
-              src={file.storage_url}
-              muted
-              loop
-              playsInline
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovering ? 'opacity-100' : 'opacity-0'}`}
-            />
-            {/* Play Icon when not hovering */}
-            {!isHovering && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                 <div className="w-12 h-12 bg-black/40 backdrop-blur rounded-full flex items-center justify-center pl-1">
-                   <Play size={20} fill="white" className="text-white" />
-                 </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <img src={file.storage_url} alt={file.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+        {/* Static Thumbnail (Main Image or Video Thumbnail) */}
+        <img 
+          src={file.thumbnail_url || (file.file_type === 'image' ? file.storage_url : '')} 
+          alt={file.title} 
+          className={`w-full h-full object-cover transition-opacity duration-300 ${isHovering && showHoverVideo ? 'opacity-0' : 'opacity-100'}`}
+        />
+        
+        {/* Hover Video Preview */}
+        {showHoverVideo && (
+          <video
+            ref={videoRef}
+            src={hoverVideoUrl}
+            muted
+            loop
+            playsInline
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovering ? 'opacity-100' : 'opacity-0'}`}
+          />
+        )}
+
+        {/* Play Icon overlay for videos when not hovering */}
+        {!isHovering && file.file_type === 'video' && (
+          <div className="absolute inset-0 flex items-center justify-center">
+             <div className="w-12 h-12 bg-black/40 backdrop-blur rounded-full flex items-center justify-center pl-1">
+               <Play size={20} fill="white" className="text-white" />
+             </div>
+          </div>
         )}
 
         {/* Watermark Overlay */}

@@ -32,6 +32,12 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "nexustoolz.b-cdn.net", 
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };
