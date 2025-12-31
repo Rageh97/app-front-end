@@ -10,6 +10,7 @@ import Link from "next/link";
 import i18n from "@/i18n";
 import PremiumLoader from "@/components/PremiumLoader";
 import ShinyText from "@/components/ShinyText";
+import { useMyInfo } from "@/utils/user-info/getUserInfo";
 
 interface Category {
   category_id: number;
@@ -59,8 +60,8 @@ const InlineLoader = () => (
     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#00c48c] to-orange animate-pulse opacity-80 shadow-[0_0_30px_rgba(0,196,140,0.4)]"></div>
   </div>
 );
-
 const MediaHubContent = () => {
+  const { data } = useMyInfo();
   const searchParams = useSearchParams();
   const catParam = searchParams.get('cat');
 
@@ -87,7 +88,12 @@ const MediaHubContent = () => {
     const fetchSettings = async () => {
       try {
         const res = await axios.get("/api/admin/settings/media_hub_enabled");
-        if (String(res.data.value) === 'false') {
+        const isEnabled = String(res.data.value) !== 'false';
+        
+        // Check both: is it enabled and does the user have the right role?
+        const isAuthorized = data?.userRole === "admin" || data?.userRole === "manager";
+        
+        if (!isEnabled || !isAuthorized) {
           setIsMediaHubEnabled(false);
           window.location.href = "/dashboard";
         }
@@ -95,10 +101,13 @@ const MediaHubContent = () => {
         console.error("Failed to fetch media hub setting:", error);
       }
     };
-    fetchSettings();
+    
+    if (data) {
+      fetchSettings();
+    }
     fetchCategories();
     fetchStats();
-  }, []);
+  }, [data]);
 
   const fetchStats = async () => {
     try {

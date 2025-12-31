@@ -10,6 +10,7 @@ interface Category {
   category_id: number;
   name: string;
   description: string;
+  cover_image_url?: string;
   filesCount?: number;
 }
 
@@ -74,6 +75,7 @@ const MediaAdminPage = () => {
   const [editingCatId, setEditingCatId] = useState<number | null>(null);
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
+  const [catCover, setCatCover] = useState<File | null>(null);
 
   // Files Management
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
@@ -96,6 +98,7 @@ const MediaAdminPage = () => {
   const [previewVideo, setPreviewVideo] = useState<File | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     fetchCategories();
@@ -157,15 +160,25 @@ const MediaAdminPage = () => {
   const handleCreateOrUpdateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const formData = new FormData();
+      formData.append("name", catName);
+      formData.append("description", catDesc);
+      if (catCover) formData.append("coverImage", catCover);
+
       if (editingCatId) {
-        await axios.put(`/api/media/categories/${editingCatId}`, { name: catName, description: catDesc });
+        await axios.put(`/api/media/categories/${editingCatId}`, formData, {
+           headers: { "Content-Type": "multipart/form-data" }
+        });
         toast.success(t('mediaAdmin.successUpdated'));
       } else {
-        await axios.post("/api/media/categories", { name: catName, description: catDesc });
+        await axios.post("/api/media/categories", formData, {
+           headers: { "Content-Type": "multipart/form-data" }
+        });
         toast.success(t('mediaAdmin.successCreated'));
       }
       setCatName("");
       setCatDesc("");
+      setCatCover(null);
       setEditingCatId(null);
       fetchCategories();
     } catch (err) {
@@ -285,11 +298,17 @@ const MediaAdminPage = () => {
 
       formData.append("variantsMetadata", JSON.stringify(variantMetadata));
 
-      await axios.post("/api/media/upload", formData, {
+      const uploadPromise = axios.post("/api/media/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+          setUploadProgress(percentCompleted);
+        },
       });
+
+      await uploadPromise;
 
       toast.success(t('mediaAdmin.successUpload'));
       // Reset Form
@@ -298,16 +317,72 @@ const MediaAdminPage = () => {
       setMainFile(null);
       setPreviewVideo(null);
       setVariants([]);
+      setUploadProgress(0);
     } catch (err: any) {
       console.error(err);
       toast.error(t('mediaAdmin.failedUpload') + " " + (err.response?.data || err.message));
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (uploading) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [uploading]);
+
   return (
     <div className="p-6  min-h-screen text-white dark:text-gray-200">
+      {/* Professional Upload Progress Overlay */}
+      {uploading && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+           <div className="bg-[#190237] border border-orange/30 w-full max-w-lg rounded-[2rem] p-10 shadow-[0_0_100px_rgba(255,119,2,0.2)] scale-in-center overflow-hidden relative">
+              {/* Background Glow */}
+              <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange/20 blur-[80px] rounded-full"></div>
+              <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-[#00c48c]/20 blur-[80px] rounded-full"></div>
+
+              <div className="relative z-10 flex flex-col items-center">
+                 <div className="w-20 h-20 bg-orange/10 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                    <Upload size={36} className="text-orange" />
+                 </div>
+                 
+                 <h3 className="text-2xl font-black mb-2 tracking-tight">{t('mediaAdmin.uploading')}...</h3>
+                 <p className="text-white/40 text-sm mb-10 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-xs">{uploadTitle || "Media Asset"}</p>
+
+                 {/* Progress Container */}
+                 <div className="w-full space-y-4">
+                    <div className="flex justify-between items-end mb-1">
+                       <span className="text-xs font-bold uppercase tracking-widest text-orange">Server Sync Progress</span>
+                       <span className="text-3xl font-black text-white">{uploadProgress}%</span>
+                    </div>
+                    
+                    <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden p-1 border border-white/10">
+                       <div 
+                         className="h-full bg-gradient-to-r from-orange via-orange to-[#00c48c] rounded-full transition-all duration-300 ease-out shadow-[0_0_20px_rgba(255,119,2,0.4)]"
+                         style={{ width: `${uploadProgress}%` }}
+                       ></div>
+                    </div>
+                    
+                    {/* <div className="flex justify-between items-center text-[9px] text-white/30 uppercase tracking-[0.2em] font-bold py-2">
+                       <span>Processing Chunks</span>
+                       <span className="animate-pulse">Resumable Session Active</span>
+                    </div> */}
+
+                    <p className="text-center text-[10px] text-orange uppercase tracking-[0.2em] pt-4">
+                       Please do not close this tab until finished
+                    </p>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold">{t('mediaAdmin.pageTitle')}</h1>
         <button
@@ -353,6 +428,15 @@ const MediaAdminPage = () => {
                 value={catDesc}
                 onChange={(e) => setCatDesc(e.target.value)}
               />
+              <div className="flex flex-col gap-2">
+                 <label className="text-sm font-bold opacity-70 text-white">رفع صورة التصنيف</label>
+                 <input 
+                   type="file" 
+                   accept="image/*" 
+                   onChange={(e) => setCatCover(e.target.files?.[0] || null)}
+                   className="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20"
+                 />
+              </div>
               <div className="flex gap-2">
                 <button type="submit" className="flex-1 bg-orange hover:bg-orange/80 text-white font-bold py-2 rounded-lg transition">
                   {editingCatId ? t('mediaAdmin.update') : t('mediaAdmin.create')}

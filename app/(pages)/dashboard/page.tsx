@@ -427,7 +427,7 @@ useEffect(() => {
       {/* ............................... */}
 
       {/* Media Categories Swiper Section */}
-      {isMediaHubEnabled && mediaCategories.length > 0 && (
+      {isMediaHubEnabled && (data?.userRole === "admin" || data?.userRole === "manager") && mediaCategories.length > 0 && (
         <div className="mb-8 px-1 lg:px-5 mt-5">
             {/* <div className="flex items-center gap-2 mb-4 px-2">
                <div className="w-1 h-6 bg-[#ff7702] rounded-full"></div>
@@ -470,9 +470,9 @@ useEffect(() => {
                           className="cursor-pointer h-40 rounded-2xl relative overflow-hidden group shadow-lg transition-all duration-300  hover:shadow-[#ff7702]/30"
                         >
                           {/* Background Image */}
-                          {category.cover_image ? (
+                          {category.cover_image_url ? (
                             <img 
-                              src={category.cover_image} 
+                              src={category.cover_image_url} 
                               alt={category.name} 
                               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 "
                             />

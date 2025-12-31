@@ -577,7 +577,7 @@ const hasActiveSubscription = () => {
             name: "مكتبة الميديا",
             icon: <Video size={28} />,
             children: "",
-            permission: isMediaHubEnabled,
+            permission: isMediaHubEnabled && (data?.userRole === "admin" || data?.userRole === "manager"),
           },
           {
             completeHref: "/subscriptions",
