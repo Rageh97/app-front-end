@@ -57,7 +57,7 @@ export function useTusUpload() {
         const upload = new tus.Upload(file, {
           endpoint: `${API_URL}/api/tus/`,
           retryDelays: [0, 1000, 3000, 5000, 10000, 30000], // Retry delays in ms
-          chunkSize: 5 * 1024 * 1024, // 5MB chunks to stay within typical server body limits
+          chunkSize: 1 * 1024 * 1024, // 1MB chunks for maximum compatibility with all proxy servers
           metadata: {
             filename: file.name,
             filetype: file.type || "application/octet-stream",
