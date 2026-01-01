@@ -315,15 +315,21 @@ const MediaAdminPage = () => {
               title: uploadTitle,
               description: uploadDesc,
               mainFileType,
+              filename: item.file?.name,
             });
-          } else if (item.type === "preview" && fileId) {
-            result = await finalizePreviewVideo({ uploadId, parentFileId: fileId });
+          } else if (item.type === "preview" && fileId) { 
+            result = await finalizePreviewVideo({ 
+              uploadId, 
+              parentFileId: fileId,
+              filename: item.file?.name || "preview.mp4",
+            });
           } else if (item.type === "variant" && fileId) {
             result = await finalizeVariant({
               uploadId,
               parentFileId: fileId,
               variantType: item.variantType || "video",
               variantLabel: item.variantLabel || "VARIANT",
+              filename: item.file.name,
             });
           }
 

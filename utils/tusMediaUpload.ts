@@ -8,18 +8,22 @@ interface FinalizeMainFileParams {
   title: string;
   description?: string;
   mainFileType: "video" | "image";
+  filename: string;
 }
 
 interface FinalizePreviewParams {
   uploadId: string;
   parentFileId: number;
+  filename: string;
 }
+
 
 interface FinalizeVariantParams {
   uploadId: string;
   parentFileId: number;
   variantType: "video" | "image" | "prores" | "png_sequence" | "archive";
   variantLabel: string;
+  filename: string;
 }
 
 interface FinalizeResponse {
@@ -52,6 +56,7 @@ export async function finalizeMainFile(
     description: params.description || "",
     mainFileType: params.mainFileType,
     isMainFile: true,
+    filename: params.filename,
   }, { timeout: 3600000 }); // 1 hour timeout for large file processing
   return response.data;
 }
@@ -66,6 +71,7 @@ export async function finalizePreviewVideo(
     uploadId: params.uploadId,
     parentFileId: params.parentFileId,
     isPreviewVideo: true,
+    filename: params.filename,
   }, { timeout: 3600000 }); // 1 hour timeout
   return response.data;
 }
@@ -82,6 +88,7 @@ export async function finalizeVariant(
     isVariant: true,
     variantType: params.variantType,
     variantLabel: params.variantLabel,
+    filename: params.filename,
   }, { timeout: 3600000 }); // 1 hour timeout
   return response.data;
 }
