@@ -39,7 +39,7 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
       onClick={() => {
         if (isStable) onClick();
       }}
-      className={` mb-5 cursor-pointer bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] border-2 border-[#ff7702] shadow-xl rounded-[20px] duration-500 hover:scale-95 hover:shadow-xl relative overflow-hidden ${
+      className={`w-80 mb-5 cursor-pointer bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] border-2 border-[#ff7702] shadow-xl rounded-[20px] duration-500 hover:scale-95 hover:shadow-xl relative overflow-hidden ${
         !isStable ? "cursor-not-allowed" : ""
       }`}
     >
