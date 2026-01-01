@@ -334,10 +334,11 @@ const MediaAdminPage = () => {
                 try {
                   const statusRes = await axios.get(`/api/tus/status/${uploadId}`);
                   if (statusRes.data?.status === "completed") {
+                    const finalFileId = statusRes.data.fileId || fileId;
                     setUploadQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: "completed" as const, cloudProgress: 100 } : q));
                     clearInterval(pollInterval);
                     clearInterval(statusTimer);
-                    resolve();
+                    resolve(finalFileId);
                   } else if (statusRes.data?.status === "error") {
                     clearInterval(pollInterval);
                     clearInterval(statusTimer);
