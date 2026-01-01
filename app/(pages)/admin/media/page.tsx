@@ -244,11 +244,27 @@ const MediaAdminPage = () => {
     const queue: UploadQueueItem[] = [];
     
     if (mainFile) {
-      queue.push({ id: `main-${Date.now()}`, file: mainFile, type: "main", status: "pending", progress: 0 });
+      queue.push({ 
+        id: `main-${Date.now()}`, 
+        file: mainFile, 
+        type: "main", 
+        status: "pending", 
+        progress: 0,
+        filetype: mainFile.type || "application/octet-stream",
+        fileextension: mainFile.name.split('.').pop()?.toLowerCase() || ""
+      } as any);
     }
     
     if (previewVideo) {
-      queue.push({ id: `preview-${Date.now()}`, file: previewVideo, type: "preview", status: "pending", progress: 0 });
+      queue.push({ 
+        id: `preview-${Date.now()}`, 
+        file: previewVideo, 
+        type: "preview", 
+        status: "pending", 
+        progress: 0,
+        filetype: previewVideo.type || "application/octet-stream",
+        fileextension: previewVideo.name.split('.').pop()?.toLowerCase() || ""
+      } as any);
     }
     
     variants.forEach((v, idx) => {
@@ -261,7 +277,9 @@ const MediaAdminPage = () => {
           variantLabel: v.label || v.type.toUpperCase(),
           status: "pending",
           progress: 0,
-        });
+          filetype: v.file.type || "application/octet-stream",
+          fileextension: v.file.name.split('.').pop()?.toLowerCase() || ""
+        } as any);
       }
     });
     
@@ -284,6 +302,9 @@ const MediaAdminPage = () => {
             uploadType: item.type,
             variantType: item.variantType || "",
             variantLabel: item.variantLabel || "",
+            filename: item.file.name,
+            filetype: item.file.type || "application/octet-stream",
+            fileextension: item.file.name.split('.').pop()?.toLowerCase() || "",
           },
         });
 
