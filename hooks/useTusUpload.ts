@@ -62,6 +62,7 @@ export function useTusUpload() {
             filename: file.name,
             filetype: file.type || "application/octet-stream",
             filesize: String(file.size),
+            fileextension: file.name.split('.').pop() || "bin",
             ...options.metadata,
           },
           headers: {
