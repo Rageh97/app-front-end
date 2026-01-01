@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "@/utils/api";
-import { Folder, Video, Image as ImageIcon, Download, Lock, ChevronRight, ArrowLeft, Play, LayoutGrid, X, ArrowLeftCircle, Search, Film } from "lucide-react";
+import { Folder, Video, Image as ImageIcon, Download, Lock, ChevronRight, ArrowLeft, Play, LayoutGrid, X, ArrowLeftCircle, Search, Film, Music } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -528,6 +528,7 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
       case 'video': return <Video size={size} />;
       case 'prores': return <Film size={size} />;
       case 'image': return <ImageIcon size={size} />;
+      case 'audio': return <Music size={size} />;
       case 'png_sequence': 
       case 'archive': return <Folder size={size} />;
       default: return <Download size={size} />;
@@ -544,15 +545,31 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
          
          {/* Media Preview Section */}
          <div className="flex-1 bg-black flex items-center justify-center relative group overflow-hidden">
-            {previewType === 'video' ? (
+            {previewType === 'video' || (previewType === 'prores') ? (
               <video 
                 key={previewUrl}
-                src={previewUrl} 
                 controls 
                 autoPlay 
                 loop 
                 className="w-full h-full object-contain transition-all duration-500 animate-in fade-in"
-              />
+              >
+                <source 
+                  src={previewUrl} 
+                  type={(currentVariant?.extension || file.extension || '').toLowerCase().replace('.','') === 'mov' ? 'video/quicktime' : 'video/mp4'} 
+                />
+                Your browser does not support the video tag.
+              </video>
+            ) : previewType === 'audio' ? (
+              <div className="flex flex-col items-center gap-6 animate-in zoom-in-95">
+                 <div className="w-40 h-40 rounded-full bg-orange/10 border border-orange/20 flex items-center justify-center text-orange shadow-2xl animate-pulse">
+                    <Music size={80} />
+                 </div>
+                 <audio controls src={previewUrl} className="w-full max-w-sm" />
+                 <div className="text-center">
+                    <p className="text-white font-bold text-xl uppercase tracking-widest">Audio Asset</p>
+                    <p className="text-white/40 text-sm mt-1">High-quality audio resource</p>
+                 </div>
+              </div>
             ) : previewType === 'image' ? (
               <img 
                 key={previewUrl}
@@ -729,19 +746,20 @@ const MediaCard = ({ file, onDownload, onOpen }: { file: FileItem, onDownload: (
         {showHoverVideo && (
           <video
             ref={videoRef}
-            src={hoverVideoUrl}
             muted
             loop
             playsInline
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isHovering ? 'opacity-100' : 'opacity-0'}`}
-          />
+          >
+            <source src={hoverVideoUrl} type={hoverVideoUrl.toLowerCase().endsWith('.mov') ? 'video/quicktime' : 'video/mp4'} />
+          </video>
         )}
 
         {/* Play Icon overlay for videos when not hovering */}
-        {!isHovering && file.file_type === 'video' && (
+        {!isHovering && (file.file_type === 'video' || file.file_type === 'audio') && (
           <div className="absolute inset-0 flex items-center justify-center">
              <div className="w-12 h-12 bg-black/40 backdrop-blur rounded-full flex items-center justify-center pl-1">
-               <Play size={20} fill="white" className="text-white" />
+               {file.file_type === 'video' ? <Play size={20} fill="white" className="text-white" /> : <Music size={24} className="text-orange" />}
              </div>
           </div>
         )}

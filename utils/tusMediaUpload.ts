@@ -7,7 +7,7 @@ interface FinalizeMainFileParams {
   categoryId: string | number;
   title: string;
   description?: string;
-  mainFileType: "video" | "image";
+  mainFileType: "video" | "image" | "audio";
   filename: string;
 }
 
@@ -21,7 +21,7 @@ interface FinalizePreviewParams {
 interface FinalizeVariantParams {
   uploadId: string;
   parentFileId: number;
-  variantType: "video" | "image" | "prores" | "png_sequence" | "archive";
+  variantType: "video" | "image" | "audio" | "prores" | "png_sequence" | "archive";
   variantLabel: string;
   filename: string;
 }

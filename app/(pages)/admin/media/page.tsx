@@ -18,7 +18,7 @@ interface Category {
 
 interface Variant {
   file: File | null;
-  type: "image" | "video" | "prores" | "png_sequence" | "archive";
+  type: "image" | "video" | "audio" | "prores" | "png_sequence" | "archive";
   label: string;
 }
 
@@ -92,7 +92,7 @@ const MediaAdminPage = () => {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
-  const [mainFileType, setMainFileType] = useState<"video" | "image">("image");
+  const [mainFileType, setMainFileType] = useState<"video" | "image" | "audio">("image");
   const [mainFile, setMainFile] = useState<File | null>(null);
   const [previewVideo, setPreviewVideo] = useState<File | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -665,7 +665,10 @@ const MediaAdminPage = () => {
                       </div>
                       <div className="p-2 bg-black/20">
                         <h4 className="font-medium text-[10px] truncate mb-0.5">{file.title}</h4>
-                        <p className="text-[9px] text-white/40 uppercase tracking-tight">{file.type === 'video' ? t('mediaAdmin.video') : t('mediaAdmin.image')}</p>
+                        <p className="text-[9px] text-white/40 uppercase tracking-tight">
+                          {file.file_type === 'video' ? t('mediaAdmin.video') : 
+                           file.file_type === 'audio' ? 'Audio' : t('mediaAdmin.image')}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -730,7 +733,7 @@ const MediaAdminPage = () => {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="border border-orange/30 bg-orange/5 p-4 rounded-lg">
                 <h3 className="font-bold mb-3 flex items-center gap-2 text-white"><ImageIcon size={18} /> {t('mediaAdmin.mainFile')}</h3>
-                <div className="grid grid-cols-2 gap-4 mb-3">
+                <div className="grid grid-cols-3 gap-2 mb-3">
                   <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'image' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
                     <input type="radio" name="mainType" value="image" className="hidden" checked={mainFileType === 'image'} onChange={() => setMainFileType('image')} />
                     <span className="text-sm text-white">{t('mediaAdmin.image')}</span>
@@ -739,14 +742,28 @@ const MediaAdminPage = () => {
                     <input type="radio" name="mainType" value="video" className="hidden" checked={mainFileType === 'video'} onChange={() => setMainFileType('video')} />
                     <span className="text-sm text-white">{t('mediaAdmin.video')}</span>
                   </label>
+                  {/* <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'audio' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
+                    <input type="radio" name="mainType" value="audio" className="hidden" checked={mainFileType === 'audio'} onChange={() => setMainFileType('audio')} />
+                    <span className="text-sm text-white">Audio</span>
+                  </label> */}
                 </div>
-                <input type="file" accept={mainFileType === 'video' ? 'video/*,.mov,.prores,.mxf,.zip,.rar,.7z' : 'image/*,.zip,.rar,.7z'} onChange={handleMainFileChange} required className="w-full text-sm text-white" />
+                <input 
+                  type="file" 
+                  accept={
+                    mainFileType === 'video' ? 'video/*,.mov,.prores,.mxf,.zip,.rar,.7z' : 
+                    mainFileType === 'audio' ? 'audio/*,.mp3,.wav,.zip,.rar,.7z' : 
+                    'image/*,.zip,.rar,.7z'
+                  } 
+                  onChange={handleMainFileChange} 
+                  required 
+                  className="w-full text-sm text-white" 
+                />
                 {mainFile && <p className="text-xs text-orange mt-2">📁 {mainFile.name} ({formatBytes(mainFile.size)})</p>}
               </div>
 
               <div className="border border-[#00c48c]/30 bg-[#00c48c]/5 p-4 rounded-lg">
                 <h3 className="font-bold mb-3 flex items-center gap-2 text-white"><Film size={18} /> Hover Video Preview</h3>
-                <input type="file" accept="video/*" onChange={(e) => setPreviewVideo(e.target.files?.[0] || null)} className="w-full text-sm text-white mt-10" />
+                <input type="file" accept="video/*,.mov" onChange={(e) => setPreviewVideo(e.target.files?.[0] || null)} className="w-full text-sm text-white mt-10" />
                 {previewVideo && <p className="text-xs text-[#00c48c] mt-2">📁 {previewVideo.name} ({formatBytes(previewVideo.size)})</p>}
               </div>
             </div>
@@ -763,6 +780,7 @@ const MediaAdminPage = () => {
                   <span className="text-xs text-white/60 font-medium">{t('mediaAdmin.quickAdd')}</span>
                   <button type="button" onClick={() => addVariant("4K PRORES", "prores")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
                   <button type="button" onClick={() => addVariant("MP4 (PREVIEW)", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
+                  <button type="button" onClick={() => addVariant("MP3", "audio")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ MP3</button>
                   <button type="button" onClick={() => addVariant("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ PNG SEQ.</button>
                   <button type="button" onClick={() => addVariant("MOV", "video")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ MOV</button>
                 </div>
@@ -782,6 +800,7 @@ const MediaAdminPage = () => {
                     <label className="text-xs block mb-1 opacity-70 text-white">{t('mediaAdmin.type')}</label>
                     <select className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange" value={v.type} onChange={(e) => updateVariant(idx, 'type', e.target.value as Variant['type'])}>
                       <option value="video">{t('mediaAdmin.video')}</option>
+                      <option value="audio">Audio</option>
                       <option value="image">{t('mediaAdmin.image')}</option>
                       <option value="prores">PRORES</option>
                       <option value="png_sequence">PNG SEQ.</option>
@@ -790,7 +809,16 @@ const MediaAdminPage = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <label className="text-xs block mb-1 opacity-70 text-white">{t('mediaAdmin.file')} {v.file ? `(${formatBytes(v.file.size)})` : ''}</label>
-                    <input type="file" accept={v.type === 'video' || v.type === 'prores' ? 'video/*,.mov,.prores,.mxf,.zip,.rar,.7z' : 'image/*,.zip,.rar,.7z'} className="w-full text-xs text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20" onChange={(e) => updateVariant(idx, 'file', e.target.files ? e.target.files[0] : null)} />
+                    <input 
+                      type="file" 
+                      accept={
+                        v.type === 'video' || v.type === 'prores' ? 'video/*,.mov,.prores,.mxf,.zip,.rar,.7z' : 
+                        v.type === 'audio' ? 'audio/*,.mp3,.wav,.zip,.rar,.7z' :
+                        'image/*,.zip,.rar,.7z'
+                      } 
+                      className="w-full text-xs text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20" 
+                      onChange={(e) => updateVariant(idx, 'file', e.target.files ? e.target.files[0] : null)} 
+                    />
                   </div>
                   <button type="button" onClick={() => removeVariant(idx)} className="text-red-400 hover:text-red-600 p-2 bg-red-400/10 hover:bg-red-400/20 rounded-lg transition"><Trash2 size={16} /></button>
                 </div>
