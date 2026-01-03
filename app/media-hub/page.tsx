@@ -682,23 +682,31 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
          
          {/* Media Preview Section */}
          <div className="flex-1 bg-black flex items-center justify-center relative group overflow-hidden">
-            {/* Check if it's a MOV file - show icon instead of video player */}
+            {/* Check if it's a MOV or ProRes file - show icon instead of video player */}
             {(currentVariant?.extension || file.extension || '').toLowerCase().replace('.','') === 'mov' || 
              (currentVariant?.label || '').toLowerCase() === 'mov' ||
-             previewType === 'mov' ? (
+             (currentVariant?.label || '').toLowerCase().includes('prores') ||
+             previewType === 'mov' ||
+             previewType === 'prores' ? (
               <div className="flex flex-col items-center gap-6 animate-in zoom-in-95">
                  <div className="w-40 h-40 rounded-3xl bg-gradient-to-br from-[#4f008c]/30 to-[#00c48c]/20 border border-[#00c48c]/30 flex items-center justify-center text-[#00c48c] shadow-[0_0_60px_rgba(0,196,140,0.15)] relative">
                     <Film size={80} />
                     <div className="absolute -bottom-2 -right-2 bg-orange text-black text-xs font-bold px-2 py-1 rounded-lg">
-                      MOV
+                      {(currentVariant?.label || '').toLowerCase().includes('prores') || previewType === 'prores' ? 'ProRes' : 'MOV'}
                     </div>
                  </div>
                  <div className="text-center">
-                    <p className="text-white font-bold text-xl uppercase tracking-widest">MOV Video File</p>
-                    <p className="text-white/40 text-sm mt-1">QuickTime format - Download to play</p>
+                    <p className="text-white font-bold text-xl uppercase tracking-widest">
+                      {(currentVariant?.label || '').toLowerCase().includes('prores') || previewType === 'prores' ? '4K ProRes File' : 'MOV Video File'}
+                    </p>
+                    <p className="text-white/40 text-sm mt-1">
+                      {(currentVariant?.label || '').toLowerCase().includes('prores') || previewType === 'prores' 
+                        ? 'Professional format - Download to play' 
+                        : 'QuickTime format - Download to play'}
+                    </p>
                  </div>
               </div>
-            ) : previewType === 'video' || (previewType === 'prores') ? (
+            ) : previewType === 'video' ? (
               <video 
                 key={previewUrl}
                 controls 
