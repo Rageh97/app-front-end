@@ -687,7 +687,8 @@ const resources = {
     toolsIncluded:"Tools included",
     deletePackMsg:"Are you sure you want to delete this pack ?",
     deletePackTitle:"Pack Delete",
-    isInactive:"Inactive"
+    isInactive:"Inactive",
+    discount:"Discount"
       },
       toolsTable:{
 picture:"Picture",
@@ -1521,6 +1522,7 @@ isInStable:"Unstable"
         deletePackMsg:"هل أنت متأكد من حذف هذه الباقه؟",
         deletePackTitle:"حذف الباقه",
         isInactive:"غير نشط",
+         discount:"نسبة الخصم"
       },
       toolsTable:{
         picture:"الصورة",
