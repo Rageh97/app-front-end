@@ -327,7 +327,7 @@ useEffect(() => {
                 </div>
                 <div 
                   onClick={() => setStabilityFilter(false)} 
-                  className={`px-2 lg:px-10 py-3 lg:py-2  ${stabilityFilter === false ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white ${i18n.language === 'ar' ? 'text-sm lg:text-md xxl:text-xl' : 'text-sm sm:text-2xl'}   cursor-pointer`}>
+                  className={`px-2 lg:px-5 py-3 lg:py-2  ${stabilityFilter === false ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white ${i18n.language === 'ar' ? 'text-sm lg:text-2xl xxl:text-xl' : 'text-sm sm:text-2xl'}   cursor-pointer`}>
                   {t('dashboard.unstable')}
                 </div>
                 <div 

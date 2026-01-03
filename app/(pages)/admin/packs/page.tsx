@@ -60,6 +60,20 @@ const { t } = useTranslation();
         cell: (info) => "$" + info.getValue() || "none",
       },
       {
+        accessorKey: "discount_percentage",
+        header: () => t("packs.discount") || "Discount",
+        cell: (info) => {
+          const discount = info.getValue() as number;
+          return discount > 0 ? (
+            <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-sm font-semibold">
+              {discount}%
+            </span>
+          ) : (
+            <span className="text-gray-500">-</span>
+          );
+        },
+      },
+      {
         accessorKey: "creditPlans",
         header: () => t("packs.creditPlans"),
         cell: (info) => {

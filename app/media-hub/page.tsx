@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "@/utils/api";
-import { Folder, Video, Image as ImageIcon, Download, Lock, ChevronRight, ArrowLeft, Play, LayoutGrid, X, ArrowLeftCircle, Search, Film, Music } from "lucide-react";
+import { Folder, Video, Image as ImageIcon, Download, Lock, ChevronRight, ArrowLeft, Play, LayoutGrid, X, ArrowLeftCircle, Search, Film, Music, ArrowRight } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -16,6 +16,7 @@ interface Category {
   category_id: number;
   name: string;
   description: string;
+  cover_image_url?: string;
 }
 
 interface Variant {
@@ -74,12 +75,16 @@ const MediaHubContent = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
+  // View Mode: 'categories' shows category cards, 'files' shows files grid
+  const [viewMode, setViewMode] = useState<'categories' | 'files'>('categories');
+  
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
   
   // Modal State
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
@@ -123,11 +128,10 @@ const MediaHubContent = () => {
     try {
       const res = await axios.get("/api/media/categories");
       setCategories(res.data);
-      // Select category from URL if exists, otherwise first one
+      // If URL has category param, go directly to files view
       if (catParam) {
         setSelectedCategoryId(parseInt(catParam));
-      } else if (res.data.length > 0) {
-        setSelectedCategoryId(res.data[0].category_id);
+        setViewMode('files');
       }
     } catch (err) {
       console.error(err);
@@ -137,10 +141,26 @@ const MediaHubContent = () => {
   };
 
   useEffect(() => {
-    if (selectedCategoryId) {
+    if (selectedCategoryId && viewMode === 'files') {
       fetchFiles(selectedCategoryId);
     }
-  }, [selectedCategoryId]);
+  }, [selectedCategoryId, viewMode]);
+
+  // Handle category selection
+  const handleCategorySelect = (catId: number) => {
+    setSelectedCategoryId(catId);
+    setViewMode('files');
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
+
+  // Handle back to categories
+  const handleBackToCategories = () => {
+    setViewMode('categories');
+    setSelectedCategoryId(null);
+    setFiles([]);
+    setSearchQuery("");
+  };
 
   const fetchFiles = async (catId: number) => {
     setLoading(true);
@@ -190,6 +210,12 @@ const MediaHubContent = () => {
       
       if (!permRes.data.allowed) {
         if (permRes.data.code === "NO_SUBSCRIPTION" || permRes.data.code === "LIMIT_REACHED") {
+          setModalMessage(null);
+          setUpgradeModalOpen(true);
+          return;
+        }
+        if (permRes.data.code === "DAILY_LIMIT_REACHED") {
+          setModalMessage("You've reached your daily download limit. Please try again tomorrow.");
           setUpgradeModalOpen(true);
           return;
         }
@@ -352,14 +378,14 @@ const MediaHubContent = () => {
                    </div>
                  </div>
                  
+                 {/* Monthly Limit */}
                  <div className="space-y-3">
                    <div className="flex justify-between items-end">
-                      <span className="text-gray-400 text-xs md:text-sm uppercase tracking-widest font-bold">Limit</span>
+                      <span className="text-gray-400 text-xs md:text-sm uppercase tracking-widest font-bold">Monthly Limit</span>
                       <span className="font-black text-white text-xl md:text-2xl tracking-tighter">
                         {stats.remaining} <span className="text-gray-500 text-xs md:text-sm font-normal">/ {stats.limit}</span>
                       </span>
                    </div>
-                   {/* Progress Bar */}
                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden p-[1px]">
                       <div 
                         className="h-full bg-gradient-to-r from-orange via-orange to-[#00c48c] rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,119,2,0.5)]"
@@ -367,6 +393,24 @@ const MediaHubContent = () => {
                       ></div>
                    </div>
                  </div>
+
+                 {/* Daily Limit */}
+                 {stats.dailyLimit && stats.dailyLimit !== "Unlimited" && (
+                   <div className="space-y-3 pt-2 border-t border-white/5">
+                     <div className="flex justify-between items-end">
+                        <span className="text-gray-400 text-xs md:text-sm uppercase tracking-widest font-bold">Daily Limit</span>
+                        <span className="font-black text-white text-xl md:text-2xl tracking-tighter">
+                          {stats.dailyRemaining} <span className="text-gray-500 text-xs md:text-sm font-normal">/ {stats.dailyLimit}</span>
+                        </span>
+                     </div>
+                     <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden p-[1px]">
+                        <div 
+                          className="h-full bg-gradient-to-r from-[#00c48c] via-[#00c48c] to-orange rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,196,140,0.5)]"
+                          style={{ width: `${(Number(stats.dailyRemaining) / Number(stats.dailyLimit)) * 100}%` }}
+                        ></div>
+                     </div>
+                   </div>
+                 )}
               </div>
             ) : (
               <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-red-500/30 rounded-2xl p-6 flex flex-col gap-4 shadow-2xl relative overflow-hidden group">
@@ -392,78 +436,122 @@ const MediaHubContent = () => {
          </div>
       </div>
 
-      {/* Categories Bar */}
-      <div className=" sticky top-0 bg-[#0d0d0d]/95 backdrop-blur z-40">
-        <div className=" mx-auto px-4 overflow-x-auto no-scrollbar">
-          <div className="flex gap-2 py-4 min-w-max">
-            {categories.map((cat) => (
+      {/* Categories Bar - Only show when viewing files */}
+      {viewMode === 'files' && (
+        <div className="sticky top-0 bg-[#0d0d0d]/95 backdrop-blur z-40">
+          <div className="mx-auto px-4 overflow-x-auto no-scrollbar">
+            <div className="flex gap-2 py-4 min-w-max items-center">
               <button
-                key={cat.category_id}
-                onClick={() => setSelectedCategoryId(cat.category_id)}
-                className={`text-lg font-bold transition-all duration-300 relative ${
-                  selectedCategoryId === cat.category_id 
-                    ? "text-black scale-105 border rounded-lg px-2 bg-gradient-to-r from-orange to-[#00c48c]" 
-                    : "text-gray-500 hover:text-gray-300 rounded-lg border border-white/40 rounded px-2"
-                }`}
+                onClick={handleBackToCategories}
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mr-4 pr-4 border-r border-white/10"
               >
-                {cat.name}
-                {/* {selectedCategoryId === cat.category_id && (
-                  <span className="absolute -bottom-4 left-0 w-full h-1 bg-orange rounded-t-full shadow-[0_-2px_10px_rgba(255,119,2,0.5)]"></span>
-                )} */}
+              {i18n.language=== 'ar' ?<ArrowRight size={18} /> :<ArrowLeft size={18} />}  
+                <span className="text-sm font-medium">All Categories</span>
               </button>
-            ))}
-            {!loadingCategories && categories.length === 0 && <span className="text-gray-500">No categories found</span>}
+              {categories.map((cat) => (
+                <button
+                  key={cat.category_id}
+                  onClick={() => handleCategorySelect(cat.category_id)}
+                  className={`text-lg font-bold transition-all duration-300 relative ${
+                    selectedCategoryId === cat.category_id 
+                      ? "text-black scale-105 border rounded-lg px-2 bg-gradient-to-r from-orange to-[#00c48c]" 
+                      : "text-gray-500 hover:text-gray-300 rounded-lg border border-white/40 rounded px-2"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Content Area */}
-      <div className=" mx-auto px-4 py-8 relative min-h-[500px]">
-        {loading || isTransitioning ? (
-           <div className="flex flex-col justify-center items-center h-[50vh] animate-in fade-in duration-500">
-             <InlineLoader />
-           </div>
-        ) : (
-          <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-12">
-            {paginatedFiles.map((file) => (
-              <MediaCard 
-                key={file.file_id} 
-                file={file} 
-                onDownload={handleDownload} 
-                onOpen={() => setSelectedFile(file)}
-              />
-            ))}
-            {paginatedFiles.length === 0 && (
-              <div className="col-span-full text-center py-20 text-gray-500 animate-in fade-in zoom-in duration-500">
-                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Search size={32} className="opacity-20" />
-                </div>
-                <h3 className="text-white font-bold text-xl mb-2">No results found</h3>
-                <p>We couldn't find any results matching "{searchQuery}"</p>
-                <button 
-                  onClick={() => setSearchQuery("")}
-                  className="mt-6 text-[#00c48c] font-bold underline hover:text-[#00e0a0]"
-                >
-                  Clear search and show all
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {/* Professional Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-12 mb-8">
-              <Pagination 
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={(page) => {
-                  setCurrentPage(page);
-                  window.scrollTo({ top: 600, behavior: 'smooth' }); // Scroll back to grid top
-                }}
-              />
+      <div className="mx-auto px-4 py-2 relative min-h-[500px]">
+        {/* Categories Grid View */}
+        {viewMode === 'categories' && (
+          <div className="animate-in fade-in duration-500">
+            <div className="text-center mb-3">
+              <h2 className="text-3xl md:text-4xl font-black mb-1">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange to-[#00c48c]">
+                VFX ASSETS
+                </span>
+              </h2>
+              {/* <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto">
+                Select a category to explore premium assets
+              </p> */}
             </div>
-          )}
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+              {categories.map((cat) => (
+                <CategoryCard 
+                  key={cat.category_id} 
+                  category={cat} 
+                  onClick={() => handleCategorySelect(cat.category_id)}
+                />
+              ))}
+              {categories.length === 0 && (
+                <div className="col-span-full text-center py-20 text-gray-500">
+                  <Folder size={48} className="mx-auto mb-4 opacity-30" />
+                  <p>No categories available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Files Grid View */}
+        {viewMode === 'files' && (
+          <>
+            {loading || isTransitioning ? (
+              <div className="flex flex-col justify-center items-center h-[50vh] animate-in fade-in duration-500">
+                <InlineLoader />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 mb-12">
+                  {paginatedFiles.map((file) => (
+                    <MediaCard 
+                      key={file.file_id} 
+                      file={file} 
+                      onDownload={handleDownload} 
+                      onOpen={() => setSelectedFile(file)}
+                    />
+                  ))}
+                  {paginatedFiles.length === 0 && (
+                    <div className="col-span-full text-center py-20 text-gray-500 animate-in fade-in zoom-in duration-500">
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Search size={32} className="opacity-20" />
+                      </div>
+                      <h3 className="text-white font-bold text-xl mb-2">No results found</h3>
+                      <p>We couldn't find any results {searchQuery ? `matching "${searchQuery}"` : 'in this category'}</p>
+                      {searchQuery && (
+                        <button 
+                          onClick={() => setSearchQuery("")}
+                          className="mt-6 text-[#00c48c] font-bold underline hover:text-[#00e0a0]"
+                        >
+                          Clear search and show all
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Professional Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center mt-12 mb-8">
+                    <Pagination 
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={(page) => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 600, behavior: 'smooth' });
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
       </div>
@@ -489,26 +577,74 @@ const MediaHubContent = () => {
             
             <h3 className="text-2xl font-bold text-white mb-2">Access Restricted</h3>
             <p className="text-gray-400 mb-6">
-              You've reached your download limit or don't have an active subscription for this content.
+              {modalMessage || "You've reached your download limit or don't have an active subscription for this content."}
             </p>
             
             <div className="flex gap-4 justify-center">
               <button 
-                onClick={() => setUpgradeModalOpen(false)}
+                onClick={() => {
+                  setUpgradeModalOpen(false);
+                  setModalMessage(null);
+                }}
                 className="px-6 py-3 rounded-xl border border-gray-600 text-gray-300 hover:bg-white/5 transition"
               >
                 Close
               </button>
-              <button 
-                onClick={() => window.location.href = '/plans'}
-                className="px-6 py-3 rounded-xl bg-orange hover:bg-orange/90 text-white font-bold shadow-lg shadow-orange/20 transition hover:scale-105"
-              >
-                Upgrade Plan
-              </button>
+              {!modalMessage && (
+                <button 
+                  onClick={() => window.location.href = '/plans'}
+                  className="px-6 py-3 rounded-xl bg-orange hover:bg-orange/90 text-white font-bold shadow-lg shadow-orange/20 transition hover:scale-105"
+                >
+                  Upgrade Plan
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// Category Card Component
+const CategoryCard = ({ category, onClick }: { category: Category, onClick: () => void }) => {
+  return (
+    <div 
+      onClick={onClick}
+      className="group relative rounded-2xl overflow-hidden cursor-pointer aspect-[4/3] bg-[#1a1a1a] border border-white/5 hover:border-[#00c48c]/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#00c48c]/10"
+    >
+      {/* Background Image */}
+      {category.cover_image_url ? (
+        <img 
+          src={category.cover_image_url} 
+          alt={category.name}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#00c48c]/20 to-orange/20 flex items-center justify-center">
+          <Folder size={64} className="text-white/20" />
+        </div>
+      )}
+      
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
+      
+      {/* Content */}
+      <div className="absolute inset-0 p-6 flex flex-col justify-end">
+        <h3 className="text-white font-black text-xl md:text-2xl mb-2 group-hover:text-[#00c48c] transition-colors duration-300">
+          {category.name}
+        </h3>
+        {category.description && (
+          <p className="text-gray-400 text-sm line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            {category.description}
+          </p>
+        )}
+        
+        {/* Arrow indicator */}
+        <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1">
+          <ChevronRight size={20} className="text-white" />
+        </div>
+      </div>
     </div>
   );
 };
@@ -526,6 +662,7 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
   const getTypeIcon = (type: string, size = 18) => {
     switch(type) {
       case 'video': return <Video size={size} />;
+      case 'mov': return <Film size={size} />;
       case 'prores': return <Film size={size} />;
       case 'image': return <ImageIcon size={size} />;
       case 'audio': return <Music size={size} />;
@@ -545,7 +682,23 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
          
          {/* Media Preview Section */}
          <div className="flex-1 bg-black flex items-center justify-center relative group overflow-hidden">
-            {previewType === 'video' || (previewType === 'prores') ? (
+            {/* Check if it's a MOV file - show icon instead of video player */}
+            {(currentVariant?.extension || file.extension || '').toLowerCase().replace('.','') === 'mov' || 
+             (currentVariant?.label || '').toLowerCase() === 'mov' ||
+             previewType === 'mov' ? (
+              <div className="flex flex-col items-center gap-6 animate-in zoom-in-95">
+                 <div className="w-40 h-40 rounded-3xl bg-gradient-to-br from-[#4f008c]/30 to-[#00c48c]/20 border border-[#00c48c]/30 flex items-center justify-center text-[#00c48c] shadow-[0_0_60px_rgba(0,196,140,0.15)] relative">
+                    <Film size={80} />
+                    <div className="absolute -bottom-2 -right-2 bg-orange text-black text-xs font-bold px-2 py-1 rounded-lg">
+                      MOV
+                    </div>
+                 </div>
+                 <div className="text-center">
+                    <p className="text-white font-bold text-xl uppercase tracking-widest">MOV Video File</p>
+                    <p className="text-white/40 text-sm mt-1">QuickTime format - Download to play</p>
+                 </div>
+              </div>
+            ) : previewType === 'video' || (previewType === 'prores') ? (
               <video 
                 key={previewUrl}
                 controls 
@@ -555,7 +708,7 @@ const MediaDetailsModal = ({ file, onClose, onDownload }: { file: FileItem, onCl
               >
                 <source 
                   src={previewUrl} 
-                  type={(currentVariant?.extension || file.extension || '').toLowerCase().replace('.','') === 'mov' ? 'video/quicktime' : 'video/mp4'} 
+                  type={'video/mp4'} 
                 />
                 Your browser does not support the video tag.
               </video>
@@ -783,7 +936,7 @@ const MediaCard = ({ file, onDownload, onOpen }: { file: FileItem, onDownload: (
         )}
 
         {/* Overlay - Quick Actions on Hover */}
-        <div className={`absolute inset-y-0 right-0 w-24 p-2 flex flex-col gap-2 ${i18n.language === 'ar' ? 'items-start' : 'items-end'} justify-start bg-gradient-to-l from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10`}>
+        <div className={`absolute inset-y-0 right-0  p-2 flex flex-col gap-2 ${i18n.language === 'ar' ? 'items-start' : 'items-end'} justify-start bg-gradient-to-l from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10`}>
            
            {/* Download Main */}
            <button 
@@ -799,7 +952,7 @@ const MediaCard = ({ file, onDownload, onOpen }: { file: FileItem, onDownload: (
              <button 
               key={v.variant_id}
               onClick={(e) => { e.stopPropagation(); onDownload(file.file_id, v.storage_url, `${file.title}-${v.label}`, v.variant_id); }}
-              className="bg-white/20  hover:bg-white/90 hover:text-black text-white text-[9px] font-bold py-1 px-3 rounded-lg backdrop-blur-md flex items-center gap-1 shadow-lg transform translate-x-4 group-hover:translate-x-0 transition-transform duration-300"
+              className="bg-gradient-to-r from-orange/60 to-[#00c48c70]  hover:bg-orange hover:text-black text-white text-[9px] font-bold py-1 px-2 rounded-lg backdrop-blur-md flex items-center gap-1 shadow-lg transform   transition-transform duration-300"
               style={{ transitionDelay: `${idx * 50}ms` }}
               title={`Download ${v.label}`}
              >

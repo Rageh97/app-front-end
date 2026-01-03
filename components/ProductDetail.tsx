@@ -11,6 +11,15 @@ interface ProductDetailProps {
 
 const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productData, productType, currency }) => {
 
+    // Calculate discounted price
+    const getDiscountedPrice = (price: number) => {
+        const discountPercentage = productData?.discount_percentage || 0;
+        if (discountPercentage > 0) {
+            return Math.round(price * (1 - discountPercentage / 100) * 100) / 100;
+        }
+        return price;
+    };
+
     const displayPrice = (currency: "MAD" | "$", productType: "tool" | "pack" | "device" | "credits") => {
 
 
@@ -19,11 +28,11 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
 
                 switch (period) {
                     case "day":
-                        return productData?.tool_day_price * 10 + ` ${currency}`
+                        return getDiscountedPrice(productData?.tool_day_price * 10) + ` ${currency}`
                     case "month":
-                        return productData?.tool_month_price * 10 + ` ${currency}`
+                        return getDiscountedPrice(productData?.tool_month_price * 10) + ` ${currency}`
                     case "year":
-                        return productData?.tool_year_price * 10 + ` ${currency}`
+                        return getDiscountedPrice(productData?.tool_year_price * 10) + ` ${currency}`
                 }
             }
 
@@ -31,11 +40,11 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
 
                 switch (period) {
                     case "day":
-                        return productData?.tool_day_price + ` ${currency}`
+                        return getDiscountedPrice(productData?.tool_day_price) + ` ${currency}`
                     case "month":
-                        return productData?.tool_month_price + ` ${currency}`
+                        return getDiscountedPrice(productData?.tool_month_price) + ` ${currency}`
                     case "year":
-                        return productData?.tool_year_price + ` ${currency}`
+                        return getDiscountedPrice(productData?.tool_year_price) + ` ${currency}`
                 }
             }
         }
@@ -44,22 +53,22 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
             if (currency === "MAD") {
                 switch (period) {
                     case "day":
-                        return productData?.monthly_price * 10 + ` ${currency}`
+                        return getDiscountedPrice(productData?.monthly_price * 10) + ` ${currency}`
                     case "month":
-                        return productData?.monthly_price * 10 + ` ${currency}`
+                        return getDiscountedPrice(productData?.monthly_price * 10) + ` ${currency}`
                     case "year":
-                        return productData?.yearly_price * 10 + ` ${currency}`
+                        return getDiscountedPrice(productData?.yearly_price * 10) + ` ${currency}`
                 }
             }
 
             if (currency === "$") {
                 switch (period) {
                     case "day":
-                        return productData?.monthly_price + ` ${currency}`
+                        return getDiscountedPrice(productData?.monthly_price) + ` ${currency}`
                     case "month":
-                        return productData?.monthly_price + ` ${currency}`
+                        return getDiscountedPrice(productData?.monthly_price) + ` ${currency}`
                     case "year":
-                        return productData?.yearly_price + ` ${currency}`
+                        return getDiscountedPrice(productData?.yearly_price) + ` ${currency}`
                 }
             }
         }
@@ -68,23 +77,23 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
         if (productType === "device") {
             if (currency === "MAD") {
                 // Use total_price_mad if available
-                return (productData?.total_price_mad || (productData?.monthly_price * (productData?.quantity || 1) * 10)) + ` ${currency}`
+                return getDiscountedPrice(productData?.total_price_mad || (productData?.monthly_price * (productData?.quantity || 1) * 10)) + ` ${currency}`
             }
 
             if (currency === "$") {
                 // Use base price, multiplied by quantity
-                return (productData?.total_price || (productData?.monthly_price * (productData?.quantity || 1))) + ` ${currency}`
+                return getDiscountedPrice(productData?.total_price || (productData?.monthly_price * (productData?.quantity || 1))) + ` ${currency}`
             }
         }
         
         // Handle credits type
         if (productType === "credits") {
             if (currency === "MAD") {
-                return (productData?.amount * 10) + ` ${currency}`
+                return getDiscountedPrice(productData?.amount * 10) + ` ${currency}`
             }
 
             if (currency === "$") {
-                return productData?.amount + ` ${currency}`
+                return getDiscountedPrice(productData?.amount) + ` ${currency}`
             }
         }
     }    

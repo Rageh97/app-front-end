@@ -23,6 +23,19 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
   setDetailsModalOpen,
 }) => {
   const { t } = useTranslation();
+  
+  // Calculate discounted prices
+  const getDiscountedPrice = (price: number) => {
+    const discountPercentage = productData?.discount_percentage || 0;
+    if (discountPercentage > 0) {
+      return Math.round(price * (1 - discountPercentage / 100) * 100) / 100;
+    }
+    return price;
+  };
+  
+  const discountedMonthlyPrice = getDiscountedPrice(productData?.monthly_price || 0);
+  const discountedYearlyPrice = getDiscountedPrice(productData?.yearly_price || 0);
+  
   const [openErrorModal, setIsOpenErrorModal] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>(null);
   const [showCihModal, setShowCihModal] = useState<boolean>(false);
@@ -416,8 +429,8 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
           isDevice: productType === 'device',
           pack_name: productType === 'device' ? productData?.deviceName || 'Additional Device' : productData?.pack_name || productData?.tool_name,
           pack_price: productType === 'device' ? productData?.pack_price / (productData?.quantity || 1) : productData?.pack_price,
-          monthly_price: productType === 'device' ? productData?.pack_price : productData?.monthly_price,
-          yearly_price: productType === 'device' ? productData?.pack_price * 12 : productData?.yearly_price,
+          monthly_price: productType === 'device' ? productData?.pack_price : discountedMonthlyPrice,
+          yearly_price: productType === 'device' ? productData?.pack_price * 12 : discountedYearlyPrice,
           period: period || 'month', // Ensure period is always set, default to 'month'
           quantity: productType === 'device' ? productData?.quantity || 1 : 1,
          
@@ -432,8 +445,8 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
           isDevice: productType === 'device',
           pack_name: productType === 'device' ? productData?.deviceName || 'Additional Device' : productData?.pack_name || productData?.tool_name,
           pack_price: productType === 'device' ? productData?.pack_price / (productData?.quantity || 1) : productData?.pack_price,
-          monthly_price: productData?.monthly_price,
-          yearly_price: productData?.yearly_price,
+          monthly_price: discountedMonthlyPrice,
+          yearly_price: discountedYearlyPrice,
           period: period || 'month',
           quantity: productType === 'device' ? productData?.quantity || 1 : 1
         }}
@@ -446,8 +459,8 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
           isDevice: productType === 'device',
           pack_name: productType === 'device' ? productData?.deviceName || 'Additional Device' : productData?.pack_name || productData?.tool_name,
           pack_price: productType === 'device' ? productData?.pack_price / (productData?.quantity || 1) : productData?.pack_price,
-          monthly_price: productData?.monthly_price,
-          yearly_price: productData?.yearly_price,
+          monthly_price: discountedMonthlyPrice,
+          yearly_price: discountedYearlyPrice,
           period: period || 'month',
           quantity: productType === 'device' ? productData?.quantity || 1 : 1
         }}
@@ -460,8 +473,8 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
           isDevice: productType === 'device',
           pack_name: productType === 'device' ? productData?.deviceName || 'Additional Device' : productData?.pack_name || productData?.tool_name,
           pack_price: productType === 'device' ? productData?.pack_price / (productData?.quantity || 1) : productData?.pack_price,
-          monthly_price: productData?.monthly_price,
-          yearly_price: productData?.yearly_price,
+          monthly_price: discountedMonthlyPrice,
+          yearly_price: discountedYearlyPrice,
           period: period || 'month',
           quantity: productType === 'device' ? productData?.quantity || 1 : 1
         }}
@@ -474,8 +487,8 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
           isDevice: productType === 'device',
           pack_name: productType === 'device' ? productData?.deviceName || 'Additional Device' : productData?.pack_name || productData?.tool_name,
           pack_price: productType === 'device' ? productData?.pack_price / (productData?.quantity || 1) : productData?.pack_price,
-          monthly_price: productData?.monthly_price,
-          yearly_price: productData?.yearly_price,
+          monthly_price: discountedMonthlyPrice,
+          yearly_price: discountedYearlyPrice,
           period: period || 'month',
           quantity: productType === 'device' ? productData?.quantity || 1 : 1
         }}
@@ -488,8 +501,8 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
           isDevice: productType === 'device',
           pack_name: productType === 'device' ? productData?.deviceName || 'Additional Device' : productData?.pack_name || productData?.tool_name,
           pack_price: productType === 'device' ? productData?.pack_price / (productData?.quantity || 1) : productData?.pack_price,
-          monthly_price: productData?.monthly_price,
-          yearly_price: productData?.yearly_price,
+          monthly_price: discountedMonthlyPrice,
+          yearly_price: discountedYearlyPrice,
           period: period || 'month',
           quantity: productType === 'device' ? productData?.quantity || 1 : 1
         }}

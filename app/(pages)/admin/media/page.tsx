@@ -22,6 +22,27 @@ interface Variant {
   label: string;
 }
 
+interface ExistingVariant {
+  variant_id: number;
+  file_type: string;
+  label: string;
+  storage_url: string;
+  size: number;
+  extension: string;
+}
+
+interface MediaFileData {
+  file_id: number;
+  title: string;
+  description: string;
+  file_type: string;
+  storage_url: string;
+  thumbnail_url: string;
+  preview_video_url?: string;
+  category_id: number;
+  variants: ExistingVariant[];
+}
+
 interface UploadQueueItem {
   id: string;
   file: File;
@@ -86,7 +107,20 @@ const MediaAdminPage = () => {
   const [loadingFiles, setLoadingFiles] = useState(false);
 
   // Deletion Modal State
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'category' | 'file' | null; id: number | null; }>({ isOpen: false, type: null, id: null });
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'category' | 'file' | 'variant' | null; id: number | null; }>({ isOpen: false, type: null, id: null });
+
+  // Edit File Modal State
+  const [editFileModal, setEditFileModal] = useState<{ isOpen: boolean; file: MediaFileData | null }>({ isOpen: false, file: null });
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+  const [savingFile, setSavingFile] = useState(false);
+  
+  // New Variant in Edit Modal
+  const [newVariantsToUpload, setNewVariantsToUpload] = useState<Variant[]>([]);
+  const [uploadingNewVariant, setUploadingNewVariant] = useState(false);
+  const [newVariantProgress, setNewVariantProgress] = useState(0);
+  const [currentUploadingVariantIndex, setCurrentUploadingVariantIndex] = useState(-1);
 
   // Upload Form - TUS Based
   const [uploadTitle, setUploadTitle] = useState("");
@@ -215,7 +249,147 @@ const MediaAdminPage = () => {
     setDeleteModal({ isOpen: false, type: null, id: null });
   };
 
-  const openDeleteModal = (type: 'category' | 'file', id: number) => { setDeleteModal({ isOpen: true, type, id }); };
+  const openDeleteModal = (type: 'category' | 'file' | 'variant', id: number) => { setDeleteModal({ isOpen: true, type, id }); };
+
+  // --- Edit File Handlers ---
+  const handleOpenEditFile = async (fileId: number) => {
+    try {
+      const res = await axios.get(`/api/media/files/single/${fileId}`);
+      const file = res.data;
+      setEditFileModal({ isOpen: true, file });
+      setEditTitle(file.title);
+      setEditDesc(file.description || "");
+      setEditCategoryId(file.category_id);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في تحميل بيانات الملف");
+    }
+  };
+
+  const handleCloseEditFile = () => {
+    setEditFileModal({ isOpen: false, file: null });
+    setEditTitle("");
+    setEditDesc("");
+    setEditCategoryId(null);
+    setNewVariantsToUpload([]);
+    setNewVariantProgress(0);
+    setCurrentUploadingVariantIndex(-1);
+  };
+
+  const handleSaveFileEdit = async () => {
+    if (!editFileModal.file) return;
+    setSavingFile(true);
+    try {
+      await axios.put(`/api/media/files/${editFileModal.file.file_id}`, {
+        title: editTitle,
+        description: editDesc,
+        category_id: editCategoryId
+      });
+      toast.success("تم تحديث الملف بنجاح");
+      handleCloseEditFile();
+      if (selectedCatId) handleViewFiles(selectedCatId);
+      fetchCategories();
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في تحديث الملف");
+    } finally {
+      setSavingFile(false);
+    }
+  };
+
+  const handleDeleteVariant = async (variantId: number) => {
+    try {
+      await axios.delete(`/api/media/variants/${variantId}`);
+      toast.success("تم حذف الصيغة بنجاح");
+      // Refresh the edit modal data
+      if (editFileModal.file) {
+        handleOpenEditFile(editFileModal.file.file_id);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في حذف الصيغة");
+    }
+    setDeleteModal({ isOpen: false, type: null, id: null });
+  };
+
+  // Upload new variant to existing file
+  const addNewVariantRow = (label = "", type: Variant['type'] = "video") => {
+    setNewVariantsToUpload([...newVariantsToUpload, { file: null, type, label }]);
+  };
+
+  const removeNewVariantRow = (index: number) => {
+    const updated = [...newVariantsToUpload];
+    updated.splice(index, 1);
+    setNewVariantsToUpload(updated);
+  };
+
+  const updateNewVariantRow = (index: number, field: keyof Variant, value: any) => {
+    const updated = [...newVariantsToUpload];
+    (updated[index] as any)[field] = value;
+    setNewVariantsToUpload(updated);
+  };
+
+  const handleUploadNewVariants = async () => {
+    if (!editFileModal.file) return;
+    
+    const variantsWithFiles = newVariantsToUpload.filter(v => v.file && v.label);
+    if (variantsWithFiles.length === 0) {
+      toast.error("يرجى إضافة ملف واسم لكل صيغة");
+      return;
+    }
+
+    setUploadingNewVariant(true);
+
+    try {
+      for (let i = 0; i < variantsWithFiles.length; i++) {
+        const v = variantsWithFiles[i];
+        if (!v.file) continue;
+        
+        setCurrentUploadingVariantIndex(i);
+        setNewVariantProgress(0);
+
+        // Start TUS upload
+        const uploadId = await tusUpload.startUpload(v.file, {
+          onProgress: (progress) => {
+            setNewVariantProgress(progress.percentage);
+          },
+          metadata: {
+            uploadType: "variant",
+            variantType: v.type,
+            variantLabel: v.label,
+            filename: v.file.name,
+            filetype: v.file.type || "application/octet-stream",
+            fileextension: v.file.name.split('.').pop()?.toLowerCase() || "",
+          },
+        });
+
+        // Finalize variant
+        await finalizeVariant({
+          uploadId,
+          parentFileId: editFileModal.file.file_id,
+          variantType: v.type,
+          variantLabel: v.label,
+          filename: v.file.name,
+        });
+      }
+
+      toast.success(`تم إضافة ${variantsWithFiles.length} صيغة بنجاح`);
+      
+      // Reset
+      setNewVariantsToUpload([]);
+      setNewVariantProgress(0);
+      setCurrentUploadingVariantIndex(-1);
+      
+      // Refresh file data
+      handleOpenEditFile(editFileModal.file.file_id);
+      
+    } catch (err: any) {
+      console.error(err);
+      toast.error("فشل في رفع الصيغة: " + (err.message || ""));
+    } finally {
+      setUploadingNewVariant(false);
+    }
+  };
 
   // --- TUS Upload Handlers ---
   const handleMainFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -680,7 +854,8 @@ const MediaAdminPage = () => {
                       <div className="aspect-[4/3] relative bg-black/40 flex items-center justify-center">
                         {file.type === 'video' ? <Film size={28} className="text-orange/40" /> : <ImageIcon size={28} className="text-orange/40" />}
                         {file.thumbnail_url && <img src={file.thumbnail_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                          <button onClick={() => handleOpenEditFile(file.file_id)} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transform scale-90 group-hover:scale-100 transition-transform shadow-lg" title="تعديل"><Edit size={16} /></button>
                           <button onClick={() => openDeleteModal('file', file.file_id)} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transform scale-90 group-hover:scale-100 transition-transform shadow-lg" title={t('mediaAdmin.deleteFile')}><Trash2 size={16} /></button>
                         </div>
                       </div>
@@ -713,12 +888,264 @@ const MediaAdminPage = () => {
         onConfirm={() => {
           if (deleteModal.type === 'category' && deleteModal.id) handleDeleteCategory(deleteModal.id);
           if (deleteModal.type === 'file' && deleteModal.id) handleDeleteFile(deleteModal.id);
+          if (deleteModal.type === 'variant' && deleteModal.id) handleDeleteVariant(deleteModal.id);
         }}
-        title={deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : t('mediaAdmin.deleteFile')}
-        message={deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : t('mediaAdmin.deleteFileConfirm')}
+        title={deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : deleteModal.type === 'variant' ? "حذف الصيغة" : t('mediaAdmin.deleteFile')}
+        message={deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : deleteModal.type === 'variant' ? "هل أنت متأكد من حذف هذه الصيغة؟" : t('mediaAdmin.deleteFileConfirm')}
         confirmText={t('admin.delete')}
         cancelText={t('mediaAdmin.cancel')}
       />
+
+      {/* Edit File Modal */}
+      {editFileModal.isOpen && editFileModal.file && (
+        <div className="fixed inset-0 z-[30] mt-25 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="gradient-border-analysis border border-white/10 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-white/10">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Edit size={20} className="text-orange" />
+                تعديل الملف
+              </h3>
+              <button onClick={handleCloseEditFile} className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Preview */}
+              <div className="flex gap-4 items-start">
+                <div className="w-24 h-24 rounded-xl bg-black/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {editFileModal.file.thumbnail_url ? (
+                    <img src={editFileModal.file.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    editFileModal.file.file_type === 'video' ? <Film size={32} className="text-orange/40" /> : <ImageIcon size={32} className="text-orange/40" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white/40 mb-1">النوع: {editFileModal.file.file_type}</p>
+                  <p className="text-xs text-white/40 truncate">URL: {editFileModal.file.storage_url}</p>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">العنوان</label>
+                <input 
+                  type="text" 
+                  value={editTitle} 
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black"
+                />
+              </div>
+
+              {/* Description */}
+              {/* <div>
+                <label className="block text-sm font-medium mb-2 text-white">الوصف</label>
+                <textarea 
+                  value={editDesc} 
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black min-h-[80px]"
+                />
+              </div> */}
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">التصنيف</label>
+                <select 
+                  value={editCategoryId || ""} 
+                  onChange={(e) => setEditCategoryId(Number(e.target.value))}
+                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black"
+                >
+                  {categories.map(cat => (
+                    <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Variants Section */}
+              <div>
+                <label className="block text-sm font-medium mb-3 text-white flex items-center gap-2">
+                  <Film size={16} className="text-orange" />
+                  الصيغ المتاحة ({editFileModal.file.variants?.length || 0})
+                </label>
+                
+                {editFileModal.file.variants && editFileModal.file.variants.length > 0 ? (
+                  <div className="space-y-2">
+                    {editFileModal.file.variants.map((variant) => (
+                      <div key={variant.variant_id} className="flex items-center justify-between p-3 bg-black/30 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-orange/20 flex items-center justify-center">
+                            {variant.file_type === 'video' || variant.file_type === 'prores' ? (
+                              <Film size={18} className="text-orange" />
+                            ) : (
+                              <ImageIcon size={18} className="text-orange" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{variant.label}</p>
+                            <p className="text-[10px] text-white/40">{variant.file_type} • {variant.extension}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => openDeleteModal('variant', variant.variant_id)}
+                          className="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-colors"
+                          title="حذف الصيغة"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center p-4 border border-dashed border-white/20 rounded-xl text-white/40 text-sm">
+                    لا توجد صيغ إضافية
+                  </div>
+                )}
+
+                {/* Add New Variants Section */}
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-col gap-3">
+                    <label className="text-sm font-medium text-[#00c48c] flex items-center gap-2">
+                      <Plus size={16} />
+                      إضافة صيغ جديدة
+                    </label>
+
+                    {/* Quick Add Buttons */}
+                    <div className="flex flex-wrap gap-2 items-center bg-black/30 p-3 rounded-lg border border-white/10">
+                      <span className="text-xs text-white/60 font-medium">إضافة سريعة:</span>
+                      <button type="button" onClick={() => addNewVariantRow("4K PRORES", "prores")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
+                      <button type="button" onClick={() => addNewVariantRow("MP4", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
+                      <button type="button" onClick={() => addNewVariantRow("MP3", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ MP3</button>
+                      <button type="button" onClick={() => addNewVariantRow("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ PNG SEQ.</button>
+                      <button type="button" onClick={() => addNewVariantRow("MOV", "video")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ MOV</button>
+                    </div>
+                  </div>
+
+                  {/* New Variants Rows */}
+                  {newVariantsToUpload.map((v, idx) => (
+                    <div key={idx} className="flex gap-3 items-end bg-[#00c48c]/5 p-3 rounded-lg border border-[#00c48c]/20">
+                      <div className="flex-1">
+                        <label className="text-xs block mb-1 opacity-70 text-white">الاسم</label>
+                        <input 
+                          type="text" 
+                          className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-[#00c48c]" 
+                          value={v.label} 
+                          onChange={(e) => updateNewVariantRow(idx, 'label', e.target.value)} 
+                          placeholder="مثال: 4K"
+                          disabled={uploadingNewVariant}
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="text-xs block mb-1 opacity-70 text-white">النوع</label>
+                        <select 
+                          className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-[#00c48c]" 
+                          value={v.type} 
+                          onChange={(e) => updateNewVariantRow(idx, 'type', e.target.value as Variant['type'])}
+                          disabled={uploadingNewVariant}
+                        >
+                          <option value="video">فيديو</option>
+                          <option value="audio">صوت</option>
+                          <option value="image">صورة</option>
+                          <option value="prores">PRORES</option>
+                          <option value="png_sequence">PNG SEQ.</option>
+                          <option value="archive">ZIP/RAR</option>
+                        </select>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-xs block mb-1 opacity-70 text-white">الملف {v.file ? `(${formatBytes(v.file.size)})` : ''}</label>
+                        <input 
+                          type="file" 
+                          accept={
+                            v.type === 'video' || v.type === 'prores' ? 'video/*,.mov,.prores,.mxf,.zip,.rar,.7z' : 
+                            v.type === 'audio' ? 'audio/*,.mp3,.wav,.zip,.rar,.7z' :
+                            'image/*,.zip,.rar,.7z'
+                          } 
+                          className="w-full text-xs text-gray-300 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#00c48c]/10 file:text-[#00c48c] hover:file:bg-[#00c48c]/20" 
+                          onChange={(e) => updateNewVariantRow(idx, 'file', e.target.files ? e.target.files[0] : null)}
+                          disabled={uploadingNewVariant}
+                        />
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => removeNewVariantRow(idx)} 
+                        className="text-red-400 hover:text-red-600 p-2 bg-red-400/10 hover:bg-red-400/20 rounded-lg transition"
+                        disabled={uploadingNewVariant}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Upload Progress */}
+                  {uploadingNewVariant && (
+                    <div className="p-3 bg-orange/10 border border-orange/30 rounded-lg space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white/60">
+                          جاري رفع الصيغة {currentUploadingVariantIndex + 1} من {newVariantsToUpload.filter(v => v.file && v.label).length}...
+                        </span>
+                        <span className="text-orange font-bold">{newVariantProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-orange to-[#00c48c] rounded-full transition-all duration-300"
+                          style={{ width: `${newVariantProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload Button */}
+                  {newVariantsToUpload.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleUploadNewVariants}
+                      disabled={uploadingNewVariant || newVariantsToUpload.every(v => !v.file || !v.label)}
+                      className="w-full py-2.5 rounded-lg bg-[#00c48c] hover:bg-[#00c48c]/80 text-black font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                    >
+                      {uploadingNewVariant ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                          جاري الرفع...
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={16} />
+                          رفع الصيغ الجديدة ({newVariantsToUpload.filter(v => v.file && v.label).length})
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 justify-end p-6 border-t border-white/10 bg-black/20">
+              <button 
+                onClick={handleCloseEditFile} 
+                className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button 
+                onClick={handleSaveFileEdit}
+                disabled={savingFile}
+                className="px-6 py-2 rounded-lg bg-orange hover:bg-orange/80 transition-colors font-bold disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingFile ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  "حفظ التغييرات"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === "uploads" && (
         <div className="max-w-5xl mx-auto bg-[#190237] p-8 rounded-xl shadow-lg">

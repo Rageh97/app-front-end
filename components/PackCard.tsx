@@ -11,6 +11,7 @@ interface PackCardProps {
   packData: any;
   toolsData: any;
   period: 'month' | 'year';
+  discountPercentage?: number;
 }
 
 const PackCard: FunctionComponent<PackCardProps> = ({
@@ -23,6 +24,13 @@ const PackCard: FunctionComponent<PackCardProps> = ({
   onClick,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Get discount from packData
+  const discountPercentage = packData.discount_percentage || 0;
+  const originalPrice = packPrice;
+  const discountedPrice = discountPercentage > 0 
+    ? Math.round(originalPrice * (1 - discountPercentage / 100) * 100) / 100
+    : originalPrice;
 
   function getToolNameById(toolId) {
     const tool = toolsData.find(t => t.tool_id === toolId);
@@ -35,7 +43,7 @@ const PackCard: FunctionComponent<PackCardProps> = ({
       <div className="absolute w-25 h-25 z-0 top-25 left-1/2 -translate-x-1/2 rounded-full bg-[linear-gradient(130deg,_#ff7702,_#ffffff,_#00c48c)] opacity-100 blur-2xl "></div>
     <div className="w-[280px] overflow-visible relative z-10 mt-30 h-min font-extrabold text-black pb-1 px-3 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] border-[#ff7702] border-[2px] rounded-[40px] shadow-2xl">
      {/* <img className="absolute w-70 h-22 z-10 -top-40 left-1/2 -translate-x-1/2" src="/images/shadow-light.png" alt="" /> */}
-      <div style={{clipPath: "polygon(25% 0%, 70% 0%, 90% 100%, 5% 100%"}} className="absolute bg-[#ff7702] py-1 px-7 top-4 -left-8 -rotate-45   rounded-sm text-xs">Discount 50%</div>
+      <div style={{clipPath: "polygon(25% 0%, 70% 0%, 90% 100%, 5% 100%"}} className={`absolute bg-[#ff7702] py-1 px-7 top-4 -left-8 -rotate-45 rounded-sm text-xs ${discountPercentage > 0 ? '' : 'hidden'}`}>Discount {discountPercentage}%</div>
       {packData.pack_name.trim().toUpperCase() === "AI PLAN" && <img className="absolute w-40 z-20 -top-36 left-1/2 -translate-x-1/2" src="/images/plus (2).png" alt="AI Plan" />}
     {packData.pack_name.trim().toUpperCase() === "DESIGNERS PLAN" && <img className="absolute w-40 z-20 -top-36 left-1/2 -translate-x-1/2" src="/images/pro.png" alt="Designers Plan" />}
     {packData.pack_name.trim().toUpperCase() === "ALL IN ONE PLAN" && <img className="absolute w-40 z-20 -top-36 left-1/2 -translate-x-1/2" src="/images/vip.png" alt="All in One Plan" />}
@@ -43,7 +51,12 @@ const PackCard: FunctionComponent<PackCardProps> = ({
       {/* <img className="absolute w-40 z-20 -top-28 left-1/2 -translate-x-1/2" src="/images/crown.png" alt="" /> */}
       <p className="text-[21px] py-6 text-white text-center">{title}</p>
       <div className="flex pb-3 pt-4">
-        <div className="text-[45px] text-white">${packPrice}</div>
+        <div className="text-[45px] text-white">
+          ${discountedPrice}
+          {discountPercentage > 0 && (
+            <span className="text-[20px] text-[#ACADB1] line-through ml-2">${originalPrice}</span>
+          )}
+        </div>
         <div className="h-[30px] flex flex-col justify-between">
           <div></div>
           <p className="text-[24px] px-1 font-bold text-[#00c48c]">/ {period === 'month' ? t("packs.month") : t("packs.year")}</p>
@@ -151,7 +164,7 @@ const PackCard: FunctionComponent<PackCardProps> = ({
           onClick();
         }}
          className="absolute flex items-center justify-center w-30 bottom-0 right-5 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] skew-x-[-50deg] rounded-[15px] gradient-border-packet text-white">
-       <p className="skew-x-[50deg] px-2 py-3"> <span className="text-[#00c48c] mx-2">{t("packs.buyNow")}</span>${packPrice}</p>
+       <p className="skew-x-[50deg] px-2 py-3"> <span className="text-[#00c48c] mx-2">{t("packs.buyNow")}</span>${discountedPrice}</p>
     
       </LoadingButton>
  </div>

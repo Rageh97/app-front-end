@@ -23,6 +23,8 @@ type FormType = NewPacksReqDto & {
   yearly_credit_plan_id?: number;
   media_downloads_limit: number;
   media_downloads_limit_yearly: number;
+  daily_downloads_limit: number;
+  discount_percentage: number;
 };
 
 const initialValues: FormType = {
@@ -38,6 +40,8 @@ const initialValues: FormType = {
   yearly_credit_plan_id: undefined,
   media_downloads_limit: 0,
   media_downloads_limit_yearly: 0,
+  daily_downloads_limit: 0,
+  discount_percentage: 0,
 };
 
 export const packsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
@@ -50,6 +54,8 @@ export const packsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
   max_devices: Yup.number().required("Please enter max devices."),
   media_downloads_limit: Yup.number().default(0),
   media_downloads_limit_yearly: Yup.number().default(0),
+  daily_downloads_limit: Yup.number().default(0),
+  discount_percentage: Yup.number().min(0, "Discount must be 0 or more").max(100, "Discount cannot exceed 100%").default(0),
   isActive: Yup.boolean(),
   // Optional fields to match FormType
   pack_price: Yup.number().optional(),
@@ -188,6 +194,13 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
     }
     if (formatted.media_downloads_limit_yearly === undefined || formatted.media_downloads_limit_yearly === null) {
       formatted.media_downloads_limit_yearly = 0;
+    }
+    if (formatted.daily_downloads_limit === undefined || formatted.daily_downloads_limit === null) {
+      formatted.daily_downloads_limit = 0;
+    }
+    
+    if (formatted.discount_percentage === undefined || formatted.discount_percentage === null) {
+      formatted.discount_percentage = 0;
     }
 
     return formatted as FormType;
@@ -351,6 +364,36 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
                     error={touched.media_downloads_limit_yearly && errors.media_downloads_limit_yearly}
                   />
                 </div>
+
+                <InputField
+                  className={"w-full mb-4.5"}
+                  required={false}
+                  id={"daily_downloads_limit"}
+                  label={"Daily Downloads Limit (0 = Unlimited)"}
+                  type={"number"}
+                  min={0}
+                  max={100}
+                  placeholder={"Enter daily limit (0 for unlimited)"}
+                  value={values.daily_downloads_limit}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.daily_downloads_limit && errors.daily_downloads_limit}
+                />
+
+                <InputField
+                  className={"w-full mb-4.5"}
+                  required={false}
+                  id={"discount_percentage"}
+                  label={"Discount Percentage (%)"}
+                  type={"number"}
+                  min={0}
+                  max={100}
+                  placeholder={"Enter discount percentage (0-100)"}
+                  value={values.discount_percentage}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.discount_percentage && errors.discount_percentage}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4.5">
                   <div>
