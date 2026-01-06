@@ -6,7 +6,7 @@ import { Trash2, Edit, Upload, FolderPlus, Film, Image as ImageIcon, Plus, X, Ey
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import useTusUpload, { formatBytes, calculateETA } from "@/hooks/useTusUpload";
-import { finalizeMainFile, finalizePreviewVideo, finalizeVariant } from "@/utils/tusMediaUpload";
+import { finalizeMainFile, finalizePreviewVideo, finalizeVariant, updateMainFile } from "@/utils/tusMediaUpload";
 
 interface Category {
   category_id: number;
@@ -121,6 +121,12 @@ const MediaAdminPage = () => {
   const [uploadingNewVariant, setUploadingNewVariant] = useState(false);
   const [newVariantProgress, setNewVariantProgress] = useState(0);
   const [currentUploadingVariantIndex, setCurrentUploadingVariantIndex] = useState(-1);
+
+  // File Replacements
+  const [newMainFile, setNewMainFile] = useState<File | null>(null);
+  const [newPreviewFile, setNewPreviewFile] = useState<File | null>(null);
+  const [filesUpdateProgress, setFilesUpdateProgress] = useState(0);
+  const [isUpdatingFiles, setIsUpdatingFiles] = useState(false);
 
   // Upload Form - TUS Based
   const [uploadTitle, setUploadTitle] = useState("");
@@ -274,26 +280,91 @@ const MediaAdminPage = () => {
     setNewVariantsToUpload([]);
     setNewVariantProgress(0);
     setCurrentUploadingVariantIndex(-1);
+    setNewMainFile(null);
+    setNewPreviewFile(null);
+    setFilesUpdateProgress(0);
+    setIsUpdatingFiles(false);
   };
 
   const handleSaveFileEdit = async () => {
     if (!editFileModal.file) return;
     setSavingFile(true);
     try {
+      // 1. Update Metadata
       await axios.put(`/api/media/files/${editFileModal.file.file_id}`, {
         title: editTitle,
         description: editDesc,
         category_id: editCategoryId
       });
+
+      // 2. Handle File Replacements if any
+      if (newMainFile || newPreviewFile) {
+        setIsUpdatingFiles(true);
+        setFilesUpdateProgress(0);
+
+        const totalUploads = (newMainFile ? 1 : 0) + (newPreviewFile ? 1 : 0);
+        let completedUploads = 0;
+
+        // Helper to update progress based on current file progress + completed files
+        const updateOverallProgress = (currentFileProgress: number) => {
+          const totalProgress = ((completedUploads * 100) + currentFileProgress) / totalUploads;
+          setFilesUpdateProgress(Math.round(totalProgress));
+        };
+
+        // Upload Main File
+        if (newMainFile) {
+          const mainFileType = newMainFile.type.startsWith('video') ? 'video' : newMainFile.type.startsWith('audio') ? 'audio' : 'image';
+          
+          const uploadId = await tusUpload.startUpload(newMainFile, {
+            onProgress: (progress) => updateOverallProgress(progress.percentage),
+            metadata: {
+              uploadType: "main_replacement",
+              filename: newMainFile.name,
+              filetype: newMainFile.type || "application/octet-stream", 
+            }
+          });
+
+          await updateMainFile({
+            uploadId,
+            fileId: editFileModal.file.file_id,
+            filename: newMainFile.name,
+            mainFileType: mainFileType as any
+          });
+          
+          completedUploads++;
+        }
+
+        // Upload Preview File
+        if (newPreviewFile) {
+          const uploadId = await tusUpload.startUpload(newPreviewFile, {
+            onProgress: (progress) => updateOverallProgress(progress.percentage),
+            metadata: {
+              uploadType: "preview_replacement",
+              filename: newPreviewFile.name,
+              filetype: newPreviewFile.type || "application/octet-stream",
+            }
+          });
+
+          await finalizePreviewVideo({
+            uploadId,
+            parentFileId: editFileModal.file.file_id,
+            filename: newPreviewFile.name,
+          });
+          
+          completedUploads++;
+        }
+      }
+
       toast.success("تم تحديث الملف بنجاح");
       handleCloseEditFile();
       if (selectedCatId) handleViewFiles(selectedCatId);
       fetchCategories();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("فشل في تحديث الملف");
+      toast.error("فشل في تحديث الملف: " + (err.message || ""));
     } finally {
       setSavingFile(false);
+      setIsUpdatingFiles(false);
     }
   };
 
@@ -961,6 +1032,48 @@ const MediaAdminPage = () => {
                     <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Update Main File & Preview */}
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                 <h4 className="font-bold text-white flex items-center gap-2">
+                    <Edit size={16} className="text-orange" />
+                    تحديث الملفات الأساسية
+                 </h4>
+                 
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium mb-1 block text-white/70">استبدال الملف الرئيسي</label>
+                      <input 
+                        type="file"
+                        onChange={(e) => setNewMainFile(e.target.files?.[0] || null)}
+                        disabled={isUpdatingFiles}
+                        className="w-full text-xs text-gray-300 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20"
+                      />
+                      {newMainFile && <p className="text-[10px] text-orange mt-1 truncate">{newMainFile.name}</p>}
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs font-medium mb-1 block text-white/70">استبدال فيديو الهوفر (Preview)</label>
+                      <input 
+                        type="file"
+                        accept="video/*"
+                        onChange={(e) => setNewPreviewFile(e.target.files?.[0] || null)}
+                        disabled={isUpdatingFiles}
+                        className="w-full text-xs text-gray-300 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#00c48c]/10 file:text-[#00c48c] hover:file:bg-[#00c48c]/20"
+                      />
+                      {newPreviewFile && <p className="text-[10px] text-[#00c48c] mt-1 truncate">{newPreviewFile.name}</p>}
+                    </div>
+                 </div>
+
+                 {isUpdatingFiles && (
+                    <div className="w-full bg-black/30 rounded-full h-2 overflow-hidden mt-2">
+                      <div 
+                        className="h-full bg-gradient-to-r from-orange to-[#00c48c] transition-all duration-300"
+                        style={{ width: `${filesUpdateProgress}%` }}
+                      />
+                    </div>
+                 )}
               </div>
 
               {/* Variants Section */}

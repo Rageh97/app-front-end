@@ -109,10 +109,33 @@ export async function cancelUpload(uploadId: string) {
   return response.data;
 }
 
+/**
+ * Update main file content
+ */
+export async function updateMainFile(
+  params: {
+    uploadId: string;
+    fileId: number;
+    filename: string;
+    mainFileType: "video" | "image" | "audio";
+  }
+): Promise<FinalizeResponse> {
+  const response = await axios.post("/api/tus/finalize", {
+    uploadId: params.uploadId,
+    fileId: params.fileId,
+    isMainFile: true,
+    isUpdate: true,
+    filename: params.filename,
+    mainFileType: params.mainFileType,
+  }, { timeout: 3600000 });
+  return response.data;
+}
+
 export default {
   finalizeMainFile,
   finalizePreviewVideo,
   finalizeVariant,
+  updateMainFile,
   getUploadStatus,
   cancelUpload,
 };
