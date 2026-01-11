@@ -95,10 +95,10 @@ const MediaHubContent = () => {
         const res = await axios.get("/api/admin/settings/media_hub_enabled");
         const isEnabled = String(res.data.value) !== 'false';
         
-        // Check both: is it enabled and does the user have the right role?
-        const isAuthorized = data?.userRole === "admin" || data?.userRole === "manager";
+        // Admin and Manager can always access, regular users only if enabled
+        const isAdmin = data?.userRole === "admin" || data?.userRole === "manager";
         
-        if (!isEnabled || !isAuthorized) {
+        if (!isEnabled && !isAdmin) {
           setIsMediaHubEnabled(false);
           window.location.href = "/dashboard";
         }
@@ -519,19 +519,50 @@ const MediaHubContent = () => {
                     />
                   ))}
                   {paginatedFiles.length === 0 && (
-                    <div className="col-span-full text-center py-20 text-gray-500 animate-in fade-in zoom-in duration-500">
-                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Search size={32} className="opacity-20" />
-                      </div>
-                      <h3 className="text-white font-bold text-xl mb-2">No results found</h3>
-                      <p>We couldn't find any results {searchQuery ? `matching "${searchQuery}"` : 'in this category'}</p>
-                      {searchQuery && (
-                        <button 
-                          onClick={() => setSearchQuery("")}
-                          className="mt-6 text-[#00c48c] font-bold underline hover:text-[#00e0a0]"
-                        >
-                          Clear search and show all
-                        </button>
+                    <div className="col-span-full text-center py-20 animate-in fade-in zoom-in duration-500">
+                      {searchQuery ? (
+                        // عرض رسالة البحث
+                        <>
+                          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Search size={32} className="opacity-20" />
+                          </div>
+                          <h3 className="text-white font-bold text-xl mb-2">No results found</h3>
+                          <p className="text-gray-500">We couldn't find any results matching "{searchQuery}"</p>
+                          <button 
+                            onClick={() => setSearchQuery("")}
+                            className="mt-6 text-[#00c48c] font-bold underline hover:text-[#00e0a0] transition-colors"
+                          >
+                            Clear search and show all
+                          </button>
+                        </>
+                      ) : (
+                        // عرض رسالة التصنيف الفارغ
+                        <div className="max-w-md mx-auto">
+                          <div className="relative mb-8">
+                            <div className="w-24 h-24 bg-gradient-to-br from-[#00c48c]/20 to-[#00e0a0]/10 rounded-2xl flex items-center justify-center mx-auto backdrop-blur-sm border border-[#00c48c]/20 shadow-lg shadow-[#00c48c]/10">
+                              <svg className="w-12 h-12 text-[#00c48c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-[#00c48c]/5 rounded-full blur-2xl -z-10"></div>
+                          </div>
+                          
+                          <h3 className="text-white font-bold text-2xl mb-3 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                            Coming Soon
+                          </h3>
+                          <p className="text-gray-400 text-lg leading-relaxed">
+                            سيتم إضافة فيديوهات جديدة قريباً
+                          </p>
+                          <p className="text-gray-500 text-sm mt-2">
+                            New videos will be added soon
+                          </p>
+                          
+                          <div className="mt-8 flex items-center justify-center gap-2">
+                            <div className="w-2 h-2 bg-[#00c48c] rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-[#00c48c] rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-2 h-2 bg-[#00c48c] rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}

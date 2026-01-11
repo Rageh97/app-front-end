@@ -427,7 +427,7 @@ useEffect(() => {
       {/* ............................... */}
 
       {/* Media Categories Swiper Section */}
-      {isMediaHubEnabled && (data?.userRole === "admin" || data?.userRole === "manager") && mediaCategories.length > 0 && (
+      {(isMediaHubEnabled || data?.userRole === "admin" || data?.userRole === "manager") && mediaCategories.length > 0 && (
         <div className="mb-8 px-1 lg:px-5 mt-5">
             {/* <div className="flex items-center gap-2 mb-4 px-2">
                <div className="w-1 h-6 bg-[#ff7702] rounded-full"></div>
