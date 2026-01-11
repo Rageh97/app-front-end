@@ -439,28 +439,59 @@ const MediaHubContent = () => {
       {/* Categories Bar - Only show when viewing files */}
       {viewMode === 'files' && (
         <div className="sticky top-0 bg-[#0d0d0d]/95 backdrop-blur z-40">
-          <div className="mx-auto px-4 overflow-x-auto no-scrollbar">
-            <div className="flex gap-2 py-4 min-w-max items-center">
-              <button
-                onClick={handleBackToCategories}
-                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mr-4 pr-4 border-r border-white/10"
-              >
-              {i18n.language=== 'ar' ?<ArrowRight size={18} /> :<ArrowLeft size={18} />}  
-                <span className="text-sm font-medium">All Categories</span>
-              </button>
-              {categories.map((cat) => (
+          <div className="mx-auto px-4 relative">
+            {/* Left Scroll Arrow */}
+            <button
+              onClick={() => {
+                const container = document.getElementById('categories-scroll-container');
+                if (container) {
+                  container.scrollBy({ left: i18n.language === 'ar' ? 200 : -200, behavior: 'smooth' });
+                }
+              }}
+              className={`absolute ${i18n.language === 'ar' ? 'right-0' : 'left-0'} top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-gradient-to-r from-[#00c48c] to-orange text-black flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95`}
+            >
+              {i18n.language === 'ar' ? <ChevronRight size={20} /> : <ArrowLeft size={20} />}
+            </button>
+
+            {/* Right Scroll Arrow */}
+            <button
+              onClick={() => {
+                const container = document.getElementById('categories-scroll-container');
+                if (container) {
+                  container.scrollBy({ left: i18n.language === 'ar' ? -200 : 200, behavior: 'smooth' });
+                }
+              }}
+              className={`absolute ${i18n.language === 'ar' ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-gradient-to-r from-orange to-[#00c48c] text-black flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95`}
+            >
+              {i18n.language === 'ar' ? <ArrowLeft size={20} /> : <ChevronRight size={20} />}
+            </button>
+
+            <div 
+              id="categories-scroll-container"
+              className="overflow-x-auto no-scrollbar scroll-smooth"
+            >
+              <div className="flex gap-2 py-4 min-w-max items-center px-5">
                 <button
-                  key={cat.category_id}
-                  onClick={() => handleCategorySelect(cat.category_id)}
-                  className={`text-lg font-bold transition-all duration-300 relative ${
-                    selectedCategoryId === cat.category_id 
-                      ? "text-black scale-105 border rounded-lg px-2 bg-gradient-to-r from-orange to-[#00c48c]" 
-                      : "text-gray-500 hover:text-gray-300 rounded-lg border border-white/40 rounded px-2"
-                  }`}
+                  onClick={handleBackToCategories}
+                  className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mr-1 pr-1 border-r border-white/10"
                 >
-                  {cat.name}
+                {i18n.language=== 'ar' ?<ArrowRight size={18} /> :<ArrowLeft size={18} />}  
+                  <span className="text-sm font-medium">All Categories</span>
                 </button>
-              ))}
+                {categories.map((cat) => (
+                  <button
+                    key={cat.category_id}
+                    onClick={() => handleCategorySelect(cat.category_id)}
+                    className={`text-lg font-bold transition-all duration-300 relative whitespace-nowrap ${
+                      selectedCategoryId === cat.category_id 
+                        ? "text-black scale-105 border rounded-lg px-2 bg-gradient-to-r from-orange to-[#00c48c]" 
+                        : "text-gray-500 hover:text-gray-300 rounded-lg border border-white/40 rounded px-2"
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
