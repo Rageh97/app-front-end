@@ -466,6 +466,7 @@ const MediaHubContent = () => {
               {i18n.language === 'ar' ? <ArrowLeft size={20} /> : <ChevronRight size={20} />}
             </button>
 
+
             <div 
               id="categories-scroll-container"
               className="overflow-x-auto no-scrollbar scroll-smooth"
