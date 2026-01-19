@@ -29,7 +29,7 @@ import * as consts from "@/consts";
 import SignOutIcon from "../svg/SignOutIcon";
 import AffiliateIcon from "../svg/AffiliateIcon";
 import RocketIcon from "../svg/RocketIcon";
-import { Crown, Download, House, ListOrdered, LogOut, ShieldCheck, ShieldUser, ShoppingBag, ShoppingCart, UsersRound, Vibrate, Video, Bell, User, MessageCircleMore, ImageDown } from "lucide-react";
+import { Crown, Download, House, ListOrdered, LogOut, ShieldCheck, ShieldUser, ShoppingBag, ShoppingCart, UsersRound, Vibrate, Video, Bell, User, MessageCircleMore, ImageDown, TypeOutline } from "lucide-react";
 import axios from "@/utils/api";
 import { useGetDevices } from "@/hooks/useGetDevices";
 
@@ -107,7 +107,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       ref={sidebar}
       className="fixed z-[999] flex overflow-y-hidden duration-300 ease-linear
       bottom-0 left-0 w-full hidden md:flex flex-row items-center justify-center  
-      md:top-0 md:bottom-auto md:mt-40 md:h-auto md:w-auto md:flex-col md:items-start md:justify-between"
+      md:top-0 md:bottom-auto md:mt-25 md:h-auto md:w-auto md:flex-col md:items-start md:justify-between"
       
     >
       
@@ -423,15 +423,20 @@ const GlobalMenu: FunctionComponent = () => {
   const { devices, active_sessions } = useGetDevices();
 
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+  const [isFontsHubEnabled, setIsFontsHubEnabled] = useState(true);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await axios.get("/api/admin/settings/media_hub_enabled");
-        // Ensure accurate boolean conversion regardless of API response format
-        setIsMediaHubEnabled(String(res.data.value) !== 'false');
+        const [mediaRes, fontsRes] = await Promise.all([
+          axios.get("/api/admin/settings/media_hub_enabled"),
+          axios.get("/api/admin/settings/fonts_hub_enabled")
+        ]);
+        
+        setIsMediaHubEnabled(String(mediaRes.data.value) !== 'false');
+        setIsFontsHubEnabled(String(fontsRes.data.value) !== 'false');
       } catch (error) {
-        console.error("Failed to fetch media hub setting:", error);
+        console.error("Failed to fetch settings:", error);
       }
     };
 
@@ -440,8 +445,12 @@ const GlobalMenu: FunctionComponent = () => {
     // Listen for real-time updates from Admin Page
     const handleSettingsChange = (event: Event) => {
       const customEvent = event as CustomEvent;
-      if (customEvent.detail && customEvent.detail.key === 'media_hub_enabled') {
-        setIsMediaHubEnabled(customEvent.detail.value);
+      if (customEvent.detail) {
+        if (customEvent.detail.key === 'media_hub_enabled') {
+          setIsMediaHubEnabled(customEvent.detail.value);
+        } else if (customEvent.detail.key === 'fonts_hub_enabled') {
+          setIsFontsHubEnabled(customEvent.detail.value);
+        }
       }
     };
 
@@ -579,6 +588,13 @@ const hasActiveSubscription = () => {
             children: "",
             permission: isMediaHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },
+            {
+              completeHref: "/fonts",
+              name: "مكتبة الخطوط ",
+              icon: <TypeOutline   size={28} />,
+              children: "",
+              permission: isFontsHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
+            },
           {
             completeHref: "/subscriptions",
             name: t('dashboard.Subscriptions'),

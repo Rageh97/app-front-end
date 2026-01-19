@@ -38,6 +38,7 @@
     "i18next-browser-languagedetector": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "jsvectormap": "^1.5.1",
+    "jszip": "^3.10.1",
     "localforage": "^1.10.0",
     "lucide-react": "^0.488.0",
     "match-sorter": "^6.3.1",

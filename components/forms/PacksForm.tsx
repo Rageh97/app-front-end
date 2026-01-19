@@ -24,6 +24,10 @@ type FormType = NewPacksReqDto & {
   media_downloads_limit: number;
   media_downloads_limit_yearly: number;
   daily_downloads_limit: number;
+  // Font limits
+  font_downloads_limit: number;
+  font_downloads_limit_yearly: number;
+  daily_font_downloads_limit: number;
   discount_percentage: number;
 };
 
@@ -41,6 +45,9 @@ const initialValues: FormType = {
   media_downloads_limit: 0,
   media_downloads_limit_yearly: 0,
   daily_downloads_limit: 0,
+  font_downloads_limit: 0,
+  font_downloads_limit_yearly: 0,
+  daily_font_downloads_limit: 0,
   discount_percentage: 0,
 };
 
@@ -55,6 +62,9 @@ export const packsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
   media_downloads_limit: Yup.number().default(0),
   media_downloads_limit_yearly: Yup.number().default(0),
   daily_downloads_limit: Yup.number().default(0),
+  font_downloads_limit: Yup.number().default(0),
+  font_downloads_limit_yearly: Yup.number().default(0),
+  daily_font_downloads_limit: Yup.number().default(0),
   discount_percentage: Yup.number().min(0, "Discount must be 0 or more").max(100, "Discount cannot exceed 100%").default(0),
   isActive: Yup.boolean(),
   // Optional fields to match FormType
@@ -197,6 +207,16 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
     }
     if (formatted.daily_downloads_limit === undefined || formatted.daily_downloads_limit === null) {
       formatted.daily_downloads_limit = 0;
+    }
+
+    if (formatted.font_downloads_limit === undefined || formatted.font_downloads_limit === null) {
+      formatted.font_downloads_limit = 0;
+    }
+    if (formatted.font_downloads_limit_yearly === undefined || formatted.font_downloads_limit_yearly === null) {
+      formatted.font_downloads_limit_yearly = 0;
+    }
+    if (formatted.daily_font_downloads_limit === undefined || formatted.daily_font_downloads_limit === null) {
+      formatted.daily_font_downloads_limit = 0;
     }
     
     if (formatted.discount_percentage === undefined || formatted.discount_percentage === null) {
@@ -379,6 +399,57 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
                   onBlur={handleBlur}
                   error={touched.daily_downloads_limit && errors.daily_downloads_limit}
                 />
+
+                <div className="w-full h-px bg-white/20 my-6"></div>
+                {/* <h3 className="text-xl font-bold text-white mb-4">{t('packsForm.fontsLimits') || "Font Limits"}</h3> */}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4.5">
+                  <InputField
+                    className={"w-full"}
+                    required={true}
+                    id={"font_downloads_limit"}
+                    label={"Font Downloads Limit (Per Month)"}
+                    type={"number"}
+                    min={0}
+                    max={1000}
+                    placeholder={"Enter allowed font downloads"}
+                    value={values.font_downloads_limit}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.font_downloads_limit && errors.font_downloads_limit}
+                  />
+                  <InputField
+                    className={"w-full"}
+                    required={true}
+                    id={"font_downloads_limit_yearly"}
+                    label={"Font Downloads Limit (Per Year)"}
+                    type={"number"}
+                    min={0}
+                    max={10000}
+                    placeholder={"Enter allowed font downloads"}
+                    value={values.font_downloads_limit_yearly}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.font_downloads_limit_yearly && errors.font_downloads_limit_yearly}
+                  />
+                </div>
+
+                <InputField
+                  className={"w-full mb-4.5"}
+                  required={false}
+                  id={"daily_font_downloads_limit"}
+                  label={"Daily Font Downloads Limit (0 = Unlimited)"}
+                  type={"number"}
+                  min={0}
+                  max={100}
+                  placeholder={"Enter daily limit"}
+                  value={values.daily_font_downloads_limit}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.daily_font_downloads_limit && errors.daily_font_downloads_limit}
+                />
+
+                <div className="w-full h-px bg-white/20 my-6"></div>
 
                 <InputField
                   className={"w-full mb-4.5"}

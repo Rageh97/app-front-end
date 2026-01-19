@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "@/utils/api";
-import { Trash2, Edit, Upload, FolderPlus, Film, Image as ImageIcon, Plus, X, Eye, EyeOff, Pause, Play, AlertCircle } from "lucide-react";
+import { Trash2, Edit, Upload, FolderPlus, Film, Image as ImageIcon, Plus, X, Eye, EyeOff, Pause, Play, AlertCircle, Download } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import useTusUpload, { formatBytes, calculateETA } from "@/hooks/useTusUpload";
@@ -90,10 +90,21 @@ const ConfirmationModal = ({
 
 const MediaAdminPage = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"categories" | "uploads">("categories");
+  const [activeTab, setActiveTab] = useState<"categories" | "uploads" | "banner" | "analytics">("categories");
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+
+  // Analytics State
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
+  // Banner State
+  const [banners, setBanners] = useState<any[]>([]);
+  const [loadingBanners, setLoadingBanners] = useState(false);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string>("");
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   // Category Form
   const [editingCatId, setEditingCatId] = useState<number | null>(null);
@@ -151,6 +162,8 @@ const MediaAdminPage = () => {
   useEffect(() => {
     fetchCategories();
     fetchMediaHubSetting();
+    fetchBanners();
+    fetchAnalytics();
   }, []);
 
   const fetchMediaHubSetting = async () => {
@@ -187,6 +200,93 @@ const MediaAdminPage = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- Banner Handlers ---
+  const fetchBanners = async () => {
+    setLoadingBanners(true);
+    try {
+      const res = await axios.get("/api/media/banners");
+      setBanners(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في تحميل البانرات");
+    } finally {
+      setLoadingBanners(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    setLoadingAnalytics(true);
+    try {
+      const res = await axios.get("/api/media/admin/analytics");
+      setAnalytics(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في تحميل الإحصائيات");
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  const handleBannerFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setBannerFile(file);
+      setBannerPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleUploadBanner = async () => {
+    if (!bannerFile) {
+      toast.error("يرجى اختيار صورة أو فيديو للبانر");
+      return;
+    }
+
+    setUploadingBanner(true);
+    try {
+      const formData = new FormData();
+      formData.append("bannerMedia", bannerFile);
+      formData.append("media_type", bannerFile.type.startsWith('video') ? 'video' : 'image');
+
+      await axios.post("/api/media/banners", formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      toast.success("تم رفع البانر بنجاح");
+      setBannerFile(null);
+      setBannerPreview("");
+      fetchBanners();
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في رفع البانر");
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  const handleDeleteBanner = async (bannerId: number) => {
+    try {
+      await axios.delete(`/api/media/banners/${bannerId}`);
+      toast.success("تم حذف البانر بنجاح");
+      fetchBanners();
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في حذف البانر");
+    }
+  };
+
+  const handleToggleBannerActive = async (bannerId: number, currentStatus: boolean) => {
+    try {
+      await axios.put(`/api/media/banners/${bannerId}`, {
+        is_active: !currentStatus
+      });
+      toast.success(currentStatus ? "تم إخفاء البانر" : "تم تفعيل البانر");
+      fetchBanners();
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في تحديث حالة البانر");
     }
   };
 
@@ -860,6 +960,12 @@ const MediaAdminPage = () => {
         <button onClick={() => setActiveTab("uploads")} className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === "uploads" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <Upload size={18} /> {t('mediaAdmin.uploadsTab')}
         </button>
+        <button onClick={() => setActiveTab("banner")} className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === "banner" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+          <ImageIcon size={18} /> إدارة البانر
+        </button>
+        <button onClick={() => setActiveTab("analytics")} className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === "analytics" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+          <AlertCircle size={18} /> الإحصائيات
+        </button>
       </div>
 
       {activeTab === "categories" && (
@@ -1260,6 +1366,159 @@ const MediaAdminPage = () => {
         </div>
       )}
 
+      {/* Banner Tab */}
+      {activeTab === "banner" && (
+        <div className="max-w-5xl mx-auto space-y-8">
+          {/* Upload New Banner */}
+          <div className="bg-[#190237] p-8 rounded-xl shadow-lg">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
+              <ImageIcon size={24} className="text-orange" />
+              رفع بانر جديد
+            </h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block mb-3 font-medium text-white">اختر صورة أو فيديو للبانر</label>
+                <input 
+                  type="file" 
+                  accept="image/*,video/*"
+                  onChange={handleBannerFileChange}
+                  className="w-full text-sm text-white file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20 cursor-pointer"
+                />
+              </div>
+
+              {bannerPreview && (
+                <div className="relative w-full h-64 bg-black rounded-xl overflow-hidden border border-white/10">
+                  {bannerFile?.type.startsWith('video') ? (
+                    <video 
+                      src={bannerPreview} 
+                      className="w-full h-full object-cover"
+                      controls
+                      autoPlay
+                      muted
+                      loop
+                    />
+                  ) : (
+                    <img 
+                      src={bannerPreview} 
+                      alt="Banner Preview" 
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={handleUploadBanner}
+                disabled={!bannerFile || uploadingBanner}
+                className="w-full bg-orange hover:bg-orange/80 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {uploadingBanner ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    جاري الرفع...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={20} />
+                    رفع البانر
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Existing Banners */}
+          <div className="bg-[#190237] p-8 rounded-xl shadow-lg">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
+              <Film size={24} className="text-[#00c48c]" />
+              البانرات الموجودة ({banners.length})
+            </h2>
+
+            {loadingBanners ? (
+              <div className="flex justify-center p-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange"></div>
+              </div>
+            ) : banners.length === 0 ? (
+              <div className="text-center p-12 text-white/40">
+                <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
+                <p>لا توجد بانرات حالياً</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {banners.map((banner) => (
+                  <div key={banner.banner_id} className="bg-black/30 rounded-xl overflow-hidden border border-white/10 hover:border-orange/30 transition-all group">
+                    <div className="relative h-48 bg-black">
+                      {banner.media_type === 'video' ? (
+                        <video 
+                          src={banner.media_url} 
+                          className="w-full h-full object-cover"
+                          muted
+                          loop
+                          onMouseEnter={(e) => e.currentTarget.play()}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.pause();
+                            e.currentTarget.currentTime = 0;
+                          }}
+                        />
+                      ) : (
+                        <img 
+                          src={banner.media_url} 
+                          alt="Banner" 
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                      
+                      {/* Status Badge */}
+                      <div className="absolute top-3 right-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          banner.is_active 
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                            : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        }`}>
+                          {banner.is_active ? 'نشط' : 'معطل'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between text-sm text-white/60">
+                        <span className="flex items-center gap-2">
+                          {banner.media_type === 'video' ? <Film size={16} /> : <ImageIcon size={16} />}
+                          {banner.media_type === 'video' ? 'فيديو' : 'صورة'}
+                        </span>
+                        <span className="text-xs">
+                          {new Date(banner.createdAt).toLocaleDateString('ar-EG')}
+                        </span>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleToggleBannerActive(banner.banner_id, banner.is_active)}
+                          className={`flex-1 py-2 rounded-lg font-bold transition-all ${
+                            banner.is_active
+                              ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
+                              : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30'
+                          }`}
+                        >
+                          {banner.is_active ? <><EyeOff size={16} className="inline mr-1" /> إخفاء</> : <><Eye size={16} className="inline mr-1" /> تفعيل</>}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBanner(banner.banner_id)}
+                          className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {activeTab === "uploads" && (
         <div className="max-w-5xl mx-auto bg-[#190237] p-8 rounded-xl shadow-lg">
           {/* TUS Feature Banner */}
@@ -1398,6 +1657,148 @@ const MediaAdminPage = () => {
               {isUploading ? t('mediaAdmin.uploading') : <><Upload size={20} /> {t('mediaAdmin.uploadEverything')}</>}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === "analytics" && (
+        <div className="max-w-7xl mx-auto space-y-6">
+          {loadingAnalytics ? (
+            <div className="flex justify-center p-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange"></div>
+            </div>
+          ) : analytics ? (
+            <>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Total Downloads */}
+                <div className="gradient-border-analysis  rounded-2xl p-6 hover:scale-105 transition-transform">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-orange/20 rounded-full flex items-center justify-center">
+                      <Download size={24} className="text-orange" />
+                    </div>
+                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">إجمالي</span>
+                  </div>
+                  <h3 className="text-4xl font-black text-white mb-2">{analytics.totalDownloads?.toLocaleString() || 0}</h3>
+                  <p className="text-white/60 text-sm">إجمالي التحميلات</p>
+                </div>
+
+                {/* Downloads Today */}
+                <div className="gradient-border-analysis  rounded-2xl p-6 hover:scale-105 transition-transform">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-[#00c48c]/20 rounded-full flex items-center justify-center">
+                      <Download size={24} className="text-[#00c48c]" />
+                    </div>
+                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">اليوم</span>
+                  </div>
+                  <h3 className="text-4xl font-black text-white mb-2">{analytics.downloadsToday?.toLocaleString() || 0}</h3>
+                  <p className="text-white/60 text-sm">تحميلات اليوم</p>
+                </div>
+
+                {/* Downloads This Month */}
+                <div className="gradient-border-analysis rounded-2xl p-6 hover:scale-105 transition-transform">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <Download size={24} className="text-blue-400" />
+                    </div>
+                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">هذا الشهر</span>
+                  </div>
+                  <h3 className="text-4xl font-black text-white mb-2">{analytics.downloadsThisMonth?.toLocaleString() || 0}</h3>
+                  <p className="text-white/60 text-sm">تحميلات الشهر</p>
+                </div>
+
+                {/* Unique Users */}
+                <div className="gradient-border-analysis   rounded-2xl p-6 hover:scale-105 transition-transform">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                      <Film size={24} className="text-purple-400" />
+                    </div>
+                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">مستخدمين</span>
+                  </div>
+                  <h3 className="text-4xl font-black text-white mb-2">{analytics.uniqueDownloaders?.toLocaleString() || 0}</h3>
+                  <p className="text-white/60 text-sm">مستخدمين فريدين</p>
+                </div>
+              </div>
+
+              {/* Additional Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <FolderPlus size={20} className="text-orange" />
+                    <h4 className="font-bold text-white">التصنيفات</h4>
+                  </div>
+                  <p className="text-3xl font-black text-white">{analytics.totalCategories || 0}</p>
+                </div>
+
+                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Film size={20} className="text-[#00c48c]" />
+                    <h4 className="font-bold text-white">الملفات</h4>
+                  </div>
+                  <p className="text-3xl font-black text-white">{analytics.totalFiles || 0}</p>
+                </div>
+
+                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Eye size={20} className="text-blue-400" />
+                    <h4 className="font-bold text-white">زيارات الصفحة</h4>
+                  </div>
+                  <p className="text-3xl font-black text-white">{analytics.pageViews?.toLocaleString() || 0}</p>
+                  <p className="text-xs text-white/40 mt-1">زيارات Media Hub</p>
+                </div>
+              </div>
+
+              {/* Top Downloaded Files */}
+              {analytics.topFiles && analytics.topFiles.length > 0 && (
+                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
+                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-white">
+                    <Download size={20} className="text-orange" />
+                    الملفات الأكثر تحميلاً (أفضل 3)
+                  </h3>
+                  <div className="space-y-3">
+                    {analytics.topFiles.slice(0, 3).map((item: any, idx: number) => (
+                      <div key={item.file_id} className="flex items-center gap-4 p-4 bg-black/30 rounded-xl border border-white/5 hover:border-orange/30 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-orange/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-orange font-bold text-sm">#{idx + 1}</span>
+                        </div>
+                        
+                        {item.file?.thumbnail_url && (
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-black/40 flex-shrink-0">
+                            <img src={item.file.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-white truncate">{item.file?.title || 'Unknown'}</h4>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-white/40">{item.file?.file_type || 'N/A'}</p>
+                            {item.file?.category?.name && (
+                              <>
+                                <span className="text-white/20">•</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-[#00c48c]/10 text-[#00c48c] border border-[#00c48c]/20">
+                                  {item.file.category.name}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-orange">{item.download_count}</p>
+                          <p className="text-xs text-white/40">تحميل</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center p-12 text-white/40">
+              <AlertCircle size={48} className="mx-auto mb-4 opacity-20" />
+              <p>لا توجد إحصائيات متاحة</p>
+            </div>
+          )}
         </div>
       )}
     </div>

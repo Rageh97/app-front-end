@@ -11,6 +11,7 @@ import i18n from "@/i18n";
 import PremiumLoader from "@/components/PremiumLoader";
 import ShinyText from "@/components/ShinyText";
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
+import { trackPageView } from "@/utils/analytics";
 
 interface Category {
   category_id: number;
@@ -65,6 +66,9 @@ const MediaHubContent = () => {
   const { data } = useMyInfo();
   const searchParams = useSearchParams();
   const catParam = searchParams.get('cat');
+  
+  // Track page view only once
+  const hasTrackedView = useRef(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -78,16 +82,13 @@ const MediaHubContent = () => {
   // View Mode: 'categories' shows category cards, 'files' shows files grid
   const [viewMode, setViewMode] = useState<'categories' | 'files'>('categories');
   
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 50;
-  
   // Modal State
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+  const [activeBanner, setActiveBanner] = useState<any>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -106,13 +107,31 @@ const MediaHubContent = () => {
         console.error("Failed to fetch media hub setting:", error);
       }
     };
+
+    const fetchBanner = async () => {
+      try {
+        const res = await axios.get("/api/media/banner/active");
+        setActiveBanner(res.data);
+      } catch (error) {
+        console.error("Failed to fetch banner:", error);
+      }
+    };
     
     if (data) {
       fetchSettings();
     }
     fetchCategories();
     fetchStats();
+    fetchBanner();
   }, [data]);
+
+  // Separate effect for tracking - runs only once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      trackPageView('media_hub');
+      hasTrackedView.current = true;
+    }
+  }, []); // Empty dependency array ensures this runs only once
 
   const fetchStats = async () => {
     try {
@@ -151,7 +170,6 @@ const MediaHubContent = () => {
     setSelectedCategoryId(catId);
     setViewMode('files');
     setSearchQuery("");
-    setCurrentPage(1);
   };
 
   // Handle back to categories
@@ -190,18 +208,6 @@ const MediaHubContent = () => {
       file.description.toLowerCase().includes(query)
     );
   }, [files, searchQuery]);
-
-  // Reset pagination when filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategoryId, searchQuery]);
-
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredFiles.length / ITEMS_PER_PAGE);
-  const paginatedFiles = filteredFiles.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE, 
-    currentPage * ITEMS_PER_PAGE
-  );
 
   const handleDownload = async (fileId: number, fallbackUrl: string, title: string, variantId?: number) => {
     try {
@@ -298,16 +304,40 @@ const MediaHubContent = () => {
          
          {/* Background Media */}
          <div className="absolute inset-0 z-0">
-             {/* Replace with your preferred video or image URL */}
+             {/* Dynamic Banner */}
              <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-[#0d0d0d]/50 to-[#00c48c30] z-10"></div>
-             {/* <img 
-               src="https://images.unsplash.com/photo-1706174131367-bb0e7e1212a5?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
-
-               alt="Hero Background" 
-               className="w-full h-full object-cover opacity-60 mix-blend-overlay"
-             /> */}
-           <div style={{position:'relative', width:'100%', height:'0px', paddingBottom:'56.250%'}}><iframe allow="fullscreen;autoplay" allowFullScreen height="100%" src="https://streamable.com/e/uhfvf7?autoplay=1&muted=1" width="100%" style={{border:'none', width:'100%', height:'100%', position:'absolute', left:'0px', top:'0px', overflow:'hidden'}}></iframe></div>
-             {/* <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-10"></div> */}
+             
+             {activeBanner ? (
+               activeBanner.media_type === 'video' ? (
+                 <video 
+                   src={activeBanner.media_url}
+                   className="w-full h-full object-cover opacity-60 mix-blend-overlay"
+                   autoPlay
+                   muted
+                   loop
+                   playsInline
+                 />
+               ) : (
+                 <img 
+                   src={activeBanner.media_url}
+                   alt="Hero Background" 
+                   className="w-full h-full object-cover opacity-60 mix-blend-overlay"
+                 />
+               )
+             ) : (
+               // Fallback to default video if no banner
+               <div style={{position:'relative', width:'100%', height:'0px', paddingBottom:'56.250%'}}>
+                 <iframe 
+                   allow="fullscreen;autoplay" 
+                   allowFullScreen 
+                   height="100%" 
+                   src="https://streamable.com/e/uhfvf7?autoplay=1&muted=1" 
+                   width="100%" 
+                   style={{border:'none', width:'100%', height:'100%', position:'absolute', left:'0px', top:'0px', overflow:'hidden'}}
+                 />
+               </div>
+             )}
+             
              {/* Bottom Fade */}
              <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#0d0d0d] to-transparent z-10"></div>
          </div>
@@ -542,7 +572,7 @@ const MediaHubContent = () => {
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 mb-12">
-                  {paginatedFiles.map((file) => (
+                  {filteredFiles.map((file) => (
                     <MediaCard 
                       key={file.file_id} 
                       file={file} 
@@ -550,7 +580,7 @@ const MediaHubContent = () => {
                       onOpen={() => setSelectedFile(file)}
                     />
                   ))}
-                  {paginatedFiles.length === 0 && (
+                  {filteredFiles.length === 0 && (
                     <div className="col-span-full text-center py-20 animate-in fade-in zoom-in duration-500">
                       {searchQuery ? (
                         // عرض رسالة البحث
@@ -599,20 +629,6 @@ const MediaHubContent = () => {
                     </div>
                   )}
                 </div>
-                
-                {/* Professional Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center mt-12 mb-8">
-                    <Pagination 
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={(page) => {
-                        setCurrentPage(page);
-                        window.scrollTo({ top: 600, behavior: 'smooth' });
-                      }}
-                    />
-                  </div>
-                )}
               </>
             )}
           </>
@@ -1051,53 +1067,6 @@ const MediaCard = ({ file, onDownload, onOpen }: { file: FileItem, onDownload: (
             </div>
          </div>
       </div>
-    </div>
-  );
-};
-
-const Pagination = ({ currentPage, totalPages, onPageChange }: { currentPage: number, totalPages: number, onPageChange: (page: number) => void }) => {
-  return (
-    <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl border border-white/10 p-2 rounded-full shadow-2xl animate-in slide-in-from-bottom duration-500">
-      <button 
-        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        disabled={currentPage === 1}
-        className="p-3 rounded-full hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-      >
-        <ArrowLeft size={18} />
-      </button>
-
-      <div className="flex items-center gap-1 px-2">
-         {Array.from({ length: totalPages }).map((_, idx) => {
-           const page = idx + 1;
-           // Logic to show limited pages if many
-           if (totalPages > 7 && (page < currentPage - 2 || page > currentPage + 2) && page !== 1 && page !== totalPages) {
-             if (page === currentPage - 3 || page === currentPage + 3) return <span key={page} className="text-gray-600">...</span>;
-             return null;
-           }
-           
-           return (
-            <button
-              key={page}
-              onClick={() => onPageChange(page)}
-              className={`w-10 h-10 rounded-full font-bold transition-all duration-300 flex items-center justify-center ${
-                currentPage === page 
-                  ? "bg-gradient-to-r from-orange to-[#00c48c] text-black scale-110 shadow-[0_0_15px_rgba(0,196,140,0.5)]" 
-                  : "text-gray-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {page}
-            </button>
-           );
-         })}
-      </div>
-
-      <button 
-        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        disabled={currentPage === totalPages}
-        className="p-3 rounded-full hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-      >
-        <ChevronRight size={18} />
-      </button>
     </div>
   );
 };

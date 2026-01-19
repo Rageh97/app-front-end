@@ -38,6 +38,12 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "nexus-fonts.b-cdn.net", 
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };

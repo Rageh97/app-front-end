@@ -143,10 +143,10 @@ const AdminTabs: FunctionComponent = () => {
           label: t('admin.Media'),
           href: `/admin/media`,
         },
-        // {
-        //   label: t('admin.issues'),
-        //   href: `/admin/issues`,
-        // },
+        {
+          label: t('fonts.adminTab'),
+          href: `/admin/fonts`,
+        },
       ];
     }
     

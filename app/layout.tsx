@@ -3,7 +3,6 @@ import "./globals.css";
 import "./data-tables-css.css";
 import Providers from "@/components/Providers";
 import { ReactNode, useEffect, useState } from "react";
-import "./satoshi.css";
 import Head from "next/head";
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';

@@ -36,10 +36,10 @@ const ConfirmationModal: React.FC<
           <span className="mx-auto inline-block">
             <AlertIcon />
           </span>
-          <h3 className="mt-5.5 pb-2 text-xl font-bold text-black dark:text-white sm:text-2xl">
+          <h3 className="mt-5.5 pb-2 text-xl font-bold text-black  sm:text-2xl">
             {title}
           </h3>
-          <p className="mb-10">{message}</p>
+          <p className="mb-10 text-black">{message}</p>
           <div className="-mx-3 flex flex-wrap gap-y-4">
             <div className="w-full px-3 2xsm:w-1/2">
               <button
