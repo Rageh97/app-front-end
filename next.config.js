@@ -40,7 +40,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "nexus-fonts.b-cdn.net", 
+        hostname: "test-ai.b-cdn.net", 
         port: "",
         pathname: "/**",
       },

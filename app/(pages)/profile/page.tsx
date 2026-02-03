@@ -17,10 +17,11 @@ import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useTranslation } from "react-i18next";
 
 type ActiveSubscription = {
-  type: "plan" | "pack" | "tool";
+  type: "plan" | "pack" | "tool" | "credit";
   name: string;
   endsAt?: string;
   startsAt?: string;
+  remaining?: number;
 };
 
 const Profile = () => {
@@ -83,8 +84,19 @@ const Profile = () => {
       };
     }
 
+    const creditRecord = selectSoonestByExpiry(data?.userCreditsData?.filter((c: any) => c.remaining_credits > 0));
+    if (creditRecord) {
+        return {
+            type: "credit" as const,
+            name: creditRecord.plan_id === 1 ? "Starter AI" : creditRecord.plan_id === 2 ? "Pro AI" : "Business AI",
+            endsAt: creditRecord.endedAt,
+            startsAt: creditRecord.createdAt,
+            remaining: creditRecord.remaining_credits
+        };
+    }
+
     return null;
-  }, [data?.packsData, data?.toolsData, data?.userPacksData, data?.userPlansData, data?.userToolsData]);
+  }, [data?.packsData, data?.toolsData, data?.userPacksData, data?.userPlansData, data?.userToolsData, data?.userCreditsData]);
 
   const planEndsAt = activeSubscription?.endsAt ?? null;
   const planCreatedAt = activeSubscription?.startsAt ?? null;
@@ -362,6 +374,10 @@ const getSubscriptionDisplayName = (
   if (subscription.type === "pack") {
     return `${isArabic ? "باقة" : "Pack"} • ${subscription.name}`;
   }
+  
+  if (subscription.type === "credit") {
+     return `${isArabic ? "خطة ذكاء" : "AI Plan"} • ${subscription.name}`;
+  }
 
   return `${isArabic ? "أداة" : "Tool"} • ${subscription.name}`;
 };
@@ -379,6 +395,8 @@ const getSubscriptionCaption = (
       return isArabic ? "خطة عضوية فعّالة" : "Active membership plan";
     case "pack":
       return isArabic ? "باقات قيد التفعيل" : "Active pack entitlement";
+    case "credit":
+       return isArabic ? `رصيد نشط: ${subscription.remaining} نقطة` : `Active Balance: ${subscription.remaining} Credits`;
     case "tool":
     default:
       return isArabic ? "أداة مفعّلة" : "Active tool access";
@@ -414,6 +432,10 @@ const getSubscriptionCoverage = (
 
   if (subscription.type === "plan") {
     return getPlanCoverage(subscription.name, isArabic);
+  }
+
+  if (subscription.type === "credit") {
+      return isArabic ? "وصول شامل لأدوات الذكاء الاصطناعي مع رصيد نقاط." : "Full access to AI tools with credit balance.";
   }
 
   // if (subscription.type === "pack") {

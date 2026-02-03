@@ -42,6 +42,7 @@
     "localforage": "^1.10.0",
     "lucide-react": "^0.488.0",
     "match-sorter": "^6.3.1",
+    "motion": "^12.29.0",
     "next": "13.5.6",
     "node-fetch": "^3.3.2",
     "ogl": "^1.0.11",

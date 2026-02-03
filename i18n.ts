@@ -654,6 +654,7 @@ const resources = {
         understand:"I Understand",
         here:"here",
         errorModal2:" then refresh this page to continue.",
+        remainingCredits: "Remaining Credits",
 
       },
       plans: {
@@ -1568,6 +1569,7 @@ isInStable:"Unstable"
         understand:"فهمت",
         here:"هنا",
         errorModal2:" ثم تحديث هذه الصفحة للمتابعة.",
+        remainingCredits: "النقاط المتبقية",
       },
       plans: {
         pageTitle: "الخطط والأسعار",

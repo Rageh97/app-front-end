@@ -45,7 +45,7 @@ export const useMyInfo = (enabled = true) => {
   return useQuery(["userData"], () => getMyInfo(), {
     refetchOnWindowFocus: false,
     keepPreviousData: true,
-    enabled: false,
+    enabled: enabled,
     cacheTime: Infinity,
     staleTime: Infinity,
   });

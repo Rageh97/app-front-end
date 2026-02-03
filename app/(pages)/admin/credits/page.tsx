@@ -2,6 +2,23 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { 
+  Plus, 
+  Trash2, 
+  Edit, 
+  Save, 
+  X, 
+  CheckCircle2, 
+  AlertCircle,
+  MessageSquare,
+  ImageIcon,
+  Video,
+  Settings2,
+  Wand2,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
 
 type CreditPlan = {
   plan_id: number;
@@ -10,19 +27,60 @@ type CreditPlan = {
   credits_per_period: number;
   amount: string;
   isActive: boolean;
-  credits_per_image: number;
-  tokens_per_credit: number;
+  allowed_tools: string; // JSON string
+  chat_profit: number;
+  image_profit: number;
+  video_profit: number;
 };
+
+const ALL_TOOLS = [
+  { id: 'chat', name: 'نيكسوس تشات برو', category: 'chat' },
+  { id: 'image', name: 'انشاء صور احترافية', category: 'image' },
+  { id: 'image-to-text', name: 'استخراج النص من الصورة', category: 'image' },
+  { id: 'upscale', name: 'رفع دقة الصور', category: 'image' },
+  { id: 'bg-remove', name: 'حذف الخلفية', category: 'image' },
+  { id: 'restore', name: 'ترميم الصور', category: 'image' },
+  { id: 'avatar', name: 'صانع الأفاتار', category: 'image' },
+  { id: 'nano', name: 'نانو بانانا برو', category: 'image' },
+  { id: 'product', name: 'نماذج لمنتجك', category: 'image' },
+  { id: 'colorize', name: 'تلوين الصور', category: 'image' },
+  { id: 'edit', name: 'المحرر الذكي', category: 'image' },
+  { id: 'sketch', name: 'رسم إلى صورة', category: 'image' },
+  { id: 'logo', name: 'صانع الشعارات', category: 'image' },
+  { id: 'video', name: 'انشاء فيديوهات احترافية', category: 'video' },
+  // { id: 'lipsync', name: 'تحريك الشفاه', category: 'video' },
+  // { id: 'effects', name: 'تأثيرات الفيديو', category: 'video' },
+  { id: 'long-video', name: 'الفيديو الطويل', category: 'video' },
+  { id: 'motion', name: 'تحريك الصور', category: 'video' },
+  // { id: 'ugc', name: 'محتوى المستخدم', category: 'video' },
+  // { id: 'vupscale', name: 'تحسين الفيديو', category: 'video' },
+  // { id: 'resize', name: 'تحجيم الفيديو', category: 'video' },
+];
 
 export default function AdminCreditsPage() {
   const { t } = useTranslation();
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
   const [plans, setPlans] = useState<CreditPlan[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<Partial<CreditPlan>>({ plan_name: '', period: 'month', credits_per_period: 50, amount: '0', isActive: true, credits_per_image: 1, tokens_per_credit: 1000 });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiHubEnabled, setAiHubEnabled] = useState(true);
+  const [loadingToggle, setLoadingToggle] = useState(false);
 
+  // Form State
+  const [form, setForm] = useState<Partial<CreditPlan>>({ 
+    plan_name: '', 
+    period: 'month', 
+    credits_per_period: 100, 
+    amount: '0', 
+    isActive: true,
+    allowed_tools: '["*"]',
+    chat_profit: 0.1,
+    image_profit: 1,
+    video_profit: 2
+  });
+
+  // Editing State
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<CreditPlan>>({});
 
@@ -45,21 +103,99 @@ export default function AdminCreditsPage() {
         const data = await res.json();
         setPlans(data);
       } else {
-        setError(t('credits.failedToLoad'));
+        setError("فشل في تحميل الباقات");
       }
     } catch (e) {
-      setError(t('credits.networkError'));
+      setError("خطأ في الاتصال بالسيرفر");
     } finally {
       setLoading(false);
     }
   };
 
+  const loadAiHubStatus = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings/ai_hub_enabled`, { headers });
+      if (res.status === 200) {
+        const data = await res.json();
+        setAiHubEnabled(data.value === 'true');
+      }
+    } catch (e) {
+      console.error('Error loading AI hub status:', e);
+    }
+  };
 
+  const toggleAiHub = async () => {
+    if (!apiBase) return;
+    setLoadingToggle(true);
+    try {
+      const newValue = !aiHubEnabled;
+      const res = await fetch(`${apiBase}/api/admin/settings/ai_hub_enabled`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ value: newValue }),
+      });
+      if (res.status === 200) {
+        setAiHubEnabled(newValue);
+        // Dispatch event to update sidebar and dashboard in real-time
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('settingsChanged', {
+            detail: { key: 'ai_hub_enabled', value: newValue }
+          }));
+        }
+      } else {
+        setError("فشل في تحديث حالة مكتبة الذكاء الاصطناعي");
+      }
+    } catch (e) {
+      setError("خطأ في الشبكة");
+    } finally {
+      setLoadingToggle(false);
+    }
+  };
 
   useEffect(() => {
     loadPlans();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadAiHubStatus();
   }, []);
+
+  const startEdit = (plan: CreditPlan) => {
+    setEditingId(plan.plan_id);
+    setForm({
+      plan_name: plan.plan_name,
+      period: plan.period,
+      credits_per_period: plan.credits_per_period,
+      amount: plan.amount,
+      isActive: plan.isActive,
+      allowed_tools: plan.allowed_tools,
+      chat_profit: plan.chat_profit,
+      image_profit: plan.image_profit,
+      video_profit: plan.video_profit
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm({ 
+      plan_name: '', 
+      period: 'month', 
+      credits_per_period: 100, 
+      amount: '0', 
+      isActive: true,
+      allowed_tools: '["*"]',
+      chat_profit: 0.1,
+      image_profit: 1,
+      video_profit: 2
+    });
+  };
+
+  const onSave = async () => {
+    if (editingId) {
+      await onUpdate(editingId, form);
+    } else {
+      await onCreate();
+    }
+  };
 
   const onCreate = async () => {
     if (!apiBase) return;
@@ -72,44 +208,51 @@ export default function AdminCreditsPage() {
         body: JSON.stringify(form),
       });
       if (res.status === 200) {
-        setForm({ plan_name: '', period: 'month', credits_per_period: 50, amount: '0', isActive: true });
+        setForm({ 
+          plan_name: '', 
+          period: 'month', 
+          credits_per_period: 100, 
+          amount: '0', 
+          isActive: true,
+          allowed_tools: '["*"]',
+          chat_profit: 0.1,
+          image_profit: 1,
+          video_profit: 2
+        });
         await loadPlans();
       } else {
-        setError(t('credits.failedToCreate'));
+        setError("فشل في إنشاء الباقة");
       }
     } catch (e) {
-      setError(t('credits.networkError'));
+      setError("خطأ في الشبكة");
     } finally {
       setSaving(false);
     }
   };
 
-  const onToggleActive = async (plan_id: number, isActive: boolean) => {
+  const onUpdate = async (plan_id: number, data: Partial<CreditPlan>) => {
     if (!apiBase) return;
     setSaving(true);
-    setError(null);
     try {
       const res = await fetch(`${apiBase}/api/credits/plans/${plan_id}`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify({ isActive }),
+        body: JSON.stringify(data),
       });
       if (res.status === 200) {
+        setEditingId(null);
         await loadPlans();
-      } else {
-        setError(t('credits.failedToUpdate'));
       }
     } catch (e) {
-      setError(t('credits.networkError'));
+      setError("فشل في التحديث");
     } finally {
       setSaving(false);
     }
   };
 
   const onDelete = async (plan_id: number) => {
-    if (!apiBase) return;
+    if (!apiBase || !confirm("هل أنت متأكد من حذف هذه الباقة؟")) return;
     setSaving(true);
-    setError(null);
     try {
       const res = await fetch(`${apiBase}/api/credits/plans/${plan_id}`, {
         method: 'DELETE',
@@ -117,290 +260,357 @@ export default function AdminCreditsPage() {
       });
       if (res.status === 200) {
         await loadPlans();
-      } else {
-        setError(t('credits.failedToDelete'));
       }
     } catch (e) {
-      setError(t('credits.networkError'));
+      setError("فشل في الحذف");
     } finally {
       setSaving(false);
     }
   };
 
-  const startEdit = (plan: CreditPlan) => {
-    setEditingId(plan.plan_id);
-    setEditForm({
-      plan_name: plan.plan_name,
-      period: plan.period,
-      credits_per_period: plan.credits_per_period,
-      amount: plan.amount,
-      isActive: plan.isActive,
-      credits_per_image: plan.credits_per_image,
-      tokens_per_credit: plan.tokens_per_credit,
-    });
+  const toggleTool = (currentTools: string, toolId: string) => {
+    let tools = [];
+    try {
+      tools = JSON.parse(currentTools || '[]');
+    } catch {
+      tools = [];
+    }
+
+    if (tools.includes('*')) {
+        // If all tools, and we want to toggle one off, we need to list all others except this one
+        tools = ALL_TOOLS.map(t => t.id).filter(id => id !== toolId);
+    } else if (tools.includes(toolId)) {
+      tools = tools.filter((id: string) => id !== toolId);
+    } else {
+      tools.push(toolId);
+      if (tools.length === ALL_TOOLS.length) tools = ['*'];
+    }
+    return JSON.stringify(tools);
   };
 
-  const saveEdit = async () => {
-    if (!apiBase || editingId == null) return;
-    setSaving(true);
-    setError(null);
+  const isToolChecked = (currentTools: string, toolId: string) => {
     try {
-      const res = await fetch(`${apiBase}/api/credits/plans/${editingId}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(editForm),
-      });
-      if (res.status === 200) {
-        setEditingId(null);
-        setEditForm({});
-        await loadPlans();
-      } else {
-        const text = await res.text();
-        setError(text || t('credits.failedToUpdate'));
-      }
-    } catch (e) {
-      setError(t('credits.networkError'));
-    } finally {
-      setSaving(false);
+      const tools = JSON.parse(currentTools || '[]');
+      return tools.includes('*') || tools.includes(toolId);
+    } catch {
+      return false;
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-
-      {/* Create New Plan Form */}
-      <div className="bg-[#19023790] rounded-xl p-6 text-white mb-6">
-        <h2 className="text-lg font-semibold mb-4">{t('credits.createNewPlan')}</h2>
-        <div className="grid md:grid-cols-6 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-2">{t('credits.planNameLabel')}</label>
-        <input
-              className="w-full px-3 py-2 rounded bg-white   outline-none text-black"
-       
-          value={form.plan_name ?? ''}
-          onChange={(e) => setForm((f) => ({ ...f, plan_name: e.target.value }))}
-        />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">{t('credits.periodLabel')}</label>
-        <select
-              className="w-full px-3 py-1 rounded bg-white  text-black"
-          value={form.period}
-          onChange={(e) => setForm((f) => ({ ...f, period: e.target.value }))}
-        >
-              <option value="day">{t('credits.day')}</option>
-              <option value="month">{t('credits.month')}</option>
-              <option value="year">{t('credits.year')}</option>
-        </select>
-          </div>
-          <div>
-            <label className="block text-sm  font-medium mb-2">{t('credits.creditsLabel')}</label>
-        <input
-          type="number"
-              className="w-full px-3 py-2  rounded bg-white outline-none  text-black"
-              placeholder="0"
-          value={form.credits_per_period ?? 0}
-          onChange={(e) => setForm((f) => ({ ...f, credits_per_period: parseInt(e.target.value || '0') }))}
-        />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">{t('credits.amountLabel')}</label>
-        <input
-              className="w-full px-3 py-2 rounded bg-white  outline-none text-black"
-              placeholder="0.00"
-          value={form.amount ?? ''}
-          onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-        />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">{t('credits.creditsPerImageLabel')}</label>
-            <input
-              type="number"
-              className="w-full px-3 py-2 rounded bg-white  outline-none text-black inner-shadow"
-              placeholder="1"
-              value={form.credits_per_image ?? 1}
-              onChange={(e) => setForm((f) => ({ ...f, credits_per_image: parseInt(e.target.value || '1') }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Tokens per Credit (Chat)</label>
-            <input
-              type="number"
-              className="w-full px-3 py-2 rounded bg-white  outline-none text-black inner-shadow"
-              placeholder="1000"
-              value={form.tokens_per_credit ?? 1000}
-              onChange={(e) => setForm((f) => ({ ...f, tokens_per_credit: parseInt(e.target.value || '1000') }))}
-            />
-            <small className="text-gray-400 text-xs">Default: 1000 (1000 tokens per credit)</small>
-          </div>
+    <div className="p-8  min-h-screen text-white font-sans" dir="rtl">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-900/20">
+                    <ShieldCheck size={28} className="text-white" />
+                </div>
+                <div>
+                    <h1 className="text-3xl font-black tracking-tight">إدارة باقات الذكاء الاصطناعي</h1>
+                    <p className="text-gray-500 text-sm">قم بإنشاء وتعديل خطط الاشتراك ونسب الربح لكل أداة</p>
+                </div>
+            </div>
+            
+            {/* AI Hub Toggle Button */}
+            <button
+              onClick={toggleAiHub}
+              disabled={loadingToggle}
+              className={`flex items-center gap-3 px-6 py-3 rounded-2xl font-bold transition-all shadow-lg ${
+                aiHubEnabled
+                  ? 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white'
+                  : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loadingToggle ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Wand2 size={20} />
+              )}
+              <span>{aiHubEnabled ? 'إخفاء مكتبة AI' : 'إظهار مكتبة AI'}</span>
+            </button>
         </div>
-        <div className="flex gap-3 mt-4">
-          <button
-            className=" bg-primary text-white px-4 py-2 rounded-md"
-            onClick={onCreate}
-            disabled={saving}
-          >
-            {saving ? t('credits.saving') : t('credits.createPlan')}
-          </button>
-          {error && <span className="text-red-300 text-sm">{error}</span>}
-        </div>
-      </div>
 
-      {/* Plans Table */}
-      <div className="bg-[#19023790] rounded-md overflow-hidden">
-        {loading ? (
-          <div className="p-6 text-center text-gray-400">{t('credits.loading')}</div>
-        ) : plans.length === 0 ? (
-          <div className="p-6 text-center text-gray-400">{t('credits.noPlans')}</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#19023790]">
-                <tr>
-                  <th className="px-4 py-3 text-sm font-medium  text-center text-orange font-bold">{t('credits.planNameLabel')}</th>
-                  <th className="px-4 py-3 text-sm font-medium  text-center text-orange font-bold">{t('credits.periodLabel')}</th>
-                  <th className="px-4 py-3 text-sm font-medium text-orange text-center font-bold">{t('credits.creditsLabel')}</th>
-                  <th className="px-4 py-3 text-sm font-medium  text-center text-orange font-bold">{t('credits.amountLabel')}</th>
-                  <th className="px-4 py-3 text-sm font-medium  text-center text-orange font-bold">{t('credits.creditsPerImageLabel')}</th>
-                  <th className="px-4 py-3 text-sm font-medium  text-center text-orange font-bold">Tokens/Credit</th>
-                  {/* <th className="px-4 py-3 text-left text-sm font-medium text-white text-center">{t('credits.statusLabel')}</th> */}
-                  <th className="px-4 py-3 text-sm font-medium  text-center text-orange font-bold">{t('credits.actionsLabel')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#2b1a40]">
-                {plans.map((p) => (
-                  <tr key={p.plan_id} className="hover:bg-[#2b1a40]/50">
-                    {editingId === p.plan_id ? (
-                      <>
-                        <td className="px-4 py-3">
-                          <input
-                            className="w-full rounded-md p-2 bg-[#2b1a40] text-white text-sm"
-                            value={editForm.plan_name ?? ''}
-                            onChange={(e) => setEditForm((f) => ({ ...f, plan_name: e.target.value }))}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            className="w-full rounded-md p-2 bg-[#2b1a40] text-white text-sm"
-                            value={editForm.period ?? 'month'}
-                            onChange={(e) => setEditForm((f) => ({ ...f, period: e.target.value }))}
-                          >
-                            <option value="day">{t('credits.day')}</option>
-                            <option value="month">{t('credits.month')}</option>
-                            <option value="year">{t('credits.year')}</option>
-                          </select>
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            className="w-full rounded-md p-2 bg-[#2b1a40] text-white text-sm"
-                            value={editForm.credits_per_period ?? 0}
-                            onChange={(e) => setEditForm((f) => ({ ...f, credits_per_period: parseInt(e.target.value) || 0 }))}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            className="w-full rounded-md p-2 bg-[#2b1a40] text-white text-sm"
-                            value={editForm.amount ?? ''}
-                            onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            className="w-full rounded-md p-2 bg-[#2b1a40] text-white text-sm"
-                            value={editForm.credits_per_image ?? 1}
-                            onChange={(e) => setEditForm((f) => ({ ...f, credits_per_image: parseInt(e.target.value) || 1 }))}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            className="w-full rounded-md p-2 bg-[#2b1a40] text-white text-sm"
-                            value={editForm.tokens_per_credit ?? 1000}
-                            onChange={(e) => setEditForm((f) => ({ ...f, tokens_per_credit: parseInt(e.target.value) || 1000 }))}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={!!editForm.isActive}
-                              onChange={(e) => setEditForm((f) => ({ ...f, isActive: e.target.checked }))}
-                            />
-                            {t('credits.isActive')}
-                          </label>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={saveEdit}
-                              disabled={saving}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                            >
-                              {saving ? t('credits.saving') : t('credits.save')}
-                            </button>
-                            <button
-                              onClick={() => { setEditingId(null); setEditForm({}); }}
-                              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"
-                            >
-                              {t('credits.cancel')}
-                            </button>
-              </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-4 py-3 text-white font-medium text-center">{p.plan_name}</td>
-                        <td className="px-4 py-3 text-white text-center">{p.period}</td>
-                        <td className="px-4 py-3 text-white text-center">{p.credits_per_period}</td>
-                        <td className="px-4 py-3 text-white text-center">${p.amount}</td>
-                        <td className="px-4 py-3 text-white text-center">{p.credits_per_image}</td>
-                        <td className="px-4 py-3 text-white text-center">{p.tokens_per_credit || 1000}</td>
-                        {/* <td className="px-4 py-3 text-center">
-                <button
-                            className={`px-3 py-1 rounded text-sm ${p.isActive ? 'bg-green-600 text-white' : 'bg-gray-600 text-white'}`}
-                  onClick={() => onToggleActive(p.plan_id, !p.isActive)}
-                  disabled={saving}
-                >
-                            {p.isActive ? t('credits.active') : t('credits.inactive')}
-                          </button>
-                        </td> */}
-                        <td className="px-4 py-3 flex justify-center">
-                          <div className="flex gap-2">
-                            <button
-                              className="px-1 py-1 rounded bg-primary text-white text-sm hover:bg-blue-700"
-                              onClick={() => startEdit(p)}
-                              disabled={saving}
-                            >
-                              {t('credits.edit')}
-                </button>
-                <button
-                              className="px-1 py-1 rounded bg-red text-white text-sm hover:bg-red-700"
-                  onClick={() => onDelete(p.plan_id)}
-                  disabled={saving}
-                >
-                              {t('credits.delete')}
-                </button>
-              </div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Global Error Handle */}
+        {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 animate-fade-in">
+                <AlertCircle size={20} />
+                <span className="text-sm font-bold">{error}</span>
+                <button onClick={() => setError(null)} className="mr-auto"><X size={16} /></button>
             </div>
         )}
+
+        {/* Create Form Section */}
+        <div className="grid lg:grid-cols-3 gap-8 mb-12">
+            
+            {/* Basic Info */}
+            <div className="lg:col-span-2 space-y-6">
+                <div className="gradient-border-analysis border border-white/5 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-purple-600/10 transition-all duration-700"></div>
+                    <h2 className="text-xl font-bold mb-6 flex items-center gap-3">
+                        <Settings2 size={20} className="text-purple-400" />
+                        <span>بيانات الباقة الأساسية</span>
+                    </h2>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mr-2">اسم الباقة</label>
+                            <input 
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:border-purple-500/50 outline-none transition-all font-bold placeholder:text-gray-700"
+                                placeholder="  "
+                                value={form.plan_name}
+                                onChange={e => setForm({...form, plan_name: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mr-2"> مدة الاشتراك</label>
+                            <select 
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:border-purple-500/50 outline-none transition-all font-bold appearance-none"
+                                value={form.period}
+                                onChange={e => setForm({...form, period: e.target.value})}
+                            >
+                                <option value="day" className="bg-[#141414]">يومي</option>
+                                <option value="month" className="bg-[#141414]">شهري</option>
+                                <option value="year" className="bg-[#141414]">سنوي</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mr-2">إجمالي النقاط (Credits)</label>
+                            <input 
+                                type="number"
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:border-purple-500/50 outline-none transition-all font-bold"
+                                value={form.credits_per_period}
+                                onChange={e => setForm({...form, credits_per_period: parseInt(e.target.value) || 0})}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest mr-2">سعر الباقة ($)</label>
+                            <input 
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:border-purple-500/50 outline-none transition-all font-bold placeholder:text-gray-700"
+                                placeholder="0.00"
+                                value={form.amount}
+                                onChange={e => setForm({...form, amount: e.target.value})}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="mt-10 grid md:grid-cols-3 gap-6">
+                         <div className="p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 group/p shadow-inner transition-all hover:border-blue-500/20">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                    <MessageSquare size={16} />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-gray-200">ربح الشات</span>
+                            </div>
+                            <input 
+                                type="number" step="0.01"
+                                className="w-full bg-transparent text-xl font-black focus:outline-none text-center"
+                                value={form.chat_profit}
+                                onChange={e => setForm({...form, chat_profit: parseFloat(e.target.value) || 0})}
+                            />
+                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ الكريديت الفعلي من جوجل</p>
+                         </div>
+
+                         <div className="p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 group/p shadow-inner transition-all hover:border-purple-500/20">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400">
+                                    <ImageIcon size={16} />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-gray-200">ربح الصور</span>
+                            </div>
+                            <input 
+                                type="number" step="0.1"
+                                className="w-full bg-transparent text-xl font-black focus:outline-none text-center"
+                                value={form.image_profit}
+                                onChange={e => setForm({...form, image_profit: parseFloat(e.target.value) || 0})}
+                            />
+                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ الكريديت الفعلي من جوجل</p>
+                         </div>
+
+                         <div className="p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 group/p shadow-inner transition-all hover:border-indigo-500/20">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                    <Video size={16} />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-gray-200">ربح الفيديو</span>
+                            </div>
+                            <input 
+                                type="number" step="0.1"
+                                className="w-full bg-transparent text-xl font-black focus:outline-none text-center"
+                                value={form.video_profit}
+                                onChange={e => setForm({...form, video_profit: parseFloat(e.target.value) || 0})}
+                            />
+                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ الكريديت الفعلي من جوجل</p>
+                         </div>
+                    </div>
+
+                    <div className="flex gap-4 mt-10">
+                        <button 
+                            onClick={onSave}
+                            disabled={saving}
+                            className={`flex-1 p-5 ${editingId ? 'bg-blue-600 hover:bg-purple-700' : 'bg-white text-black'} rounded-[2rem] font-black text-lg flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl disabled:opacity-50`}
+                        >
+                            {saving ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> : (editingId ? <Save size={24} /> : <Plus size={24} />)}
+                            <span>{editingId ? 'تحديث الباقة' : 'إنشاء الباقة الآن'}</span>
+                        </button>
+                        
+                        {editingId && (
+                            <button 
+                                onClick={cancelEdit}
+                                className="px-8 p-5 bg-red-500 hover:bg-red-500/40 text-white rounded-[2rem] font-black transition-all"
+                            >
+                                إلغاء
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Allowed Tools Selector */}
+            <div className="gradient-border-analysis border border-white/5 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[800px]">
+                <h2 className="text-xl font-bold mb-6 flex items-center gap-3">
+                    <Wand2 size={20} className="text-indigo-400" />
+                    <span>الأدوات المتاحة للتفعيل</span>
+                </h2>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+                    {ALL_TOOLS.map(tool => (
+                        <div 
+                            key={tool.id}
+                            onClick={() => setForm({...form, allowed_tools: toggleTool(form.allowed_tools!, tool.id)})}
+                            className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all border ${isToolChecked(form.allowed_tools!, tool.id) ? 'bg-white/10 border-indigo-500/30' : 'bg-orange-500/10 border-white/5 hover:border-white/10'}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-xl ${tool.category === 'chat' ? 'bg-purple-500/10 text-purple-400' : tool.category === 'video' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                                    {tool.category === 'chat' ? <MessageSquare size={16} /> : tool.category === 'video' ? <Video size={16} /> : <ImageIcon size={16} />}
+                                </div>
+                                <span className={`text-sm font-bold ${isToolChecked(form.allowed_tools!, tool.id) ? 'text-white' : 'text-gray-500'}`}>{tool.name}</span>
+                            </div>
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isToolChecked(form.allowed_tools!, tool.id) ? 'bg-indigo-500 border-indigo-500' : 'border-white/10'}`}>
+                                {isToolChecked(form.allowed_tools!, tool.id) && <CheckCircle2 size={12} className="text-white" />}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-white/5 flex gap-4">
+                    <button 
+                         onClick={() => setForm({...form, allowed_tools: '["*"]'})}
+                         className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 transition-all font-sans"
+                    >
+                         تفعيل الجميع
+                    </button>
+                    <button 
+                         onClick={() => setForm({...form, allowed_tools: '[]'})}
+                         className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 transition-all"
+                    >
+                         إلغاء الجميع
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {/* Plans Table */}
+        <div className="bg-[#141414] border border-white/5 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden">
+            <h2 className="text-xl font-bold mb-8">الباقات الحالية</h2>
+            
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-50">
+                    <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="font-bold">جاري تحميل الباقات...</p>
+                </div>
+            ) : plans.length === 0 ? (
+                <div className="py-20 text-center text-gray-600 font-bold">لا يوجد باقات مضافة حالياً</div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-right">
+                        <thead>
+                            <tr className="border-b border-white/5">
+                                <th className="pb-6 text-[10px] font-black uppercase text-gray-500 tracking-widest">اسم الباقة</th>
+                                <th className="pb-6 text-[10px] font-black uppercase text-gray-500 tracking-widest">المدة</th>
+                                <th className="pb-6 text-[10px] font-black uppercase text-gray-500 tracking-widest">النقاط</th>
+                                <th className="pb-6 text-[10px] font-black uppercase text-gray-500 tracking-widest">السعر</th>
+                                <th className="pb-6 text-[10px] font-black uppercase text-gray-500 tracking-widest">هامش الربح (شات/صورة/فيديو)</th>
+                                <th className="pb-6 text-[10px] font-black uppercase text-gray-500 tracking-widest">الحالة</th>
+                                <th className="pb-6 text-[10px] font-black uppercase text-gray-500 tracking-widest">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {plans.map(p => (
+                                <tr key={p.plan_id} className="group hover:bg-white/[0.01] transition-all">
+                                    <td className="py-6 pr-4 font-black">{p.plan_name}</td>
+                                    <td className="py-6 text-gray-400 font-bold">{p.period === 'month' ? 'شهري' : p.period === 'year' ? 'سنوي' : 'يومي'}</td>
+                                    <td className="py-6 text-purple-400 font-black">{p.credits_per_period}</td>
+                                    <td className="py-6 font-black text-emerald-400">${p.amount}</td>
+                                    <td className="py-6 font-bold text-gray-500">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-blue-500">+{p.chat_profit}</span>
+                                            <span>/</span>
+                                            <span className="text-purple-500">+{p.image_profit}</span>
+                                            <span>/</span>
+                                            <span className="text-indigo-500">+{p.video_profit}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-6">
+                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${p.isActive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${p.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                            <span>{p.isActive ? 'نشطة' : 'متوقفة'}</span>
+                                        </div>
+                                    </td>
+                                    <td className="py-6">
+                                        <div className="flex items-center gap-3 font-bold">
+                                            <button 
+                                                onClick={() => startEdit(p)}
+                                                className="p-3 bg-purple-500/10 text-purple-500 rounded-2xl hover:bg-purple-500 transition-all hover:text-white"
+                                                title="تعديل الباقة"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+                                            <button 
+                                                onClick={() => onDelete(p.plan_id)}
+                                                className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 transition-all hover:text-white"
+                                                title="حذف الباقة"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
       </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
-
-
-
-
-
-
-
-

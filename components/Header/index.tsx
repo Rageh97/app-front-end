@@ -6,7 +6,7 @@ import DropdownUser from "./DropdownUser";
 import Image from "next/image";
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import nexusLogo from "@/public/images/nexus-logo.png"
-import { Bell, ChevronDown, Globe, Menu, User, X, House, Crown, ShoppingBag, ShoppingCart, Vibrate, ShieldCheck, ShieldUser, LogOut } from "lucide-react";
+import { Bell, ChevronDown, Globe, Menu, User, X, House, Crown, ShoppingBag, ShoppingCart, Vibrate, ShieldCheck, ShieldUser, LogOut, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGetDevices } from "@/hooks/useGetDevices";
 

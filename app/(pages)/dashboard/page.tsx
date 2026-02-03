@@ -64,22 +64,31 @@ const Dashboard: FunctionComponent = () => {
   
   // Media Hub Visibility State
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+  const [isAiHubEnabled, setIsAiHubEnabled] = useState(true);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await axios.get("/api/admin/settings/media_hub_enabled");
-        setIsMediaHubEnabled(String(res.data.value) !== 'false');
+        const [mediaRes, aiRes] = await Promise.all([
+          axios.get("/api/admin/settings/media_hub_enabled"),
+          axios.get("/api/admin/settings/ai_hub_enabled")
+        ]);
+        setIsMediaHubEnabled(String(mediaRes.data.value) !== 'false');
+        setIsAiHubEnabled(String(aiRes.data.value) !== 'false');
       } catch (error) {
-        console.error("Failed to fetch media hub setting:", error);
+        console.error("Failed to fetch settings:", error);
       }
     };
     fetchSettings();
 
     const handleSettingsChange = (event: Event) => {
       const customEvent = event as CustomEvent;
-      if (customEvent.detail && customEvent.detail.key === 'media_hub_enabled') {
-        setIsMediaHubEnabled(customEvent.detail.value);
+      if (customEvent.detail) {
+        if (customEvent.detail.key === 'media_hub_enabled') {
+          setIsMediaHubEnabled(customEvent.detail.value);
+        } else if (customEvent.detail.key === 'ai_hub_enabled') {
+          setIsAiHubEnabled(customEvent.detail.value);
+        }
       }
     };
 
@@ -426,6 +435,84 @@ useEffect(() => {
       )}
       {/* ............................... */}
 
+      {/* AI Tools Hub Swiper Section */}
+      {(isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager") && (
+      <div className="mb-0 px-1 lg:px-5 mt-5">
+            {/* Swiper Loop Fix */}
+            {(() => {
+               const aiTools = [
+                   { id: 'image', name: 'انشاء صور احترافية', path: '/ai', img: '/images/انشاء الصور.png' },
+                   { id: 'video', name: 'انشاء فيديوهات احترافية', path: '/ai', img: '/images/تاثيرات الفيديو.png' },
+                   { id: 'chat', name: 'نيكسوس تشات برو', path: '/ai', img: '/images/chat.jpg' },
+                   { id: 'image-to-text', name: 'استخراج النص من الصورة', path: '/ai', img: '/images/الصورة لنص.png' },
+                   { id: 'bg-remove', name: 'حذف الخلفية', path: '/ai', img: '/images/ازالة الخلفية.png' },
+                   { id: 'restore', name: 'ترميم الصور', path: '/ai', img: '/images/ترميم الصور .jpeg' },
+                   { id: 'avatar', name: 'صانع الأفاتار', path: '/ai', img: '/images/انشاء افاتار.png' },
+                   { id: 'nano', name: 'نانو بانانا برو', path: '/ai', img: '/images/Whisk_d2a441bc8622fa5b2774cf54a715f70feg.png' },
+                   { id: 'product', name: 'نماذج لمنتجك', path: '/ai', img: '/images/نماذج لمنتجك.png' },
+                   { id: 'colorize', name: 'تلوين الصور', path: '/ai', img: '/images/تلوين الصورة.png' },
+                   { id: 'edit', name: 'المحرر الذكي', path: '/ai', img: '/images/تعديل الصور.png' },
+                   { id: 'long-video', name: 'انشاء فيديو طويل', path: '/ai', img: 'https://i.pinimg.com/736x/cb/6f/c9/cb6fc9278dcb1d456a88e1f21325b05c.jpg' },
+                   { id: 'sketch', name: 'رسم إلى صورة', path: '/ai', img: '/images/رسم الصور.png' },
+                   { id: 'logo', name: 'صانع الشعارات', path: '/ai', img: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=1000' },
+               ];
+
+               // Ensure we have enough items for the largest breakpoint (6 slides)
+               let loopedTools = [...aiTools, ...aiTools];
+               
+               return (
+                <Swiper
+                  key={`ai-tools-${i18n.language}`} 
+                  dir={i18n.language === "ar" ? "rtl" : "ltr"}
+                  modules={[Navigation, Autoplay]}
+                  spaceBetween={15}
+                  slidesPerView={2}
+                  loop={true}
+                  autoplay={{ delay: 2500, disableOnInteraction: false }}
+                  breakpoints={{
+                    640: { slidesPerView: 3 },
+                    768: { slidesPerView: 4 },
+                    1024: { slidesPerView: 5 },
+                    1280: { slidesPerView: 6 },
+                  }}
+                  className="w-full py-4 pl-1"
+                >
+                  {loopedTools.map((tool, index) => (
+                    <SwiperSlide key={`${tool.id}-${index}`}>
+                      <Link href={tool.path}>
+                        <div 
+                          className="cursor-pointer h-40 rounded-2xl relative overflow-hidden group shadow-lg transition-all duration-300 hover:shadow-[#7c3aed]/30"
+                        >
+                          {/* Background Image */}
+                          <img 
+                            src={tool.img} 
+                            alt={tool.name} 
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          
+                          {/* Overlay Gradient */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#4c00b080] via-black/20 to-transparent group-hover:via-black/50 transition-colors duration-300"></div>
+
+                          {/* Content */}
+                          <div className="absolute inset-0 flex flex-col justify-end p-4">
+                              <h3 className="text-white font-bold text-lg leading-tight drop-shadow-md transform translate-y-0 transition-transform duration-300">
+                                {tool.name}
+                              </h3>
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse"></span>
+                                <p className="text-gray-200 text-[10px] font-bold">AI Powered</p>
+                              </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+               );
+            })()}
+      </div>
+      )}
+
       {/* Media Categories Swiper Section */}
       {(isMediaHubEnabled || data?.userRole === "admin" || data?.userRole === "manager") && mediaCategories.length > 0 && (
         <div className="mb-8 px-1 lg:px-5 mt-5">
@@ -621,7 +708,7 @@ useEffect(() => {
 
       {/* ......... */}
 
-      <div className="flex flex-wrap w-full gap-2 justify-center px-3  md:px-0">
+      <div className="flex flex-wrap w-full gap-6 justify-center px-3  md:px-0">
   {isSearching ? (
     <div className="col-span-full text-center text-white">{t('dashboard.searching')}</div>
   ) : showNoResults ? (

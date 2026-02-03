@@ -252,6 +252,35 @@ const Dashboard: FunctionComponent = () => {
         </div>
       )}
 
+      {/* AI Credit Plans Section */}
+      {data?.userCreditsData?.filter((c: any) => c.remaining_credits > 0).map((credit: any, index: number) => {
+          return (
+            <div key={`ai-plan-${index}`} className="mb-6">
+              <Panel
+                title={`${credit.plan_name} (AI Credits)`}
+                sideActions={
+                  <>
+                  <span className="text-white text-xs md:text-lg">{t('subscriptions.planExpiredAt')}</span>{" "}
+                  <span className="text-[#00c48c] text-xs md:text-lg">{fullDateTimeFormat(credit.endedAt)}</span>
+                  </>
+                }
+                containerClassName="py-4 inner-shadow rounded-xl bg-[linear-gradient(135deg,#1e1b4b,#312e81)]"
+              >
+                <div className="flex flex-col items-center justify-center py-4 text-center text-white">
+                    <h3 className="text-2xl md:text-3xl font-black text-[#00c48c] mb-1">{credit.remaining_credits}</h3>
+                    <p className="text-xs opacity-70 uppercase tracking-widest">{t('subscriptions.remainingCredits')}</p>
+                    <div className="w-full max-w-xs h-1.5 bg-white/10 rounded-full mt-3 overflow-hidden">
+                        <div 
+                          className="h-full bg-[#00c48c] transition-all duration-300" 
+                          style={{ width: `${Math.min((credit.remaining_credits / credit.total_credits) * 100, 100)}%` }}
+                        ></div>
+                    </div>
+                </div>
+              </Panel>
+            </div>
+          );
+      })}
+
 
       {data?.userPlansData?.filter((item: any) => item.plan_name === "vip")
         .length !== 0 ? (

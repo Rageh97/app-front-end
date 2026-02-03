@@ -424,17 +424,20 @@ const GlobalMenu: FunctionComponent = () => {
 
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
   const [isFontsHubEnabled, setIsFontsHubEnabled] = useState(true);
+  const [isAiHubEnabled, setIsAiHubEnabled] = useState(true);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const [mediaRes, fontsRes] = await Promise.all([
+        const [mediaRes, fontsRes, aiRes] = await Promise.all([
           axios.get("/api/admin/settings/media_hub_enabled"),
-          axios.get("/api/admin/settings/fonts_hub_enabled")
+          axios.get("/api/admin/settings/fonts_hub_enabled"),
+          axios.get("/api/admin/settings/ai_hub_enabled")
         ]);
         
         setIsMediaHubEnabled(String(mediaRes.data.value) !== 'false');
         setIsFontsHubEnabled(String(fontsRes.data.value) !== 'false');
+        setIsAiHubEnabled(String(aiRes.data.value) !== 'false');
       } catch (error) {
         console.error("Failed to fetch settings:", error);
       }
@@ -450,6 +453,8 @@ const GlobalMenu: FunctionComponent = () => {
           setIsMediaHubEnabled(customEvent.detail.value);
         } else if (customEvent.detail.key === 'fonts_hub_enabled') {
           setIsFontsHubEnabled(customEvent.detail.value);
+        } else if (customEvent.detail.key === 'ai_hub_enabled') {
+          setIsAiHubEnabled(customEvent.detail.value);
         }
       }
     };
@@ -575,11 +580,11 @@ const hasActiveSubscription = () => {
           
           },
           {
-            completeHref: "/ai/text-to-image",
+            completeHref: "/ai",
             name: "Nexus Ai",
             icon: "Ai",
             children: "",
-            permission: true,
+            permission: isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },
             {
             completeHref: "/media-hub",
