@@ -156,9 +156,20 @@ export default function NanoBananaPage() {
       setGenerationProgress(100);
       
       if (res.status === 200) {
+        const data = await res.json();
         toast.success('تم التوليد بنجاح!');
+        
+        // Add newest image directly to UI
+        const newImg = {
+          id: data.image_id,
+          url: data.image_url || data.cloudinary_url,
+          date: new Date().toISOString(),
+          prompt: prompt.trim()
+        };
+        setUserImages(prev => [newImg, ...prev]);
+        setSelectedImage(newImg); // Open the preview automatically
+        
         fetchBalance();
-        fetchUserImages();
       } else {
         setError(await res.text() || 'فشلت العملية');
       }
