@@ -29,10 +29,19 @@ type CreditsRecord = {
 };
 
 const RESIZE_OPTIONS = [
-    { id: '1920x1080', name: 'أفقي (YouTube)', icon: <Monitor size={16} />, desc: '16:9 - لليوتيوب' },
-    { id: '1080x1920', name: 'طولي (Reels)', icon: <Smartphone size={16} />, desc: '9:16 - تيك توك' },
-    { id: '1080x1080', name: 'مربع (Feed)', icon: <Square size={16} />, desc: '1:1 - فيسبوك' },
+    { id: '1920x1080', name: 'أفقي (YouTube)', iconType: 'monitor', desc: '16:9 - لليوتيوب' },
+    { id: '1080x1920', name: 'طولي (Reels)', iconType: 'smartphone', desc: '9:16 - تيك توك' },
+    { id: '1080x1080', name: 'مربع (Feed)', iconType: 'square', desc: '1:1 - فيسبوك' },
 ];
+
+const getResizeIcon = (iconType: string) => {
+    switch(iconType) {
+        case 'monitor': return <Monitor size={16} />;
+        case 'smartphone': return <Smartphone size={16} />;
+        case 'square': return <Square size={16} />;
+        default: return <Monitor size={16} />;
+    }
+};
 
 export default function VideoResizePage() {
   const [balance, setBalance] = useState<CreditsRecord | null>(null);
@@ -48,6 +57,7 @@ export default function VideoResizePage() {
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
 
@@ -319,7 +329,7 @@ export default function VideoResizePage() {
                                 }`}
                              >
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${dimensions === opt.id ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
-                                    {opt.icon}
+                                    {getResizeIcon(opt.iconType)}
                                 </div>
                                 <div className="text-right">
                                     <div className="text-[11px] font-black">{opt.name}</div>
