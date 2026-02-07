@@ -364,7 +364,7 @@ export default function VideoGenerationPage() {
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
             {/* Control Sidebar */}
-            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto no-scrollbar flex flex-col shrink-0 order-1">
                 <div className="p-4 space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">

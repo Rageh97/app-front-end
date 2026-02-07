@@ -102,6 +102,7 @@ export const IMAGE_MODELS: AIModel[] = [
 
 export const VIDEO_MODELS: VideoModel[] = [
   // Google Veo 3.1 Ultra (Preview)
+  // Vertex AI Veo supports: 4, 6, 8 seconds for text-to-video
   {
     id: 'veo-3.1-generate-preview',
     name: 'Veo Ultra',
@@ -111,8 +112,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     speed: 'slow',
     hasAudio: true,
     baseCostCredits: 125,
-    creditsByDuration: { 5: 125, 8: 140, 15: 175 },
-    supportedDurations: [5, 8, 15],
+    creditsByDuration: { 4: 115, 6: 125, 8: 140 },
+    supportedDurations: [4, 6, 8],
     isPremium: true,
     badge: 'Ultra',
   },
@@ -125,8 +126,8 @@ export const VIDEO_MODELS: VideoModel[] = [
     speed: 'slow',
     hasAudio: true,
     baseCostCredits: 120,
-    creditsByDuration: { 5: 120, 8: 130, 15: 155 },
-    supportedDurations: [5, 8, 15],
+    creditsByDuration: { 4: 110, 6: 120, 8: 130 },
+    supportedDurations: [4, 6, 8],
     isPremium: true,
   },
   {
@@ -138,23 +139,40 @@ export const VIDEO_MODELS: VideoModel[] = [
     speed: 'fast',
     hasAudio: true,
     baseCostCredits: 110,
-    creditsByDuration: { 5: 110, 8: 115, 15: 125 },
-    supportedDurations: [5, 8, 15],
+    creditsByDuration: { 4: 100, 6: 110, 8: 115 },
+    supportedDurations: [4, 6, 8],
     badge: '⚡',
   },
   // OpenAI Sora 2.0
+  // Sora 2 API supports: 4, 8, 12 seconds
   {
     id: 'sora',
     name: 'Sora 2.0',
     provider: 'openai',
-    description: 'OpenAI - قمة الابتكار السينمائي محلياً',
+    description: 'OpenAI - توليد فيديو احترافي',
     quality: 'ultra',
     speed: 'slow',
     hasAudio: false,
     baseCostCredits: 150,
-    creditsByDuration: { 5: 150, 10: 190, 15: 230, 20: 260 },
-    supportedDurations: [5, 10, 15, 20],
+    creditsByDuration: { 4: 150, 8: 190, 12: 230 },
+    supportedDurations: [4, 8, 12],
     badge: 'OpenAI',
+    isPremium: true,
+  },
+  // OpenAI Sora 2 Pro - Extended durations
+  // Sora 2 Pro API supports: 5, 10, 15, 20 seconds
+  {
+    id: 'sora-2-pro',
+    name: 'Sora 2 Pro',
+    provider: 'openai',
+    description: 'OpenAI - فيديوهات أطول حتى 20 ثانية',
+    quality: 'ultra',
+    speed: 'slow',
+    hasAudio: false,
+    baseCostCredits: 180,
+    creditsByDuration: { 5: 180, 10: 220, 15: 280, 20: 350 },
+    supportedDurations: [5, 10, 15, 20],
+    badge: 'Pro',
     isPremium: true,
   },
 ];
@@ -203,6 +221,7 @@ export const NANO_MODELS: AIModel[] = [
 // ═══════════════════════════════════════════════════════════════════
 
 export const LONG_VIDEO_MODELS: VideoModel[] = [
+  // Vertex AI Veo supports: 4, 6, 8 seconds for text-to-video
   {
     id: 'veo-3.1-generate-preview',
     name: 'Veo Ultra',
@@ -212,8 +231,8 @@ export const LONG_VIDEO_MODELS: VideoModel[] = [
     speed: 'slow',
     hasAudio: true,
     baseCostCredits: 125,
-    creditsByDuration: { 5: 125, 8: 140, 15: 175 },
-    supportedDurations: [5, 8, 15],
+    creditsByDuration: { 4: 115, 6: 125, 8: 140 },
+    supportedDurations: [4, 6, 8],
     isPremium: true,
     badge: 'Ultra',
   },
@@ -226,8 +245,8 @@ export const LONG_VIDEO_MODELS: VideoModel[] = [
     speed: 'slow',
     hasAudio: true,
     baseCostCredits: 120,
-    creditsByDuration: { 5: 120, 8: 130, 15: 155 },
-    supportedDurations: [5, 8, 15],
+    creditsByDuration: { 4: 110, 6: 120, 8: 130 },
+    supportedDurations: [4, 6, 8],
     isPremium: true,
   },
   {
@@ -239,22 +258,38 @@ export const LONG_VIDEO_MODELS: VideoModel[] = [
     speed: 'fast',
     hasAudio: true,
     baseCostCredits: 110,
-    creditsByDuration: { 5: 110, 8: 115, 15: 125 },
-    supportedDurations: [5, 8, 15],
+    creditsByDuration: { 4: 100, 6: 110, 8: 115 },
+    supportedDurations: [4, 6, 8],
     badge: '⚡',
   },
+  // Sora API supports: 4, 8, 12 seconds
   {
     id: 'sora',
     name: 'Sora 2.0',
     provider: 'openai',
-    description: 'OpenAI - قمة الابتكار السينمائي محلياً',
+    description: 'OpenAI - توليد فيديو احترافي',
     quality: 'ultra',
     speed: 'slow',
     hasAudio: false,
     baseCostCredits: 150,
-    creditsByDuration: { 5: 150, 10: 190, 15: 230, 20: 260 },
-    supportedDurations: [5, 10, 15, 20],
+    creditsByDuration: { 4: 150, 8: 190, 12: 230 },
+    supportedDurations: [4, 8, 12],
     badge: 'OpenAI',
+    isPremium: true,
+  },
+  // Sora 2 Pro API supports: 5, 10, 15, 20 seconds
+  {
+    id: 'sora-2-pro',
+    name: 'Sora 2 Pro',
+    provider: 'openai',
+    description: 'OpenAI - فيديوهات أطول حتى 20 ثانية',
+    quality: 'ultra',
+    speed: 'slow',
+    hasAudio: false,
+    baseCostCredits: 180,
+    creditsByDuration: { 5: 180, 10: 220, 15: 280, 20: 350 },
+    supportedDurations: [5, 10, 15, 20],
+    badge: 'Pro',
     isPremium: true,
   },
 ];
@@ -264,6 +299,8 @@ export const LONG_VIDEO_MODELS: VideoModel[] = [
 // ═══════════════════════════════════════════════════════════════════
 
 export const MOTION_MODELS: VideoModel[] = [
+  // IMPORTANT: Vertex AI Veo STRICTLY requires 8 seconds for image-to-video (motion/reference images)
+  // This is a hard API requirement - 5s or 6s will FAIL
   {
     id: 'veo-3.1-generate-preview',
     name: 'Veo Ultra',
@@ -272,9 +309,9 @@ export const MOTION_MODELS: VideoModel[] = [
     quality: 'ultra',
     speed: 'slow',
     hasAudio: true,
-    baseCostCredits: 125,
-    creditsByDuration: { 5: 125, 8: 140, 15: 175 },
-    supportedDurations: [5, 8, 15],
+    baseCostCredits: 140,
+    creditsByDuration: { 8: 140 },
+    supportedDurations: [8],
     isPremium: true,
     badge: 'Ultra',
   },
@@ -286,9 +323,9 @@ export const MOTION_MODELS: VideoModel[] = [
     quality: 'ultra',
     speed: 'slow',
     hasAudio: true,
-    baseCostCredits: 120,
-    creditsByDuration: { 5: 120, 8: 130, 15: 155 },
-    supportedDurations: [5, 8, 15],
+    baseCostCredits: 130,
+    creditsByDuration: { 8: 130 },
+    supportedDurations: [8],
     isPremium: true,
   },
   {
@@ -299,23 +336,39 @@ export const MOTION_MODELS: VideoModel[] = [
     quality: 'high',
     speed: 'fast',
     hasAudio: true,
-    baseCostCredits: 110,
-    creditsByDuration: { 5: 110, 8: 115, 15: 125 },
-    supportedDurations: [5, 8, 15],
+    baseCostCredits: 115,
+    creditsByDuration: { 8: 115 },
+    supportedDurations: [8],
     badge: '⚡',
   },
+  // Sora API supports: 4, 8, 12 seconds for motion/image input
   {
     id: 'sora',
     name: 'Sora 2.0',
     provider: 'openai',
-    description: 'تحريك الصور بذكاء Sora الخارق',
+    description: 'تحريك الصور بذكاء Sora',
     quality: 'ultra',
     speed: 'slow',
     hasAudio: false,
     baseCostCredits: 150,
-    creditsByDuration: { 5: 150, 10: 190, 15: 230, 20: 260 },
-    supportedDurations: [5, 10, 15, 20],
+    creditsByDuration: { 4: 150, 8: 190, 12: 230 },
+    supportedDurations: [4, 8, 12],
     badge: 'OpenAI',
+    isPremium: true,
+  },
+  // Sora 2 Pro API supports: 5, 10, 15, 20 seconds
+  {
+    id: 'sora-2-pro',
+    name: 'Sora 2 Pro',
+    provider: 'openai',
+    description: 'تحريك الصور - فيديوهات أطول',
+    quality: 'ultra',
+    speed: 'slow',
+    hasAudio: false,
+    baseCostCredits: 180,
+    creditsByDuration: { 5: 180, 10: 220, 15: 280, 20: 350 },
+    supportedDurations: [5, 10, 15, 20],
+    badge: 'Pro',
     isPremium: true,
   },
 ];
@@ -400,6 +453,7 @@ export function syncVideoWithDynamicPricing(
     const updated = JSON.parse(JSON.stringify(m)); // Deep clone
     let modelKey = updated.id.includes('preview') || updated.id.includes('ultra') ? 'veo-ultra' :
                    updated.id.includes('fast') ? 'veo-fast' :
+                   updated.id === 'sora-2-pro' ? 'sora-pro' :
                    updated.id.includes('sora') ? 'sora' : 'veo-pro';
     
     // Check for generic price override (Base Cost)
@@ -424,7 +478,8 @@ export function syncVideoWithDynamicPricing(
         const dPrice = dynamicPrices[`${modelKey}-${dur}`];
         if (dPrice !== undefined && dPrice !== null) {
           updated.creditsByDuration[parseInt(dur)] = dPrice;
-          if (parseInt(dur) === 5) updated.baseCostCredits = dPrice;
+          // Use shortest duration as base cost (4 for Veo/Sora now)
+          if (parseInt(dur) === 4) updated.baseCostCredits = dPrice;
         }
       });
     }
