@@ -370,6 +370,7 @@ export default function ChatPage() {
     return null;
   };
 
+  
   const confirmDeleteThread = async () => {
     if (!threadToDelete) return;
     setIsDeletingThread(true);
