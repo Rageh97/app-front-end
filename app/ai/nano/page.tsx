@@ -137,7 +137,7 @@ export default function NanoBananaPage() {
         const data = await res.json();
         if (data.success) {
           setUserImages(data.images.map((img: any) => ({
-            id: img.image_id, url: img.image_url || img.cloudinary_url, date: img.created_at, prompt: img.prompt
+            id: img.image_id, url: img.image_url || img.cloudinary_url, date: img.created_at, prompt: img.prompt, is_public: img.is_public
           })));
         }
       }
@@ -245,7 +245,8 @@ export default function NanoBananaPage() {
           id: data.image_id,
           url: data.image_url || data.cloudinary_url,
           date: new Date().toISOString(),
-          prompt: prompt.trim()
+          prompt: prompt.trim(),
+          is_public: false
         };
         setUserImages(prev => [newImg, ...prev]);
         setSelectedImage(newImg); // Open the preview automatically
@@ -269,6 +270,29 @@ export default function NanoBananaPage() {
       await fetch(`${apiBase}/api/ai/user-images/${id}`, { method: 'DELETE', headers: { 'Authorization': getToken() as any, "User-Client": (global as any)?.clientId1328 } });
       toast.success('تم الحذف');
     } catch (e) { setUserImages(prev); }
+  };
+
+  const togglePublicStatus = async (id: number, currentStatus: boolean) => {
+    if (!apiBase) return;
+    try {
+        const res = await fetch(`${apiBase}/api/ai/toggle-public`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': getToken() as any, 
+                'Content-Type': 'application/json',
+                "User-Client": (global as any)?.clientId1328 
+            },
+            body: JSON.stringify({ id, is_public: !currentStatus, type: 'image' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            toast.success(currentStatus ? 'تمت الإزالة من المعرض' : 'تم النشر في معرض المحترفين!');
+            setUserImages(prev => prev.map(img => img.id === id ? { ...img, is_public: !currentStatus } : img));
+            if (selectedImage?.id === id) setSelectedImage({ ...selectedImage, is_public: !currentStatus });
+        }
+    } catch (e) {
+        toast.error('فشلت العملية');
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -475,6 +499,17 @@ export default function NanoBananaPage() {
                              <div className="bg-white/5 p-4 rounded-xl text-xs text-gray-400 leading-relaxed font-medium break-words whitespace-pre-wrap">{selectedImage.prompt}</div>
                         </div>
                         <div className="space-y-3 pt-6 border-t border-white/10 shrink-0">
+                             <button 
+                                onClick={() => togglePublicStatus(selectedImage.id, selectedImage.is_public)}
+                                className={`w-full py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border text-sm ${
+                                    selectedImage.is_public 
+                                    ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/20' 
+                                    : 'bg-white/5 border-white/10 hover:bg-white/10 text-white'
+                                }`}
+                             >
+                                <Sparkles size={18} className={selectedImage.is_public ? 'animate-pulse' : ''} />
+                                {selectedImage.is_public ? 'منشور في المعرض' : 'نشر في معرض المحترفين'}
+                             </button>
                              <button onClick={() => downloadImage(selectedImage.url, `nano_${selectedImage.id}.png`)} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
                              <button onClick={(e) => deleteImage(selectedImage.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف</button>
                         </div>

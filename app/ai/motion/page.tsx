@@ -10,7 +10,7 @@ import {
   ArrowRight, Upload, Download, X, RefreshCw, Wand2, 
   CreditCard, Crown, Sparkles, Play, Film, 
   Image as ImageIcon, Trash2, Coins, History, Maximize2, 
-  Cpu, Clock
+  Cpu, Clock, Monitor, Smartphone, Square, Tv
 } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -48,6 +48,13 @@ type CreditsRecord = {
   plan?: { video_profit: number; };
 };
 
+const ASPECT_RATIOS = [
+  { label: "الأصلية", value: "original", icon: <ImageIcon size={14} /> },
+  { label: "16:9", value: "16:9", icon: <Monitor size={14} /> },
+  { label: "9:16", value: "9:16", icon: <Smartphone size={14} /> },
+  { label: "1:1", value: "1:1", icon: <Square size={14} /> },
+];
+
 export default function MotionSimulatorPage() {
   const [balance, setBalance] = useState<CreditsRecord | null>(null);
   const [imageFile, setImageFile] = useState<string | null>(null);
@@ -55,6 +62,9 @@ export default function MotionSimulatorPage() {
   // Model Selection State
   const [selectedModelId, setSelectedModelId] = useState(MOTION_MODELS[0].id);
   const [dynamicPrices, setDynamicPrices] = useState<Record<string, number>>({});
+
+  // Aspect Ratio State
+  const [aspectRatio, setAspectRatio] = useState(ASPECT_RATIOS[0].value);
 
   const dynamicModels = useMemo(() => {
     return syncVideoWithDynamicPricing(MOTION_MODELS, dynamicPrices);
@@ -238,7 +248,8 @@ export default function MotionSimulatorPage() {
             image: imageFile, 
             motion_type: selectedModelId, 
             prompt: prompt,
-            duration: duration
+            duration: duration,
+            aspect_ratio: aspectRatio
         }),
       });
       
@@ -379,6 +390,28 @@ export default function MotionSimulatorPage() {
                                 {prompt.length}/5000 حرف
                             </div>
                         </div>
+                    </div>
+
+                    {/* Aspect Ratio Selection */}
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Monitor size={12} className="text-blue-400" />
+                            أبعاد الفيديو
+                         </label>
+                         <div className="grid grid-cols-4 gap-2">
+                             {ASPECT_RATIOS.map(r => (
+                                 <button 
+                                    key={r.value} 
+                                    onClick={() => setAspectRatio(r.value)} 
+                                    className={`p-2 rounded-xl border text-center transition-all group flex flex-col items-center gap-1 ${aspectRatio === r.value ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}
+                                 >
+                                     <span className={`${aspectRatio === r.value ? 'text-blue-500' : 'text-gray-600'}`}>
+                                        {React.cloneElement(r.icon, { size: 16 })}
+                                     </span>
+                                     <span className="text-[10px] font-bold">{r.label}</span>
+                                 </button>
+                             ))}
+                         </div>
                     </div>
 
                     {/* Duration Selection */}

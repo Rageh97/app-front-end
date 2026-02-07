@@ -9,8 +9,9 @@ import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Video, Download, X, Sparkles, Play, Film, Camera, 
   Palette, Zap, CreditCard, Crown, RefreshCw, Trash2, Maximize2, 
-  Plus, Settings2, Clock, History, MonitorPlay, Upload, XCircle, Image as ImageIcon, Coins
-, Cpu} from 'lucide-react';
+  Plus, Settings2, Clock, History, MonitorPlay, Upload, XCircle, Image as ImageIcon, Coins, Cpu,
+  Monitor, Smartphone, Square, Tv
+} from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
 
 const downloadVideo = async (url: string, filename: string) => {
@@ -55,10 +56,18 @@ const VIDEO_STYLES = [
   { label: "إبداعي", value: "artistic style", icon: <Sparkles size={14} /> },
 ];
 
+const ASPECT_RATIOS = [
+  { label: "16:9", value: "16:9", icon: <Monitor size={14} /> },
+  { label: "9:16", value: "9:16", icon: <Smartphone size={14} /> },
+  { label: "1:1", value: "1:1", icon: <Square size={14} /> },
+  { label: "4:3", value: "4:3", icon: <Tv size={14} /> },
+];
+
 export default function VideoGenerationPage() {
   const [balance, setBalance] = useState<CreditsRecord | null>(null);
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState(VIDEO_STYLES[0].value);
+  const [aspectRatio, setAspectRatio] = useState(ASPECT_RATIOS[0].value);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +243,8 @@ export default function VideoGenerationPage() {
           duration,
           model: selectedModelId, // إرسال النموذج المختار
           reference_media: referenceMedia, // إرسال الصورة/الفيديو المرجعي
-          reference_type: referenceType
+          reference_type: referenceType,
+          aspect_ratio: aspectRatio
         }),
       });
       
@@ -447,6 +457,27 @@ export default function VideoGenerationPage() {
                                         {React.cloneElement(s.icon as React.ReactElement, { size: 12 })}
                                      </span>
                                      <span className="text-[10px] font-bold truncate">{s.label}</span>
+                                 </button>
+                             ))}
+                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Monitor size={12} className="text-blue-400" />
+                             أبعاد الفيديو
+                         </label>
+                         <div className="grid grid-cols-4 gap-2">
+                             {ASPECT_RATIOS.map(r => (
+                                 <button 
+                                    key={r.value} 
+                                    onClick={() => setAspectRatio(r.value)} 
+                                    className={`p-2 rounded-xl border text-center transition-all group flex flex-col items-center gap-1 ${aspectRatio === r.value ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}
+                                 >
+                                     <span className={`${aspectRatio === r.value ? 'text-blue-500' : 'text-gray-600'}`}>
+                                        {React.cloneElement(r.icon, { size: 16 })}
+                                     </span>
+                                     <span className="text-[10px] font-bold">{r.label}</span>
                                  </button>
                              ))}
                          </div>

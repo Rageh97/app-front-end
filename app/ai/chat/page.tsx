@@ -290,15 +290,15 @@ export default function ChatPage() {
     try {
       let threadId = activeThreadId;
 
+      const requestBody: Record<string, any> = { message: text };
+      if (imageToSend) requestBody.image = imageToSend;
+      if (documentToSend) requestBody.document = documentToSend;
+      if (threadId) requestBody.thread_id = threadId;
+
       const res = await fetch(`${apiBase}/api/ai/chat`, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ 
-          message: text, 
-          image: imageToSend || undefined, 
-          document: documentToSend || undefined,
-          thread_id: threadId 
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       });
 
@@ -309,14 +309,14 @@ export default function ChatPage() {
         isTypingRef.current = true;
         
         // البدء في تلوين/كتابة الرد في نفس الحاوية المحجوزة
-        const step = 25; // Number of characters to add per tick (Faster)
+        const step = 2; // أبطأ قليلاً لتبدو طبيعية أكثر
         for (let i = 0; i <= responseText.length; i += step) {
           if (controller.signal.aborted) break;
           const end = Math.min(i + step, responseText.length);
           current = responseText.slice(0, end);
           setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: current } : m));
           if (end === responseText.length) break;
-          await new Promise(r => setTimeout(r, 1)); // (سرعة قصوى)
+          await new Promise(r => setTimeout(r, 15)); // تأخير لتأثير الكتابة
         }
         isTypingRef.current = false;
         
@@ -329,7 +329,9 @@ export default function ChatPage() {
             await loadThreads();
         }
       } else {
-        toast.error("فشلت عملية المحادثة");
+        const errorData = await res.json().catch(() => ({ message: 'فشلت عملية المحادثة' }));
+        console.error('[Chat] Error:', errorData);
+        toast.error(errorData.message || "فشلت عملية المحادثة");
         setMessages(prev => prev.filter(m => m.id !== assistantId));
       }
     } catch (e: any) {
@@ -767,7 +769,7 @@ export default function ChatPage() {
                                     )}
                                     
                                     {m.role === 'assistant' && !m.id.startsWith('typing_') && (
-                                        <div className="absolute left-0 top-0 -translate-y-1/2 flex gap-1 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all">
+                                        <div className="absolute left-0 bottom-0 -translate-y-1/2 flex gap-1 translate-x-1/2 transition-all">
                                             <button 
                                                 onClick={() => { navigator.clipboard.writeText(m.content); toast.success('تم النسخ'); setCopiedMessageId(m.id) }} 
                                                 className="p-1.5 bg-black border border-white/10 rounded-lg hover:bg-purple-600 transition-all shadow-xl text-gray-400 hover:text-white"

@@ -60,7 +60,7 @@ const PaymentModal: React.FC<
                     <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
                       selected 
                         ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
                     }`}>
                       <div className={`w-16 h-16 rounded-lg flex items-center justify-center transition-all ${
                         selected ? 'bg-white shadow-md' : 'bg-white'
@@ -84,13 +84,13 @@ const PaymentModal: React.FC<
                     <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
                       selected 
                         ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
                     }`}>
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
                         selected ? 'bg-white shadow-md' : 'bg-white'
                       }`}>
                         <img
-                          src="https://stock-pik.com/tools/unnamed%20(2).webp"
+                          src="/images/iraq.png"
                           className="w-10 h-10 object-contain"
                           alt="Alrafedeen"
                         />
@@ -108,7 +108,7 @@ const PaymentModal: React.FC<
                     <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
                       selected 
                         ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
                     }`}>
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
                         selected ? 'bg-white shadow-md' : 'bg-white'
@@ -132,7 +132,7 @@ const PaymentModal: React.FC<
                     <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
                       selected 
                         ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
                     }`}>
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
                         selected ? 'bg-white shadow-md' : 'bg-white'
@@ -156,14 +156,14 @@ const PaymentModal: React.FC<
                     <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
                       selected 
                         ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
                     }`}>
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
                         selected ? 'bg-white shadow-md' : 'bg-white'
                       }`}>
                         <img
-                          src="https://stock-pik.com/tools/unnamed%20(3).png"
-                          className="w-10 h-10 object-contain"
+                          src="/images/fast.png"
+                          className="w-20 h-20 object-contain"
                           alt="FastPay"
                         />
                       </div>
@@ -180,7 +180,7 @@ const PaymentModal: React.FC<
                     <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
                       selected 
                         ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
+                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
                     }`}>
                       <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
                         selected ? 'bg-white shadow-md' : 'bg-white'
