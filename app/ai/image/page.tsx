@@ -11,10 +11,13 @@ import {
   Copy, Check, ArrowRight, Image as ImageIcon, RefreshCw, 
   Download, X, Sparkles, Wand2, Palette, Camera, 
   ChevronLeft, CreditCard, Crown, AlertCircle, ShieldCheck, 
-  ArrowLeft, Trash2, Maximize2, MoreHorizontal, Upload, XCircle
-} from 'lucide-react';
+  ArrowLeft, Trash2, Maximize2, MoreHorizontal, Upload, XCircle, Coins
+, Cpu} from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
+import { IMAGE_MODELS, AIModel, calculateImageCost, syncModelsWithDynamicPricing } from '@/lib/ai-models-config';
+import { ModelSelector } from '@/components/ModelSelector';
+import { processImagePrompt } from '@/lib/prompt-utils';
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -46,9 +49,9 @@ const PROMPT_PRESETS: { label: string; value: string; icon: React.ReactNode }[] 
 ];
 
 const IMAGE_SIZES: { label: string; value: string; creditsMultiplier: number; description: string; ratio: string }[] = [
-  { label: "مربع", value: "1024x1024", creditsMultiplier: 1, description: "مثالي لوسائل التواصل", ratio: "aspect-square" },
-  { label: "أفقي", value: "1792x1024", creditsMultiplier: 1.5, description: "رائع للخلفيات", ratio: "aspect-video" },
-  { label: "طولي", value: "1024x1792", creditsMultiplier: 1.5, description: "مناسب للهواتف", ratio: "aspect-[9/16]" },
+  { label: "مربع", value: "1024x1024", creditsMultiplier: 10, description: "مثالي لوسائل التواصل", ratio: "aspect-square" },
+  { label: "أفقي", value: "1792x1024", creditsMultiplier: 15, description: "رائع للخلفيات", ratio: "aspect-video" },
+  { label: "طولي", value: "1024x1792", creditsMultiplier: 15, description: "مناسب للهواتف", ratio: "aspect-[9/16]" },
 ];
 
 export default function ImageGenerationPage() {
@@ -63,10 +66,32 @@ export default function ImageGenerationPage() {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  
+  // Model Selection State
+  const [selectedModelId, setSelectedModelId] = useState(IMAGE_MODELS[0].id);
+  const [dynamicPrices, setDynamicPrices] = useState<Record<string, number>>({});
+
+  const dynamicModels = useMemo(() => {
+    return syncModelsWithDynamicPricing(IMAGE_MODELS, dynamicPrices);
+  }, [dynamicPrices]);
+
+  const selectedModel = dynamicModels.find(m => m.id === selectedModelId) || dynamicModels[0];
 
   // Reference Image State
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '128px'; // Reset to min-height
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 128) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [prompt]);
 
   // User Images State
   const [userImages, setUserImages] = useState<any[]>([]);
@@ -213,7 +238,8 @@ export default function ImageGenerationPage() {
     ensureClientId().then(() => {
       fetchBalance();
       fetchUserImages(); 
-      void loadPlans();
+      loadPlans();
+      loadDynamicPricing();
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -233,6 +259,20 @@ export default function ImageGenerationPage() {
     }
   };
 
+  const loadDynamicPricing = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings/public/ai-pricing`);
+      if (res.status === 200) {
+        const data = await res.json();
+        setDynamicPrices(data);
+      }
+    } catch (e) {
+      console.error("Failed to load dynamic pricing", e);
+    }
+  };
+
+
   const openBuyModal = () => {
     setShowBuyModal(true);
   };
@@ -248,9 +288,9 @@ export default function ImageGenerationPage() {
   };
 
   const selectedSize = IMAGE_SIZES.find(size => size.value === imageSize);
-  const baseCredits = selectedSize ? (selectedSize.value === '1024x1024' ? 1 : 1.5) : 1;
   const imageProfit = balance?.plan?.image_profit ?? 0;
-  const creditsNeeded = baseCredits + imageProfit;
+  // Calculate cost based on selected model + size + profit margin
+  const creditsNeeded = calculateImageCost(selectedModel, imageSize, imageProfit);
   const canGenerate = clientReady && !!prompt && !isGenerating;
 
   const checkCreditsAndShowToast = () => {
@@ -320,13 +360,26 @@ export default function ImageGenerationPage() {
     
     try {
       const token = getToken();
+      
+      // معالجة البرومبت العربي وتحسينه
+      const processedPrompt = processImagePrompt(prompt, preset);
+      
+      console.log('[IMAGE] Sending generation request with:', {
+        model: selectedModelId,
+        size: imageSize,
+        expectedCost: creditsNeeded,
+        originalPrompt: prompt,
+        processedPrompt: processedPrompt
+      });
+      
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/text-to-image`, {
         method: "POST",
         headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 },
         body: JSON.stringify({ 
-          prompt, 
+          prompt: processedPrompt, // استخدام البرومبت المحسّن
           style: preset, 
           size: imageSize,
+          model: selectedModelId, // إرسال النموذج المختار
           reference_image: referenceImage // إرسال الصورة المرجعية إن وجدت
         }),
       });
@@ -336,6 +389,7 @@ export default function ImageGenerationPage() {
       
       if (res.status === 200) {
         const data = await res.json();
+        console.log('[IMAGE] Generation successful, credits used:', data.credits_used);
         await fetchBalance();
         await fetchUserImages(); 
         toast.success('تم إنشاء الصورة بنجاح!');
@@ -437,7 +491,7 @@ export default function ImageGenerationPage() {
         }}
       />
 
-      <div className="h-screen flex flex-col bg-[#000000] text-white selection:bg-purple-500/30 font-sans overflow-hidden" dir="rtl">
+      <div className="h-screen flex flex-col bg-[#000000] text-white selection:bg-purple-500/30 font-sans overflow-hidden no-scrollbar" dir="rtl">
         {/* Background Ambience */}
         <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none z-0"></div>
         
@@ -498,47 +552,52 @@ export default function ImageGenerationPage() {
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden relative z-10">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10">
             
             {/* Right Sidebar (Settings) - Fixed Width */}
-            <aside className="w-[320px] md:w-[360px] flex flex-col border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0">
-                <div className="p-5 space-y-6">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full flex flex-col border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto no-scrollbar shrink-0 order-1">
+                <div className="p-4 space-y-4">
                     
                     {/* Prompt Section */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
-                            <Sparkles size={14} className="text-purple-400" />
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
+                            <Sparkles size={12} className="text-purple-400" />
                             وصف الصورة
                         </label>
                         <div className="relative group">
                             <textarea
+                                ref={promptRef}
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                                 placeholder="صف ما في خيالك..."
                                 maxLength={20000}
-                                className="w-full h-32 px-4 py-3 rounded-xl bg-white/5 text-white border border-white/10 focus:border-purple-500/50 focus:bg-white/[0.07] focus:ring-4 focus:ring-purple-500/10 resize-none transition-all placeholder:text-gray-600 text-sm leading-relaxed custom-scrollbar outline-none"
+                                className="w-full min-h-[80px] px-3 py-2 rounded-lg bg-white/5 text-white border border-white/10 focus:border-purple-500/50 focus:bg-white/[0.07] focus:ring-4 focus:ring-purple-500/10 resize-none transition-all placeholder:text-gray-600 text-xs leading-relaxed custom-scrollbar outline-none overflow-hidden"
                             />
-                            <div className="absolute bottom-3 right-3 text-[10px] bg-black/50 px-2 py-0.5 rounded text-gray-400 border border-white/5">
-                                {prompt.length}/20000
+                        </div>
+                        <div className="flex justify-between items-center mt-1 px-1">
+                            <div className="text-[9px] text-gray-500">
+                                {/* تم إخفاء تفاصيل الربح للحفاظ على تجربة المستخدم */}
+                            </div>
+                            <div className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded text-gray-400 border border-white/5">
+                                {prompt.length}/20000 حرف
                             </div>
                         </div>
                     </div>
 
                     {/* Reference Image Upload Section */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
-                            <Upload size={14} className="text-emerald-400" />
-                            صورة مرجعية (اختياري)
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
+                            <Upload size={12} className="text-emerald-400" />
+                            صورة مرجعية
                         </label>
                         {!referenceImage ? (
                             <div 
                                 onClick={() => fileInputRef.current?.click()}
                                 className="relative group cursor-pointer"
                             >
-                                <div className="w-full h-32 rounded-xl bg-white/5 border-2 border-dashed border-white/10 hover:border-purple-500/40 transition-all flex flex-col items-center justify-center gap-2 hover:bg-white/[0.07]">
-                                    <Upload size={24} className="text-gray-500 group-hover:text-purple-400 transition-colors" />
-                                    <span className="text-xs text-gray-500 group-hover:text-purple-300 transition-colors">انقر لرفع صورة</span>
-                                    <span className="text-[10px] text-gray-600">سيتم استخدامها كمرجع للتوليد</span>
+                                <div className="w-full h-20 rounded-lg bg-white/5 border-2 border-dashed border-white/10 hover:border-purple-500/40 transition-all flex flex-col items-center justify-center gap-1 hover:bg-white/[0.07]">
+                                    <Upload size={18} className="text-gray-500 group-hover:text-purple-400 transition-colors" />
+                                    <span className="text-[10px] text-gray-500 group-hover:text-purple-300 transition-colors">ارفع صورة</span>
                                 </div>
                                 <input 
                                     ref={fileInputRef}
@@ -553,101 +612,120 @@ export default function ImageGenerationPage() {
                                 <img 
                                     src={referenceImage} 
                                     alt="Reference" 
-                                    className="w-full h-32 object-cover rounded-xl border border-white/10"
+                                    className="w-full h-20 object-cover rounded-lg border border-white/10"
                                 />
                                 <button
                                     onClick={removeReferenceImage}
-                                    className="absolute top-2 left-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                    className="absolute top-1 left-1 p-1 bg-red-500/80 hover:bg-red-500 rounded transition-all opacity-0 group-hover:opacity-100"
                                 >
-                                    <XCircle size={16} />
+                                    <XCircle size={12} />
                                 </button>
-                                <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-[9px] text-emerald-400 font-bold">
-                                    ✓ صورة مرجعية
+                                <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-[8px] text-emerald-400 font-bold">
+                                    ✓ مرجع
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* Presets Section */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
-                            <Palette size={14} className="text-blue-400" />
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
+                            <Palette size={12} className="text-blue-400" />
                             النمط الفني
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-1.5">
                              {PROMPT_PRESETS.map((p) => (
                                 <button
                                     key={p.label}
                                     onClick={() => setPreset(p.value)}
-                                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-right transition-all duration-200 ${
+                                    className={`flex items-center gap-1.5 px-2 py-2 rounded-lg border text-right transition-all duration-200 ${
                                         preset === p.value
                                         ? 'bg-purple-500/10 border-purple-500/40 text-purple-300'
                                         : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/10'
                                     }`}
                                 >
-                                    <span className={preset === p.value ? 'text-purple-400' : 'text-gray-500'}>{p.icon}</span>
-                                    <span className="text-[11px] font-bold">{p.label}</span>
-                                    {preset === p.value && <Check size={12} className="mr-auto text-purple-400" />}
+                                    <span className={`shrink-0 ${preset === p.value ? 'text-purple-400' : 'text-gray-500'}`}>
+                                        {React.cloneElement(p.icon as React.ReactElement, { size: 12 })}
+                                    </span>
+                                    <span className="text-[10px] font-bold truncate">{p.label}</span>
                                 </button>
                              ))}
                         </div>
                     </div>
 
                     {/* Aspect Ratio Section */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
-                            <Maximize2 size={14} className="text-emerald-400" />
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
+                            <Maximize2 size={12} className="text-emerald-400" />
                             الأبعاد
                         </label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-3 gap-1.5">
                             {IMAGE_SIZES.map((size) => (
                                 <button
                                     key={size.value}
                                     onClick={() => setImageSize(size.value)}
-                                    className={`flex flex-col items-center justify-center gap-2 p-3 rounded-lg border transition-all duration-200 ${
+                                    className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all duration-200 ${
                                         imageSize === size.value
                                         ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300'
                                         : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/10'
                                     }`}
                                 >
-                                    <div className={`w-6 bg-current rounded-sm opacity-50 ${
-                                        size.value === '1024x1024' ? 'h-6' : 
-                                        size.value === '1792x1024' ? 'h-4 w-8' : 'w-4 h-8'
+                                    <div className={`shrink-0 bg-current rounded-sm opacity-50 ${
+                                        size.value === '1024x1024' ? 'w-4 h-4' : 
+                                        size.value === '1792x1024' ? 'w-5 h-3' : 'w-3 h-5'
                                     }`} />
-                                    <span className="text-[10px] font-bold">{size.label}</span>
+                                    <span className="text-[9px] font-bold">{size.label}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
-
-                    
+                    {/* Model Selection Section */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
+                            <Cpu size={12} className="text-purple-400" />
+                            اختر النموذج
+                        </label>
+                            <ModelSelector
+                                models={dynamicModels}
+                                selectedModelId={selectedModelId}
+                                onSelectModel={setSelectedModelId}
+                                size={imageSize}
+                                profit={imageProfit}
+                                compact={true}
+                            />
+                    </div>
                 </div>
                 
                  {/* Fixed Generate Button at Bottom of Sidebar */}
-                <div className="p-5 mt-auto border-t border-white/10 bg-[#080808]">
+                <div className="p-4 mt-auto border-t border-white/10 bg-[#080808]">
                      {error && (
-                        <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-xs">
-                            <AlertCircle size={14} />
-                            <span>{error}</span>
+                        <div className="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-[10px]">
+                            <AlertCircle size={12} />
+                            <span className="truncate">{error}</span>
                         </div>
                      )}
-                     <div className="flex items-center justify-between text-[10px] text-gray-500 mb-2 font-medium">
-                        <span>التكلفة المقدرة:</span>
-                        <span className="text-white font-bold">{creditsNeeded} نقطة</span>
+                     <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
                      </div>
                      <PremiumButton 
                         label={isGenerating ? "جاري الإبداع..." : "توليد الصورة الآن"}
                         icon={isGenerating ? RefreshCw : Sparkles}
                         onClick={onGenerate}
                         disabled={!canGenerate}
-                        className="w-full py-4 text-sm rounded-xl shadow-xl shadow-purple-900/20"
+                        className="w-full py-3 text-xs rounded-xl"
                       />
                 </div>
             </aside>
 
             {/* Left Main Area (Gallery) - Scrollable list */}
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar relative">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 no-scrollbar relative order-2">
                 {/* Empty State */}
                 {!isGenerating && userImages.length === 0 && (
                      <div className="h-full flex flex-col items-center justify-center text-center opacity-60">

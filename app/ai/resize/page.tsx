@@ -6,9 +6,36 @@ import PaymentModal from "@/components/Modals/PaymentModal";
 import UpgradeModal from "@/components/Modals/UpgradeModal";
 import Link from "next/link";
 import { toast, Toaster } from 'react-hot-toast';
-import { ArrowRight, Maximize, Upload, Download, X, RefreshCw, Wand2, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Play, Video, Smartphone, Monitor, Square, Trash2 } from 'lucide-react';
+import { ArrowRight, Maximize, Upload, Download, X, RefreshCw, Wand2, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Play, Video, Smartphone, Monitor, Square, Trash2, Coins } from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
+
+const downloadVideo = async (url: string, filename: string) => {
+  try {
+    const toastId = toast.loading('جاري التحميل...');
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+    toast.dismiss(toastId);
+    toast.success('تم التحميل بنجاح');
+  } catch (error) {
+    toast.dismiss();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -60,6 +87,9 @@ export default function VideoResizePage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
+  const baseCredits = 5;
+  const videoProfit = balance?.plan?.video_profit ?? 0;
+  const creditsNeeded = baseCredits + videoProfit;
 
   const getToken = () => {
     if (typeof window !== 'undefined') return localStorage.getItem("a");
@@ -129,7 +159,7 @@ export default function VideoResizePage() {
     if (!apiBase || !videoFile) return;
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -286,89 +316,95 @@ export default function VideoResizePage() {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-[1600px] mx-auto p-6 pt-8">
-          <div className="grid lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Panel */}
-            <div className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-28">
-               <div className="mb-2">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-[2px] bg-emerald-500"></div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Layout Studio</span>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          
+          {/* Sidebar */}
+          <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full flex flex-col border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0 order-1">
+            <div className="p-4 space-y-4">
+               <div>
+                <div className="flex items-center gap-2 mb-1">
+                    <div className="w-5 h-[1px] bg-emerald-500"></div>
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-emerald-400">Layout Studio</span>
                 </div>
-                <div className="text-sm text-gray-500 font-bold leading-relaxed">
+                <div className="text-[10px] text-gray-500 font-bold leading-relaxed">
                    حوّل الفيديو الخاص بك ليتناسب مع أي منصة تواصل اجتماعي بذكاء واحترافية.
                 </div>
               </div>
 
-               <div className="bg-[#0c0c0c] rounded-[2rem] p-6 border border-white/5 relative group shadow-2xl overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 opacity-50"></div>
-                
-                <div className="relative space-y-6">
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">ملف الفيديو</span>
+               <div className="space-y-4">
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest block">ملف الفيديو</span>
                     <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="hidden" id="v-res-up" />
-                    <label htmlFor="v-res-up" className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 cursor-pointer hover:border-emerald-500/30 transition-all">
-                        <span className="text-xs text-gray-400 max-w-[200px] truncate">{videoFile ? videoFile.name : "ارفع الفيديو هنا..."}</span>
-                        <Video size={18} className="text-emerald-500" />
+                    <label htmlFor="v-res-up" className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-emerald-500/30 transition-all">
+                        <span className="text-[10px] text-gray-400 max-w-[150px] truncate">{videoFile ? videoFile.name : "ارفع الفيديو هنا..."}</span>
+                        <Video size={14} className="text-emerald-500" />
                     </label>
                   </div>
 
-                  <div>
-                     <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">الأبعاد المطلوبة</span>
-                     <div className="grid grid-cols-1 gap-2">
+                  <div className="space-y-2">
+                     <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest block">الأبعاد المطلوبة</span>
+                     <div className="grid grid-cols-1 gap-1.5">
                          {RESIZE_OPTIONS.map((opt) => (
                              <button
                                 key={opt.id}
                                 onClick={() => setDimensions(opt.id)}
-                                className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 border ${
+                                className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 border ${
                                     dimensions === opt.id
-                                    ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.1)]'
+                                    ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 backdrop-blur-xl'
                                     : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'
                                 }`}
                              >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${dimensions === opt.id ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${dimensions === opt.id ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
                                     {getResizeIcon(opt.iconType)}
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-[11px] font-black">{opt.name}</div>
-                                    <div className="text-[9px] text-gray-600">{opt.desc}</div>
+                                    <div className="text-[10px] font-black">{opt.name}</div>
+                                    <div className="text-[8px] text-gray-600 font-bold">{opt.desc}</div>
                                 </div>
                              </button>
                          ))}
                      </div>
                   </div>
-
-                  <div className="mt-8 border-t border-white/5 pt-6">
-                    <PremiumButton 
-                        label={isProcessing ? "جاري إعادة التشكيل..." : "تطبيق الأبعاد الجديدة"}
-                        icon={isProcessing ? RefreshCw : Maximize}
-                        secondaryIcon={ArrowLeft}
-                        onClick={onProcess}
-                        disabled={!videoFile || isProcessing}
-                        className="w-full py-4 text-base"
-                    />
-                  </div>
                 </div>
-              </div>
-
-              {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[10px] font-black text-center flex items-center justify-center gap-2">
-                  <X size={14} />
-                  {error}
-                </div>
-              )}
             </div>
 
-            {/* Right Panel */}
-            <div className="lg:col-span-8 order-2 space-y-6">
-              <div className="bg-[#080808] rounded-[3rem] border border-white/5 min-h-[500px] lg:min-h-[850px] flex items-center justify-center relative overflow-hidden group shadow-inner">
+            <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                {error && (
+                    <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">
+                        {error}
+                    </div>
+                )}
+
+                <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                            <Coins size={10} className="text-yellow-500" />
+                        </div>
+                        <span>التكلفة المتوقعه:</span>
+                    </div>
+                    <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                </div>
+
+                <PremiumButton 
+                    label={isProcessing ? "جاري إعادة التشكيل..." : "تطبيق الأبعاد الجديدة"}
+                    icon={isProcessing ? RefreshCw : Maximize}
+                    onClick={onProcess}
+                    disabled={!videoFile || isProcessing}
+                    className="w-full py-3 text-xs rounded-xl"
+                />
+            </div>
+          </aside>
+
+          {/* Main Area */}
+          <main className="flex-1 overflow-y-auto bg-[#020202] custom-scrollbar p-6 order-2">
+            <div className="max-w-5xl mx-auto space-y-8">
+              <div className="bg-[#080808] rounded-[2rem] border border-white/5 min-h-[500px] flex items-center justify-center relative overflow-hidden group shadow-inner">
                 {result ? (
                   <div className="relative w-full h-full p-8 flex flex-col items-center justify-center group/vid">
-                    <video src={result.video_url} controls className="max-h-[650px] w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-white/10 animate-fade-in" />
+                    <video src={result.video_url} controls className="max-h-[600px] w-full max-w-2xl rounded-[2rem] shadow-2xl border border-white/10 animate-fade-in" />
                     <div className="mt-8 flex items-center gap-3">
-                        <button onClick={() => window.open(result.video_url)} className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition-all font-black text-sm">
+                        <button onClick={() => downloadVideo(result.video_url, `resized_video.mp4`)} className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition-all font-black text-sm">
                             <Download size={18} />
                             <span>تحميل الفيديو المعدل</span>
                         </button>
@@ -380,27 +416,28 @@ export default function VideoResizePage() {
                 ) : isProcessing ? (
                   <div className="text-center relative z-10 w-full max-w-sm px-8">
                     <div className="w-24 h-24 relative mx-auto mb-8">
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-emerald-500/10 scale-125"></div>
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-t-emerald-500 animate-spin"></div>
+                        <div className="absolute inset-0 rounded-[2rem] border-4 border-emerald-500/10 scale-125"></div>
+                        <div className="absolute inset-0 rounded-[2rem] border-4 border-t-emerald-500 animate-spin"></div>
                         <Maximize className="absolute inset-0 m-auto text-emerald-400 animate-pulse" size={40} />
                     </div>
-                    <h3 className="text-2xl font-black mb-2">جاري إعادة هيكلة الفيديو...</h3>
+                    <h3 className="text-xl font-black mb-2">جاري إعادة هيكلة الفيديو...</h3>
                     <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mt-6">
-                      <div className="bg-emerald-500 h-full transition-all duration-700" style={{ width: `${processingProgress}%` }}></div>
+                      <div className="bg-emerald-500 h-full transition-all duration-700 shadow-[0_0_15px_rgba(16,185,129,0.5)]" style={{ width: `${processingProgress}%` }}></div>
                     </div>
+                    <div className="text-emerald-400 font-mono text-xs mt-2 font-bold">{Math.floor(processingProgress)}%</div>
                   </div>
                 ) : (
                   <div className="text-center relative z-10 p-12">
-                     <div className="w-32 h-32 bg-white/[0.02] rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-white/5 group-hover:scale-105 transition-all duration-700 shadow-inner">
-                      <Maximize size={64} className="text-white/5 group-hover:text-emerald-500/10 transition-colors" />
+                     <div className="w-24 h-24 bg-white/[0.02] rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-white/5 group-hover:scale-105 transition-all duration-700 shadow-inner">
+                      <Maximize size={48} className="text-white/5 group-hover:text-emerald-500/10 transition-colors" />
                     </div>
-                    <p className="text-gray-600 max-w-xs mx-auto font-bold text-lg leading-relaxed">ارفع الفيديو الخاص بك، اختر المنصة التي ستنشر عليها، وسيقوم النظام بتعديل الأبعاد فوراً.</p>
+                    <p className="text-gray-600 max-w-xs mx-auto font-bold text-base leading-relaxed">ارفع الفيديو الخاص بك، اختر المنصة التي ستنشر عليها، وسيقوم النظام بتعديل الأبعاد فوراً.</p>
                   </div>
                 )}
               </div>
 
                {/* Previous Works Section - Video Resize */}
-               <div className="mt-12 lg:col-span-12 border-t border-white/5 pt-8">
+               <div className="mt-12 border-t border-white/5 pt-8">
                      <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                            <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 border border-emerald-500/20">
@@ -469,7 +506,7 @@ export default function VideoResizePage() {
                      )}
                   </div>
             </div>
-          </div>
+          </main>
         </div>
 
         <UpgradeModal 

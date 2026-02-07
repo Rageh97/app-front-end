@@ -10,9 +10,11 @@ import {
   ArrowRight, Plus, Trash2, Download, X, RefreshCw, 
   CreditCard, Crown, ShieldCheck, 
   Sparkles, Play, Film, MonitorPlay, History, Clock, Maximize2, Video, 
-  ChevronLeft, AlertCircle, History as HistoryIcon, Layers
-} from 'lucide-react';
+  ChevronLeft, AlertCircle, History as HistoryIcon, Layers, Coins
+, Cpu} from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
+import { LONG_VIDEO_MODELS, VideoModel, calculateVideoCost, syncVideoWithDynamicPricing } from '@/lib/ai-models-config';
+import { ModelSelector } from '@/components/ModelSelector';
 
 type CreditsRecord = {
   remaining_credits: number;
@@ -33,6 +35,16 @@ export default function LongVideoPage() {
   const [error, setError] = useState<string | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  // Model Selection State
+  const [selectedModelId, setSelectedModelId] = useState(LONG_VIDEO_MODELS[0].id);
+  const [dynamicPrices, setDynamicPrices] = useState<Record<string, number>>({});
+
+  const dynamicModels = useMemo(() => {
+    return syncVideoWithDynamicPricing(LONG_VIDEO_MODELS, dynamicPrices);
+  }, [dynamicPrices]);
+
+  const selectedModel = dynamicModels.find(m => m.id === selectedModelId) || dynamicModels[0];
 
   const [userVideos, setUserVideos] = useState<any[]>([]);
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
@@ -75,6 +87,19 @@ export default function LongVideoPage() {
     } catch (e) {}
   };
 
+  const loadDynamicPricing = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings/public/ai-pricing`);
+      if (res.status === 200) {
+        const data = await res.json();
+        setDynamicPrices(data);
+      }
+    } catch (e) {
+      console.error("Failed to load dynamic pricing", e);
+    }
+  };
+
   const loadPlans = async () => {
     if (!apiBase) return;
     setLoadingPlans(true);
@@ -97,6 +122,7 @@ export default function LongVideoPage() {
           fetchBalance();
           fetchUserVideos();
           loadPlans();
+          loadDynamicPricing();
         }
       } catch (e) {}
     };
@@ -109,7 +135,8 @@ export default function LongVideoPage() {
       toast.error("الحد الأقصى هو 10 مشاهد فقط");
       return;
     }
-    setScenes([...scenes, { id: Date.now().toString(), prompt: '', duration: 5 }]);
+    const defaultDuration = selectedModel.supportedDurations ? selectedModel.supportedDurations[0] : 5;
+    setScenes([...scenes, { id: Date.now().toString(), prompt: '', duration: defaultDuration }]);
   };
 
   const removeScene = (id: string) => scenes.length > 1 && setScenes(scenes.filter(s => s.id !== id));
@@ -119,7 +146,13 @@ export default function LongVideoPage() {
     const validScenes = scenes.filter(s => s.prompt.trim());
     if (!apiBase || validScenes.length === 0) return;
     
-    if (!balance || balance.remaining_credits <= 0) {
+    // Calculate total duration of all scenes
+    const totalDuration = validScenes.reduce((sum, scene) => sum + scene.duration, 0);
+    const videoProfit = balance?.plan?.video_profit ?? 0;
+    // Use the model's cost per second calculation
+    const creditsNeeded = calculateVideoCost(selectedModel, totalDuration, videoProfit);
+
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -144,7 +177,10 @@ export default function LongVideoPage() {
       const res = await fetch(`${apiBase}/api/ai/long-video`, {
         method: "POST",
         headers: { 'Authorization': getToken() as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 },
-        body: JSON.stringify({ scenes: validScenes }),
+        body: JSON.stringify({ 
+          scenes: validScenes, 
+          model: selectedModelId // إرسال النموذج المختار
+        }),
       });
       
       clearInterval(interval);
@@ -208,7 +244,10 @@ export default function LongVideoPage() {
     } catch (e) { toast.error('فشلت العملية'); }
   };
 
-  const creditsNeeded = scenes.filter(s => s.prompt.trim()).length > 0 ? 8 : 0;
+    // حساب التكلفة المتوقعة لكل المشاهد
+    const totalDuration = scenes.filter(s => s.prompt.trim()).reduce((sum, scene) => sum + scene.duration, 0) || 5;
+    const videoProfit = balance?.plan?.video_profit ?? 0;
+    const creditsNeeded = calculateVideoCost(selectedModel, totalDuration, videoProfit);
 
   return (
     <>
@@ -251,35 +290,35 @@ export default function LongVideoPage() {
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden relative z-10">
+        <div className="flex-1 flex overflow-hidden">
             
-            {/* Right Sidebar (Settings) - Fixed Width */}
-            <aside className="w-[320px] md:w-[400px] flex flex-col border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0">
-                <div className="p-5 space-y-6">
-                    <div className="flex items-center justify-between mb-2">
+            {/* Sidebar (Settings) */}
+            <aside className="w-[280px] md:w-[300px] flex flex-col border-l border-white/10 bg-[#050505] overflow-y-auto no-scrollbar shrink-0">
+                <div className="p-4 space-y-4">
+                    <div className="flex items-center justify-between mb-1">
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                             إدارة مشاهد الفيلم
+                             إدارة المشاهد
                         </label>
                         <button 
                             onClick={addScene} 
                             disabled={scenes.length >= 10}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all font-black text-[10px] border ${scenes.length >= 10 ? 'opacity-20 cursor-not-allowed bg-white/5 border-white/10 text-gray-400' : 'bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/20'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all font-black text-[9px] border ${scenes.length >= 10 ? 'opacity-20 cursor-not-allowed bg-white/5 border-white/10 text-gray-400' : 'bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/20'}`}
                         >
-                            <Plus size={14} /> مشهد جديد
+                            <Plus size={12} /> مشهد جديد
                         </button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {scenes.map((s, idx) => (
-                            <div key={s.id} className="group/scene p-5 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/20 transition-all duration-300 relative">
-                                <div className="flex items-center justify-between mb-4">
+                            <div key={s.id} className="group/scene p-4 rounded-3xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/20 transition-all duration-300 relative">
+                                <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
                                         <span className="w-5 h-5 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-[9px] font-black border border-indigo-500/10">{idx + 1}</span>
                                         <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Sequence</span>
                                     </div>
                                     {scenes.length > 1 && (
-                                        <button onClick={() => removeScene(s.id)} className="p-1.5 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all">
-                                            <Trash2 size={14} />
+                                        <button onClick={() => removeScene(s.id)} className="p-1 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all">
+                                            <Trash2 size={12} />
                                         </button>
                                     )}
                                 </div>
@@ -287,48 +326,72 @@ export default function LongVideoPage() {
                                     value={s.prompt}
                                     onChange={(e) => updateScene(s.id, 'prompt', e.target.value)}
                                     placeholder="صف تفاصيل هذا المشهد..."
-                                    className="w-full bg-transparent border-none focus:ring-0 text-[13px] font-medium text-white resize-none h-20 outline-none placeholder:text-gray-800 leading-relaxed scrollbar-hide"
+                                    className="w-full bg-transparent border-none focus:ring-0 text-xs font-medium text-white resize-none h-16 outline-none placeholder:text-gray-800 leading-relaxed scrollbar-hide"
                                 />
-                                <div className="flex items-center gap-3 pt-3 border-t border-white/5">
-                                    <Clock size={12} className="text-gray-700" />
+                                <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                                    <Clock size={10} className="text-gray-700" />
                                     <select 
                                         value={s.duration} 
                                         onChange={(e) => updateScene(s.id, 'duration', Number(e.target.value))} 
-                                        className="bg-transparent text-[10px] font-black text-gray-500 outline-none cursor-pointer hover:text-indigo-400 transition-colors"
+                                        className="bg-transparent text-[9px] font-black text-gray-500 outline-none cursor-pointer hover:text-indigo-400 transition-colors"
                                     >
-                                        <option value={5} className="bg-[#0c0c0c]">5 ثوانٍ</option>
-                                        <option value={10} className="bg-[#0c0c0c]">10 ثوانٍ</option>
+                                        {(selectedModel.supportedDurations || [5, 10]).map(dur => (
+                                            <option key={dur} value={dur} className="bg-[#0c0c0c]">{dur} ثوانٍ</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
                         ))}
                     </div>
+
+                    {/* Model Selection Section */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Cpu size={12} className="text-indigo-400" />
+                            اختر النموذج
+                        </label>
+                        <ModelSelector
+                            models={dynamicModels}
+                            selectedModelId={selectedModelId}
+                            onSelectModel={setSelectedModelId}
+                            duration={totalDuration}
+                            profit={videoProfit}
+                            compact={true}
+                        />
+                    </div>
                 </div>
 
                 {/* Generate Button at Bottom */}
-                <div className="p-5 mt-auto border-t border-white/10 bg-[#080808]">
+                <div className="p-4 mt-auto border-t border-white/10 bg-[#080808]">
                      {error && (
-                        <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-400 text-[10px] font-bold">
+                        <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-[9px] font-bold truncate">
                             <AlertCircle size={14} />
                             <span>{error}</span>
                         </div>
                      )}
-                     <div className="flex items-center justify-between text-[10px] text-gray-500 mb-2 font-black uppercase tracking-widest px-1">
-                        <span>قيمة الإنتاج الكامل:</span>
-                        <span className="text-white">8 نقاط</span>
-                     </div>
+                     
+                     <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+
                      <PremiumButton 
                         label={isGenerating ? "جاري الإخراج والدمج..." : "توليد العمل المتكامل"}
                         icon={isGenerating ? RefreshCw : Film}
                         onClick={onGenerate}
                         disabled={isGenerating || scenes.every(s => !s.prompt.trim())}
-                        className="w-full py-4 text-sm rounded-2xl shadow-xl shadow-indigo-900/10"
+                        className="w-full py-3 text-xs rounded-xl"
                       />
                 </div>
             </aside>
 
             {/* Left Main Area (Gallery) */}
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-8 custom-scrollbar relative">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-8 no-scrollbar relative">
                 
                 {/* Section Header */}
                 <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">

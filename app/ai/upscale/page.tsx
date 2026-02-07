@@ -7,7 +7,7 @@ import UpgradeModal from "@/components/Modals/UpgradeModal";
 import Link from "next/link";
 import { useTranslation } from 'react-i18next';
 import { toast, Toaster } from 'react-hot-toast';
-import { ArrowRight, Maximize, Sparkles, Upload, Zap, Image as ImageIcon, Download, X, RefreshCw, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowRight, Maximize, Sparkles, Upload, Zap, Image as ImageIcon, Download, X, RefreshCw, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Trash2, Coins } from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -48,6 +48,8 @@ export default function ImageUpscalePage() {
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
+
+  const imageProfit = balance?.plan?.image_profit ?? 0;
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
 
@@ -134,7 +136,8 @@ export default function ImageUpscalePage() {
   };
 
   const selectedOption = UPSCALE_OPTIONS.find(option => option.id === selectedScale);
-  const creditsNeeded = selectedOption ? selectedOption.credits : 2;
+  const baseCredits = selectedOption ? selectedOption.credits : 2;
+  const creditsNeeded = baseCredits + imageProfit;
   const canUpscale = clientReady && !!originalImage && !isUpscaling;
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,37 +416,37 @@ export default function ImageUpscalePage() {
           <div className="grid lg:grid-cols-12 gap-6 items-start">
             
             {/* Left Column - Actions */}
-            <div className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-24">
+            <aside className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-24">
                 <div className="bg-[#0c0c0c] rounded-2xl p-4 border border-white/5">
-                    <label className="block text-xs font-bold text-gray-400 mb-3 px-1 uppercase tracking-wider flex items-center gap-1.5">
-                        <Upload size={12} />
+                    <label className="block text-[10px] font-bold text-gray-500 mb-2 px-1 uppercase tracking-wider flex items-center gap-1.5">
+                        <Upload size={12} className="text-indigo-400" />
                         <span>ارفع الصورة</span>
                     </label>
                     <div 
-                    className="border border-dashed border-white/10 rounded-xl p-6 text-center hover:border-indigo-500/30 transition-all cursor-pointer group bg-white/[0.02]"
+                    className="border border-dashed border-white/10 rounded-xl p-4 text-center hover:border-indigo-500/30 transition-all cursor-pointer group bg-white/[0.02]"
                     onClick={() => fileInputRef.current?.click()}
                     >
                     {originalImage ? (
-                        <div className="space-y-3">
-                        <img 
-                            src={originalImage} 
-                            alt="Original" 
-                            className="max-w-full max-h-48 mx-auto rounded-lg shadow-lg"
-                        />
-                        <div className="text-indigo-400 text-xs font-bold flex items-center justify-center gap-1.5">
-                            <RefreshCw size={12} />
-                            تغيير الصورة
-                        </div>
+                        <div className="space-y-2">
+                            <img 
+                                src={originalImage} 
+                                alt="Original" 
+                                className="max-w-full max-h-40 mx-auto rounded-lg shadow-lg"
+                            />
+                            <div className="text-indigo-400 text-[10px] font-bold flex items-center justify-center gap-1.5">
+                                <RefreshCw size={12} />
+                                تغيير الصورة
+                            </div>
                         </div>
                     ) : (
-                        <div className="space-y-4 py-4">
-                        <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mx-auto group-hover:scale-105 transition-transform">
-                            <Upload size={20} className="text-gray-500 group-hover:text-indigo-400 transition-colors" />
-                        </div>
-                        <div>
-                            <p className="text-white text-sm font-bold">اضغط لرفع الملف</p>
-                            <p className="text-gray-500 text-[10px] mt-1 font-medium">PNG, JPG بحد أقصى 10 ميجا</p>
-                        </div>
+                        <div className="space-y-2 py-4">
+                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mx-auto group-hover:scale-105 transition-transform">
+                                <Upload size={16} className="text-gray-500 group-hover:text-indigo-400 transition-colors" />
+                            </div>
+                            <div>
+                                <p className="text-white text-[10px] font-bold">اضغط لرفع الملف</p>
+                                <p className="text-gray-500 text-[8px] mt-0.5 font-medium">PNG, JPG بحد أقصى 10 ميجا</p>
+                            </div>
                         </div>
                     )}
                     </div>
@@ -458,50 +461,56 @@ export default function ImageUpscalePage() {
 
               {/* Options */}
               <div className="bg-[#0c0c0c] rounded-2xl p-4 border border-white/5 group">
-                <div className="flex items-center gap-1.5 mb-3 px-1">
+                <div className="flex items-center gap-1.5 mb-2 px-1">
                        <Maximize size={12} className="text-indigo-400" />
                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">معامل التكبير</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {UPSCALE_OPTIONS.map((option) => (
                     <button
                       key={option.id}
                       onClick={() => setSelectedScale(option.id)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-lg transition-all duration-500 border relative overflow-hidden group/opt ${
+                      className={`flex flex-col items-center gap-0.5 p-2 rounded-lg transition-all duration-300 border relative overflow-hidden group/opt ${
                         selectedScale === option.id
-                          ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.15)] backdrop-blur-xl'
-                          : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10 hover:bg-white/[0.08] hover:text-white'
+                          ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-300 backdrop-blur-xl'
+                          : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:bg-white/[0.08] hover:text-white'
                       }`}
                     >
-                      {selectedScale === option.id && (
-                          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent opacity-50"></div>
-                      )}
-                      <span className="text-base font-black relative z-10">{option.multiplier}x</span>
-                      <span className="text-[9px] font-bold relative z-10 opacity-70 uppercase tracking-tighter">{option.credits} نقطة</span>
+                      <span className="text-xs font-black relative z-10">{option.multiplier}x</span>
+                      <span className="text-[8px] font-bold relative z-10 opacity-70 uppercase tracking-tighter">{option.credits} نقطة</span>
                     </button>
                   ))}
                 </div>
 
                 {/* Action Button */}
-                <div className="mt-4 pt-2">
+                <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                     <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                     </div>
+
                     <PremiumButton 
                         label={isUpscaling ? "جاري التحسين..." : "تحسين الصورة الآن"}
                         icon={isUpscaling ? RefreshCw : Zap}
-                        secondaryIcon={ArrowLeft}
                         onClick={onUpscale}
                         disabled={!canUpscale}
-                        className="w-full py-2.5 text-sm rounded-xl"
+                        className="w-full py-3 text-xs rounded-xl"
                     />
                 </div>
               </div>
 
               {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[10px] font-bold text-center flex items-center justify-center gap-2">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center flex items-center justify-center gap-2 truncate">
                   <X size={12} />
                   {error}
                 </div>
               )}
-            </div>
+            </aside>
 
             {/* Left Column - Results */}
             <div className="lg:col-span-8 order-2 lg:order-1 space-y-4">

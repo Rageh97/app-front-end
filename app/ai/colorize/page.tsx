@@ -8,7 +8,7 @@ import Link from "next/link";
 import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Palette, Upload, Download, Loader, Wand2, Sparkles, X, 
-  CreditCard, Crown, ImageIcon, RefreshCw, Trash2, Maximize2, Plus, Info
+  CreditCard, Crown, ImageIcon, RefreshCw, Trash2, Maximize2, Plus, Info, Coins
 } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -19,6 +19,7 @@ type CreditsRecord = {
   plan_name: string;
   total_credits: number;
   remaining_credits: number;
+  plan?: { image_profit: number; };
 };
 
 export default function PhotoColorizerPage() {
@@ -31,6 +32,18 @@ export default function PhotoColorizerPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '60px'; 
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 60) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [customPrompt]);
 
   const [userImages, setUserImages] = useState<any[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
@@ -42,6 +55,9 @@ export default function PhotoColorizerPage() {
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
+  const baseCredits = 2;
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  const creditsNeeded = baseCredits + imageProfit;
   const getToken = () => typeof window !== 'undefined' ? localStorage.getItem("a") : null;
 
   const fetchBalance = async () => {
@@ -116,7 +132,7 @@ export default function PhotoColorizerPage() {
     if (!apiBase || !selectedInImage) return;
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -167,6 +183,27 @@ export default function PhotoColorizerPage() {
     } catch (error) { setUserImages(prev); }
   };
 
+  const downloadUtils = async (url: string) => {
+    try {
+      const toastId = toast.loading('جاري التحميل...');
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `colorized_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.dismiss(toastId);
+      toast.success('تم التحميل');
+    } catch (e) {
+      toast.dismiss();
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <>
       <Toaster position="top-right" />
@@ -190,42 +227,59 @@ export default function PhotoColorizerPage() {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[320px] md:w-[360px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col p-5 shrink-0">
-                <div className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
-                            <Upload size={14} className="text-teal-400" /> ارفع الصورة قديمة
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:h-full lg:max-h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
+                            <Upload size={12} className="text-teal-400" /> ارفع الصورة قديمة
                         </label>
-                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-2xl p-6 text-center hover:bg-teal-500/5 hover:border-teal-400/40 cursor-pointer transition-all">
+                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-xl p-4 text-center hover:bg-teal-500/5 hover:border-teal-400/40 cursor-pointer transition-all">
                             {selectedInImage ? (
-                                <div className="space-y-2">
-                                    <img src={selectedInImage} className="h-40 mx-auto rounded-xl object-cover shadow-2xl" />
-                                    <span className="text-[10px] text-teal-400 font-bold block">تغيير الصورة</span>
+                                <div className="space-y-1">
+                                    <img src={selectedInImage} className="h-24 mx-auto rounded-lg object-cover shadow-2xl" />
+                                    <span className="text-[9px] text-teal-400 font-bold block">تغيير الصورة</span>
                                 </div>
                             ) : (
-                                <div className="py-8">
-                                    <Plus className="mx-auto text-gray-600 mb-2" />
-                                    <p className="text-[10px] text-gray-400 font-medium">صور أبيض وأسود للحصول على أفضل تلوين</p>
+                                <div className="py-4">
+                                    <Plus size={20} className="mx-auto text-gray-600 mb-1" />
+                                    <p className="text-[9px] text-gray-400 font-medium">صور أبيض وأسود</p>
                                 </div>
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">تعليمات التلوين (اختياري)</label>
-                         <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} placeholder="مثال: ألوان طبيعية هادئة..." className="w-full h-24 p-3 rounded-xl bg-white/5 border border-white/10 text-xs focus:border-teal-500/40 transition-all outline-none resize-none" />
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">تعليمات التلوين (اختياري)</label>
+                         <textarea 
+                            ref={promptRef}
+                            value={customPrompt} 
+                            onChange={(e) => setCustomPrompt(e.target.value)} 
+                            placeholder="مثال: ألوان طبيعية هادئة..." 
+                            className="w-full min-h-[60px] p-2 rounded-lg bg-white/5 border border-white/10 text-[10px] focus:border-teal-500/40 transition-all outline-none resize-none overflow-hidden" 
+                         />
                     </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    {error && <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center">{error}</div>}
-                    <PremiumButton label={isColorizing ? "جاري التلوين..." : "تلوين الآن"} icon={isColorizing ? RefreshCw : Palette} onClick={colorizePhoto} disabled={!selectedInImage || isColorizing} className="w-full py-4 text-sm rounded-xl" />
+                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[9px] font-bold text-center truncate">{error}</div>}
+                    
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+
+                    <PremiumButton label={isColorizing ? "جاري التلوين..." : "تلوين الآن"} icon={isColorizing ? RefreshCw : Palette} onClick={colorizePhoto} disabled={!selectedInImage || isColorizing} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar order-2">
                 <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
                     {isColorizing && (
                          <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-square border border-white/10 ring-1 ring-teal-500/30 flex flex-col items-center justify-center p-4">
@@ -258,9 +312,7 @@ export default function PhotoColorizerPage() {
                              <div className="bg-white/5 p-4 rounded-xl text-xs text-gray-400 leading-relaxed">{selectedImage.prompt || "صورة قديمة تم تلوينها بدقة عالية باستخدام الذكاء الاصطناعي."}</div>
                         </div>
                         <div className="space-y-3 pt-6 border-t border-white/10">
-                             <button onClick={() => {
-                                const link = document.createElement('a'); link.href = selectedImage.url; link.download = `colorized_${selectedImage.id}.png`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-                             }} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
+                             <button onClick={() => downloadUtils(selectedImage.url)} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
                              <button onClick={(e) => deleteImage(selectedImage.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف</button>
                         </div>
                     </div>

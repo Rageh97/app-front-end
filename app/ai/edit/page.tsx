@@ -9,7 +9,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Brush, Upload, Download, Wand2, Sparkles, Eraser, 
   Move, RefreshCw, X, CreditCard, Crown, ImageIcon, Zap, 
-  Trash2, Maximize2, Plus
+  Trash2, Maximize2, Plus, Coins
 } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -20,6 +20,7 @@ type CreditsRecord = {
   plan_name: string;
   total_credits: number;
   remaining_credits: number;
+  plan?: { image_profit: number; };
 };
 
 const EDIT_TYPES = [
@@ -38,6 +39,22 @@ export default function AIImageEditorPage() {
   const [error, setError] = useState('');
   const [processingProgress, setProcessingProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '60px'; 
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 60) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [editPrompt]);
+
+  const baseCredits = 10;
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  const creditsNeeded = baseCredits + imageProfit;
 
   const [userImages, setUserImages] = useState<any[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
@@ -126,7 +143,7 @@ export default function AIImageEditorPage() {
     if (!editPrompt.trim() && editType !== 'enhance_quality') return setError('يرجى وصف التعديل');
 
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -183,6 +200,27 @@ export default function AIImageEditorPage() {
     } catch (error) { setUserImages(prev); }
   };
 
+  const downloadUtils = async (url: string) => {
+    try {
+      const toastId = toast.loading('جاري التحميل...');
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `nexus_edit_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.dismiss(toastId);
+      toast.success('تم التحميل');
+    } catch (e) {
+      toast.dismiss();
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <>
       <Toaster position="top-right" />
@@ -204,55 +242,79 @@ export default function AIImageEditorPage() {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[320px] md:w-[360px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col p-5 shrink-0">
-                <div className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
-                            <Upload size={14} className="text-violet-400" /> الصورة الأصلية
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:h-full lg:max-h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
+                            <Upload size={12} className="text-violet-400" /> الصورة الأصلية
                         </label>
-                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-2xl p-6 text-center hover:bg-violet-500/5 hover:border-violet-500/40 cursor-pointer transition-all">
+                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-lg p-4 text-center hover:bg-violet-500/5 hover:border-violet-500/40 cursor-pointer transition-all">
                             {selectedInImage ? (
-                                <div className="space-y-2">
-                                    <img src={selectedInImage} className="h-40 mx-auto rounded-xl object-cover shadow-2xl" />
-                                    <span className="text-[10px] text-violet-400 font-bold block">تغيير الصورة</span>
+                                <div className="space-y-1">
+                                    <img src={selectedInImage} className="h-24 mx-auto rounded-lg object-cover shadow-xl" />
+                                    <span className="text-[9px] text-violet-400 font-bold block">تغيير الصورة</span>
                                 </div>
                             ) : (
-                                <div className="py-8">
-                                    <Plus className="mx-auto text-gray-600 mb-2" />
-                                    <p className="text-[10px] text-gray-400 font-medium">اختر صورة للبدء في تعديلها</p>
+                                <div className="py-4">
+                                    <Plus size={20} className="mx-auto text-gray-600 mb-1" />
+                                    <p className="text-[9px] text-gray-400 font-medium">اختر صورة</p>
                                 </div>
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">نوع التعديل</label>
-                         <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                            <Wand2 size={12} className="text-violet-400" /> نوع التعديل
+                         </label>
+                         <div className="grid grid-cols-2 gap-1.5">
                              {EDIT_TYPES.map(t => (
-                                 <button key={t.id} onClick={() => setEditType(t.id)} className={`flex items-center gap-2 p-3 rounded-xl border text-right transition-all ${editType === t.id ? 'bg-violet-500/10 border-violet-500/40 text-violet-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
-                                     {t.icon} <span className="text-[11px] font-bold">{t.name}</span>
+                                 <button key={t.id} onClick={() => setEditType(t.id)} className={`flex items-center gap-1.5 p-2 rounded-lg border text-right transition-all truncate ${editType === t.id ? 'bg-violet-500/10 border-violet-500/40 text-violet-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
+                                     <span className={`shrink-0 ${editType === t.id ? 'text-violet-400' : 'text-gray-600'}`}>
+                                        {React.cloneElement(t.icon as React.ReactElement, { size: 12 })}
+                                     </span>
+                                     <span className="text-[10px] font-bold truncate">{t.name}</span>
                                  </button>
                              ))}
                          </div>
                     </div>
 
                     {editType !== 'enhance_quality' && (
-                        <div className="space-y-3">
-                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">وصف التعديل</label>
-                             <textarea value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} placeholder="مثال: احذف القطة في الخلفية..." className="w-full h-24 p-3 rounded-xl bg-white/5 border border-white/10 text-xs focus:border-violet-500/40 outline-none resize-none transition-all" />
+                        <div className="space-y-2">
+                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                                <Sparkles size={12} className="text-violet-400" /> وصف التعديل
+                             </label>
+                             <textarea 
+                                ref={promptRef}
+                                value={editPrompt} 
+                                onChange={(e) => setEditPrompt(e.target.value)} 
+                                placeholder="مثال: احذف القطة في الخلفية..." 
+                                className="w-full min-h-[60px] p-2 rounded-lg bg-white/5 border border-white/10 text-[10px] focus:border-violet-500/40 outline-none resize-none transition-all overflow-hidden" 
+                             />
                         </div>
                     )}
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    {error && <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center">{error}</div>}
-                    <PremiumButton label={isEditing ? "جاري التعديل..." : "تنفيذ التعديل"} icon={isEditing ? RefreshCw : Brush} onClick={onEdit} disabled={!selectedInImage || isEditing} className="w-full py-4 text-sm rounded-xl" />
+                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[9px] font-bold text-center truncate">{error}</div>}
+                    
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+
+                    <PremiumButton label={isEditing ? "جاري التعديل..." : "تنفيذ التعديل"} icon={isEditing ? RefreshCw : Brush} onClick={onEdit} disabled={!selectedInImage || isEditing} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar order-2">
                 <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
                     {isEditing && (
                          <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-square border border-white/10 ring-1 ring-violet-500/30 flex flex-col items-center justify-center p-4">
@@ -287,7 +349,7 @@ export default function AIImageEditorPage() {
                              <div className="bg-white/5 p-4 rounded-xl text-xs text-gray-400 leading-relaxed font-medium">{selectedImage.prompt || "تعديل ذكي تم تنفيذه بدقة عالية."}</div>
                         </div>
                         <div className="space-y-3 pt-6 border-t border-white/10">
-                             <button onClick={() => { const l = document.createElement('a'); l.href = selectedImage.url; l.download=`nexus_${selectedImage.id}.png`; document.body.appendChild(l); l.click(); document.body.removeChild(l); }} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
+                             <button onClick={() => downloadUtils(selectedImage.url)} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
                              <button onClick={(e) => deleteImage(selectedImage.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف</button>
                         </div>
                     </div>

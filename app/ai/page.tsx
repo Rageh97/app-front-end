@@ -58,7 +58,7 @@ const AI_TOOLS = [
   },
   {
     id: 'chat',
-    title: 'نيكسوس تشات برو',
+    title: 'نيكسوس GPT ',
     description: 'أقوى مساعد ذكي للإجابة على تساؤلاتك وتوليد الأكواد',
     icon: MessageSquare,
     category: 'image',
@@ -159,16 +159,7 @@ const AI_TOOLS = [
     href: '/ai/edit'
   },
   
-  {
-    id: 'long-video',
-    title: ' انشاء فيديو طويل',
-    description: 'إنشاء فيديوهات طويلة ومتسلسلة',
-    icon: Film,
-    category: 'video',
-    gradient: 'from-blue-600/80 to-indigo-600/80',
-    image: 'https://i.pinimg.com/736x/cb/6f/c9/cb6fc9278dcb1d456a88e1f21325b05c.jpg',
-    href: '/ai/long-video'
-  },
+ 
    {
     id: 'sketch',
     title: 'رسم إلى صورة',
@@ -189,6 +180,28 @@ const AI_TOOLS = [
     image: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=1000',
     href: '/ai/logo'
   },
+   {
+    id: 'motion',
+    title: 'تحريك الصور',
+    description: 'أضف حركة حية لصورك الثابتة',
+    icon: Move3D,
+    category: 'video',
+    gradient: 'from-sky-600/80 to-blue-600/80',
+    image: '/images/محاكاة الحركة.png',
+    href: '/ai/motion',
+    
+  },
+   {
+    id: 'long-video',
+    title: ' انشاء فيديو طويل',
+    description: 'إنشاء فيديوهات طويلة ومتسلسلة',
+    icon: Film,
+    category: 'video',
+    gradient: 'from-blue-600/80 to-indigo-600/80',
+    image: 'https://i.pinimg.com/736x/cb/6f/c9/cb6fc9278dcb1d456a88e1f21325b05c.jpg',
+    href: '/ai/long-video',
+    comingSoon: true
+  },
   {
     id: 'effects',
     title: 'تأثيرات الفيديو',
@@ -200,17 +213,7 @@ const AI_TOOLS = [
     href: '/ai/effects',
     comingSoon: true
   },
-  {
-    id: 'motion',
-    title: 'تحريك الصور',
-    description: 'أضف حركة حية لصورك الثابتة',
-    icon: Move3D,
-    category: 'video',
-    gradient: 'from-sky-600/80 to-blue-600/80',
-    image: '/images/محاكاة الحركة.png',
-    href: '/ai/motion',
-    comingSoon: true
-  },
+ 
  
   {
     id: 'ugc',
@@ -380,7 +383,7 @@ export default function AIHomePage() {
             <Link href="#all" className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">عرض كافة الأدوات</Link>
          </div>
 
-         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+         <div className="grid  md:grid-cols-2 lg:grid-cols-3 gap-8">
             {featuredTools.map((tool) => (
                 <Link
                     key={tool.id}
@@ -433,7 +436,7 @@ export default function AIHomePage() {
                     <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
-                        className={`group relative px-8 py-2.5 rounded-full text-sm font-bold transition-all duration-500 flex items-center gap-2 overflow-hidden ${
+                        className={`group relative px-4 md:px-8 py-2.5 rounded-full text-sm font-bold transition-all duration-500 flex items-center gap-2 overflow-hidden ${
                             selectedCategory === cat.id
                                 ? 'bg-white/10 text-white shadow-inner'
                                 : 'text-gray-400 hover:text-white'
@@ -452,7 +455,7 @@ export default function AIHomePage() {
             </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-6">
             {filteredTools.map((tool) => {
                 const isComingSoon = tool.comingSoon;
                 return (

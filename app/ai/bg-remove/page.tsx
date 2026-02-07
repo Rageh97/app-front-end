@@ -9,7 +9,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Scissors, Sparkles, Upload, Download, X, 
   RefreshCw, Image as ImageIcon, CreditCard, Crown, 
-  Trash2, Maximize2, Plus, Info
+  Trash2, Maximize2, Plus, Info, Coins
 } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -20,6 +20,7 @@ type CreditsRecord = {
   plan_name: string;
   total_credits: number;
   remaining_credits: number;
+  plan?: { image_profit: number; };
 };
 
 export default function BackgroundRemoverPage() {
@@ -43,7 +44,9 @@ export default function BackgroundRemoverPage() {
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
-  const creditsNeeded = 1;
+  const baseCredits = 1;
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  const creditsNeeded = baseCredits + imageProfit;
 
   const getToken = () => typeof window !== 'undefined' ? localStorage.getItem("a") : null;
 
@@ -121,7 +124,7 @@ export default function BackgroundRemoverPage() {
     if (!apiBase || !originalImage) return;
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -177,13 +180,25 @@ export default function BackgroundRemoverPage() {
     } catch (error) { setUserImages(prev); }
   };
 
-  const downloadUtils = (url: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `bg_removed_${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadUtils = async (url: string) => {
+    try {
+      const toastId = toast.loading('جاري التحميل...');
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `bg_removed_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.dismiss(toastId);
+      toast.success('تم التحميل');
+    } catch (e) {
+      toast.dismiss();
+      window.open(url, '_blank');
+    }
   };
 
   return (
@@ -211,42 +226,53 @@ export default function BackgroundRemoverPage() {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[320px] md:w-[360px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col p-5 shrink-0">
-                <div className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
-                            <Upload size={14} className="text-cyan-400" /> رفع الصورة
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:h-full lg:max-h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
+                            <Upload size={12} className="text-cyan-400" /> رفع الصورة
                         </label>
-                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-2xl p-6 text-center hover:bg-cyan-500/5 hover:border-cyan-500/40 cursor-pointer transition-all">
+                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-xl p-4 text-center hover:bg-cyan-500/5 hover:border-cyan-500/40 cursor-pointer transition-all">
                             {originalImage ? (
-                                <div className="space-y-2">
-                                    <img src={originalImage} className="h-32 mx-auto rounded-xl object-cover" />
-                                    <span className="text-[10px] text-cyan-400 font-bold">تغيير الصورة</span>
+                                <div className="space-y-1">
+                                    <img src={originalImage} className="h-24 mx-auto rounded-lg object-cover" />
+                                    <span className="text-[9px] text-cyan-400 font-bold block">تغيير الصورة</span>
                                 </div>
                             ) : (
-                                <div className="py-4">
-                                    <Plus className="mx-auto text-gray-600 mb-2" />
-                                    <p className="text-[10px] text-gray-400">تحميل صورة لفصل خلفيتها</p>
+                                <div className="py-2">
+                                    <Plus size={20} className="mx-auto text-gray-600 mb-1" />
+                                    <p className="text-[9px] text-gray-400">تحميل صورة</p>
                                 </div>
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                     </div>
 
-                    <div className="p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/10 flex gap-3 items-start">
-                        <Info size={16} className="text-cyan-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium">سيتم فصل العناصر عن الخلفية تلقائياً وحفظها كملف PNG شفاف وعالي الجودة.</p>
+                    <div className="p-3 bg-cyan-500/5 rounded-xl border border-cyan-500/10 flex gap-2 items-start">
+                        <Info size={14} className="text-cyan-400 shrink-0 mt-0.5" />
+                        <p className="text-[9px] text-gray-400 leading-relaxed font-medium">سيتم فصل العناصر عن الخلفية تلقائياً وحفظها كملف PNG شفاف وعالي الجودة.</p>
                     </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    {error && <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center">{error}</div>}
-                    <PremiumButton label={isProcessing ? "جاري الإزالة..." : "إزالة الخلفية"} icon={isProcessing ? RefreshCw : Scissors} onClick={onProcess} disabled={!originalImage || isProcessing} className="w-full py-4 text-sm rounded-xl" />
+                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">{error}</div>}
+                    
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+
+                    <PremiumButton label={isProcessing ? "جاري الإزالة..." : "إزالة الخلفية"} icon={isProcessing ? RefreshCw : Scissors} onClick={onProcess} disabled={!originalImage || isProcessing} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar order-2">
                 <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
                     {isProcessing && (
                          <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-square border border-white/10 ring-1 ring-cyan-500/30 flex flex-col items-center justify-center p-4">

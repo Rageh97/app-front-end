@@ -7,7 +7,7 @@ import UpgradeModal from "@/components/Modals/UpgradeModal";
 import Link from "next/link";
 import { useTranslation } from 'react-i18next';
 import { toast, Toaster } from 'react-hot-toast';
-import { Copy, Check, ArrowRight, Image as ImageIcon, Upload, X, Sparkles, FileText, Wand2, CreditCard, Crown, ChevronLeft, Zap, RefreshCw, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Copy, Check, ArrowRight, Image as ImageIcon, Upload, X, Sparkles, FileText, Wand2, CreditCard, Crown, ChevronLeft, Zap, RefreshCw, ArrowLeft, ShieldCheck, Coins } from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -21,7 +21,7 @@ type CreditsRecord = {
   remaining_credits: number;
   endedAt: string;
   createdAt: string;
-  plan?: { plan_id: number; plan_name: string; period: string; credits_per_image: number; tokens_per_credit: number };
+  plan?: { plan_id: number; plan_name: string; period: string; credits_per_image: number; tokens_per_credit: number; image_profit?: number };
 };
 
 export default function ImageToTextPage() {
@@ -46,6 +46,9 @@ export default function ImageToTextPage() {
   const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
+  const baseCredits = 2;
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  const creditsNeeded = baseCredits + imageProfit;
 
   const getToken = () => {
     if (typeof window !== 'undefined') {
@@ -129,21 +132,10 @@ export default function ImageToTextPage() {
   };
 
   const checkCreditsAndShowToast = () => {
-    if (!balance) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return false;
     }
-
-    if (balance.remaining_credits === 0) {
-      setShowUpgradeModal(true);
-      return false;
-    }
-
-    if (balance.remaining_credits < 1) {
-      setShowUpgradeModal(true);
-      return false;
-    }
-
     return true;
   };
 
@@ -372,13 +364,13 @@ export default function ImageToTextPage() {
         <div className="flex-1 flex overflow-hidden relative z-10">
           
           {/* Right Sidebar (Settings) - Fixed Width */}
-          <aside className="w-[320px] md:w-[360px] flex flex-col border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0">
-            <div className="p-5 space-y-6">
+          <aside className="w-[280px] md:w-[300px] flex flex-col border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0">
+            <div className="p-4 space-y-4">
               
               {/* Upload Area */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
-                  <Upload size={14} className="text-emerald-400" />
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
+                  <Upload size={12} className="text-emerald-400" />
                   رفع الصورة
                 </label>
                 
@@ -387,11 +379,11 @@ export default function ImageToTextPage() {
                     onClick={() => document.getElementById('image-upload')?.click()}
                     className="relative group cursor-pointer"
                   >
-                    <div className="w-full h-48 rounded-xl bg-white/5 border-2 border-dashed border-white/10 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center gap-3 hover:bg-white/[0.07]">
-                      <Upload size={32} className="text-gray-500 group-hover:text-emerald-400 transition-colors" />
+                    <div className="w-full h-40 rounded-xl bg-white/5 border border-dashed border-white/10 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center gap-2 hover:bg-white/[0.07]">
+                      <Upload size={24} className="text-gray-500 group-hover:text-emerald-400 transition-colors" />
                       <div className="text-center">
-                        <span className="text-sm text-gray-400 group-hover:text-emerald-300 transition-colors block mb-1">انقر لرفع صورة</span>
-                        <span className="text-[10px] text-gray-600">JPG, PNG, WEBP (Max 10MB)</span>
+                        <span className="text-[11px] text-gray-400 group-hover:text-emerald-300 transition-colors block mb-0.5 font-bold">انقر لرفع صورة</span>
+                        <span className="text-[9px] text-gray-600">JPG, PNG, WEBP</span>
                       </div>
                     </div>
                     <input
@@ -407,15 +399,15 @@ export default function ImageToTextPage() {
                     <img 
                       src={uploadedImage} 
                       alt="Uploaded" 
-                      className="w-full h-48 object-cover rounded-xl border border-white/10"
+                      className="w-full h-40 object-cover rounded-xl border border-white/10 shadow-lg"
                     />
                     <button
                       onClick={clearUploadedImage}
                       className="absolute top-2 left-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                     >
-                      <X size={16} />
+                      <X size={14} />
                     </button>
-                    <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-[9px] text-emerald-400 font-bold">
+                    <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-[8px] text-emerald-400 font-bold border border-emerald-500/20 backdrop-blur-md">
                       ✓ جاهز للتحليل
                     </div>
                   </div>
@@ -424,20 +416,29 @@ export default function ImageToTextPage() {
             </div>
             
             {/* Generate Button - Fixed at bottom */}
-            <div className="mt-auto pt-6 border-t border-white/5 p-5">
+            <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
               {error && (
-                <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[10px] font-bold text-center flex items-center justify-center gap-2">
-                  <X size={12} />
+                <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">
                   {error}
                 </div>
               )}
+
+              <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                          <Coins size={10} className="text-yellow-500" />
+                      </div>
+                      <span>التكلفة المتوقعه:</span>
+                  </div>
+                  <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+              </div>
+
               <PremiumButton 
                 label={isGeneratingPrompt ? "جاري التحليل..." : "استخراج الوصف الآن"}
                 icon={isGeneratingPrompt ? RefreshCw : Wand2}
-                secondaryIcon={ArrowLeft}
                 onClick={generatePromptFromImage}
                 disabled={!clientReady || !uploadedImage || isGeneratingPrompt}
-                className="w-full py-4 text-sm rounded-xl"
+                className="w-full py-3 text-xs rounded-xl"
               />
             </div>
           </aside>

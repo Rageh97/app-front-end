@@ -21,6 +21,7 @@ import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { BorderBeam } from "@/components/ui/border-beam";
 
 interface Banner {
   id: number;
@@ -318,30 +319,28 @@ useEffect(() => {
   return (
     <>
 
-    <div className="mt-5 mb-0 xxl:mb-5 flex flex-col xl:flex-row items-center justify-between gap-2 lg:gap-0">
+    <div className="mt-2 mb-0 xxl:mb-2 flex flex-col xl:flex-row items-center justify-between gap-2 lg:gap-0">
           <div className="flex items-center mb-5 xl:mb-0 gap-10 lg:gap-2">
            
-          <div onClick={() => setOpenReviewModal(true)} className={`cursor-pointer hidden md:flex ml-0 ${i18n.language === 'ar' ? 'lg:mr-7' :'lg:ml-7'} px-3 py-2 lg:px-8 lg:py-2 flex items-center justify-center gap-1 lg:gap-5 bg-[#35214f] inner-shadow rounded-xl`}>
-                <h1 className="text-white text-lg lg:text-2xl">{t('dashboard.rateUs')}</h1>
-                <img className="w-7 md:w-12" src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTl4czFqbnc2YjQyOXpjejU5NHZ6cnhka20yNGh3dWxldWttcXd0biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/C4b6GwFKbYxK8/giphy.gif"/>
+          <div onClick={() => setOpenReviewModal(true)} className={`cursor-pointer hidden md:flex ml-0 ${i18n.language === 'ar' ? 'lg:mr-7' :'lg:ml-7'} px-3 py-1.5 lg:px-6 lg:py-1.5 flex items-center justify-center gap-1 lg:gap-3 bg-[#35214f] inner-shadow rounded-xl`}>
+                <h1 className="text-white text-base lg:text-lg whitespace-nowrap">{t('dashboard.rateUs')}</h1>
+                <img className="w-6 md:w-8" src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTl4czFqbnc2YjQyOXpjejU5NHZ6cnhka20yNGh3dWxldWttcXd0biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/C4b6GwFKbYxK8/giphy.gif" alt="rate us"/>
             </div>
     
-          
-
             <div className="flex items-center border-1 border-[#ff7702] bg-[#190237] rounded-xl cursor-pointer ">
                 <div 
                   onClick={() => setStabilityFilter('all')} 
-                  className={`px-2 lg:px-5 py-3 lg:py-3 ${stabilityFilter === 'all' ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-sm sm:text-2xl ${i18n.language === 'ar'?" rounded-r-xl" :"rounded-l-xl"} lg:text-2xl  cursor-pointer`}>
+                  className={`px-3 lg:px-4 py-2 lg:py-2 ${stabilityFilter === 'all' ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar'?" rounded-r-xl" :"rounded-l-xl"} cursor-pointer transition-colors duration-200 whitespace-nowrap`}>
                   {t('dashboard.all')}
                 </div>
                 <div 
                   onClick={() => setStabilityFilter(false)} 
-                  className={`px-2 lg:px-5 py-3 lg:py-2  ${stabilityFilter === false ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white ${i18n.language === 'ar' ? 'text-sm lg:text-2xl xxl:text-xl' : 'text-sm sm:text-2xl'}   cursor-pointer`}>
+                  className={`px-3 lg:px-4 py-2 lg:py-2 ${stabilityFilter === false ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-xs sm:text-base lg:text-lg cursor-pointer transition-colors duration-200 whitespace-nowrap`}>
                   {t('dashboard.unstable')}
                 </div>
                 <div 
                   onClick={() => setStabilityFilter(true)}
-                  className={`px-2 lg:px-5 py-3 lg:py-3 ${stabilityFilter === true ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-sm sm:text-2xl lg:text-2xl ${i18n.language === 'ar'?" rounded-l-xl " :"rounded-r-xl"} cursor-pointer`}>
+                  className={`px-3 lg:px-4 py-2 lg:py-2 ${stabilityFilter === true ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar'?" rounded-l-xl " :"rounded-r-xl"} cursor-pointer transition-colors duration-200 whitespace-nowrap`}>
                   {t('dashboard.stable')}
                 </div>
             </div>
@@ -349,37 +348,35 @@ useEffect(() => {
             <div className="flex items-center border-1 border-[#00c48c] bg-[#190237] rounded-xl cursor-pointer ">
                 <div 
                   onClick={() => setAccessFilter('all')} 
-                  className={`px-3 lg:px-5 py-3 ${accessFilter === 'all' ? 'bg-[#123645]' : 'bg-transparent'} text-white text-sm sm:text-2xl ${i18n.language === 'ar' ? 'rounded-r-xl' : 'rounded-l-xl'}`}>
+                  className={`px-3 lg:px-4 py-2 lg:py-2 ${accessFilter === 'all' ? 'bg-[#123645]' : 'bg-transparent'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar' ? 'rounded-r-xl' : 'rounded-l-xl'} transition-colors duration-200 whitespace-nowrap`}>
                   {t('dashboard.all')}
                 </div>
                 <div 
                   onClick={() => setAccessFilter('free')} 
-                  className={`px-3 lg:px-5 py-3 ${accessFilter === 'free' ? 'bg-[#00c48c]' : 'bg-transparent'} text-sm sm:text-2xl text-white`}>
+                  className={`px-3 lg:px-4 py-2 lg:py-2 ${accessFilter === 'free' ? 'bg-[#00c48c]' : 'bg-transparent'} text-white text-xs sm:text-base lg:text-lg transition-colors duration-200 whitespace-nowrap`}>
                   {t('dashboard.free')}
                 </div>
                 <div 
                   onClick={() => setAccessFilter('pro')} 
-                  className={`px-3 lg:px-5 py-3 ${accessFilter === 'pro' ? 'bg-[#ff7702]' : 'bg-transparent'} text-sm sm:text-2xl text-white ${i18n.language === 'ar' ? 'rounded-l-xl' : 'rounded-r-xl'}`}>
+                  className={`px-3 lg:px-4 py-2 lg:py-2 ${accessFilter === 'pro' ? 'bg-[#ff7702]' : 'bg-transparent'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar' ? 'rounded-l-xl' : 'rounded-r-xl'} transition-colors duration-200 whitespace-nowrap`}>
                   {t('dashboard.pro')}
                 </div>
             </div>
            
             </div>
 
-        <div className=" mx-7 px-2 md:px-0 w-full lg:w-[850px]">
-            <div className="relative flex items-center  w-full">
-              
-            <Search className="absolute text-white w-4 lg:w-7 h-4 lg:h-7 top-3.5 left-2.5  " />
+        <div className=" mx-7 px-2 md:px-0 w-full lg:w-[600px] xl:w-[700px]">
+            <div className="relative flex items-center w-full">
+            <Search className={`absolute text-white w-4 lg:w-5 h-4 lg:h-5 top-1/2 -translate-y-1/2 ${i18n.language === 'ar' ? 'right-3' : 'left-3'}`} />
             <input
             value={seachedTool}
             onChange={(event) => {
-              
               setSearchedTool(event.target.value);
             }}
-            
-            className={`w-full bg-transparent placeholder:text-start placeholder:text-slate-400 text-white text-sm border border-white rounded-full pl-10 pr-3 py-2 lg:py-4 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow ${i18n.language === 'ar' ? 'placeholder:text-left' : ''}`}
+            className={`w-full bg-transparent placeholder:text-slate-400 text-white text-sm border border-white rounded-full py-2 lg:py-2.5 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow ${i18n.language === 'ar' ? 'pr-9 pl-3 text-right placeholder:text-right' : 'pl-9 pr-3 text-left placeholder:text-left'}`}
             placeholder={displayedText}/>
             </div>
+            <BorderBeam/>
         </div>
      
     </div>
@@ -389,7 +386,7 @@ useEffect(() => {
  {/* Banner Slideshow Section */}
       {bannerError && <p className="text-red text-center my-3">Error loading banners: {bannerError}</p>}
       {banners.length > 0 ? (
-        <div  className="rounded-2xl mb-5 px-1 lg:px-5 mt-5">
+        <div  className="rounded-2xl mb-2 px-1 lg:px-5 mt-2">
           <div className="overflow-hidden rounded-2xl">
             <Swiper
               modules={[Autoplay, Navigation, Pagination]}
@@ -437,13 +434,13 @@ useEffect(() => {
 
       {/* AI Tools Hub Swiper Section */}
       {(isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager") && (
-      <div className="mb-0 px-1 lg:px-5 mt-5">
+      <div className="mb-0 px-1 lg:px-5 mt-2">
             {/* Swiper Loop Fix */}
             {(() => {
                const aiTools = [
                    { id: 'image', name: 'انشاء صور احترافية', path: '/ai', img: '/images/انشاء الصور.png' },
                    { id: 'video', name: 'انشاء فيديوهات احترافية', path: '/ai', img: '/images/تاثيرات الفيديو.png' },
-                   { id: 'chat', name: 'نيكسوس تشات برو', path: '/ai', img: '/images/chat.jpg' },
+                   { id: 'chat', name: 'نيكسوس  GPT', path: '/ai', img: '/images/chat.jpg' },
                    { id: 'image-to-text', name: 'استخراج النص من الصورة', path: '/ai', img: '/images/الصورة لنص.png' },
                    { id: 'bg-remove', name: 'حذف الخلفية', path: '/ai', img: '/images/ازالة الخلفية.png' },
                    { id: 'restore', name: 'ترميم الصور', path: '/ai', img: '/images/ترميم الصور .jpeg' },
@@ -452,7 +449,7 @@ useEffect(() => {
                    { id: 'product', name: 'نماذج لمنتجك', path: '/ai', img: '/images/نماذج لمنتجك.png' },
                    { id: 'colorize', name: 'تلوين الصور', path: '/ai', img: '/images/تلوين الصورة.png' },
                    { id: 'edit', name: 'المحرر الذكي', path: '/ai', img: '/images/تعديل الصور.png' },
-                   { id: 'long-video', name: 'انشاء فيديو طويل', path: '/ai', img: 'https://i.pinimg.com/736x/cb/6f/c9/cb6fc9278dcb1d456a88e1f21325b05c.jpg' },
+                   { id: 'long-video', name: 'تحريك الصور', path: '/ai', img: '/images/محاكاة الحركة.png' },
                    { id: 'sketch', name: 'رسم إلى صورة', path: '/ai', img: '/images/رسم الصور.png' },
                    { id: 'logo', name: 'صانع الشعارات', path: '/ai', img: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=1000' },
                ];
@@ -468,7 +465,8 @@ useEffect(() => {
                   spaceBetween={15}
                   slidesPerView={2}
                   loop={true}
-                  autoplay={{ delay: 2500, disableOnInteraction: false }}
+                
+                  autoplay={{ delay: 2500, disableOnInteraction: false, reverseDirection: true }}
                   breakpoints={{
                     640: { slidesPerView: 3 },
                     768: { slidesPerView: 4 },
@@ -515,7 +513,7 @@ useEffect(() => {
 
       {/* Media Categories Swiper Section */}
       {(isMediaHubEnabled || data?.userRole === "admin" || data?.userRole === "manager") && mediaCategories.length > 0 && (
-        <div className="mb-8 px-1 lg:px-5 mt-5">
+        <div className="mb-8 px-1 lg:px-5 mt-2">
             {/* <div className="flex items-center gap-2 mb-4 px-2">
                <div className="w-1 h-6 bg-[#ff7702] rounded-full"></div>
                <h2 className="text-xl font-bold text-white">Media Categories</h2>

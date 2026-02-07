@@ -17,12 +17,12 @@
 }
 
 /* Hide scrollbar for specific elements */
-.scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+.scrollbar-hide, .no-scrollbar {
+  -ms-overflow-style: none !important;  /* Internet Explorer 10+ */
+  scrollbar-width: none !important;  /* Firefox */
 }
-.scrollbar-hide::-webkit-scrollbar { 
-  display: none;  /* Safari and Chrome */
+.scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { 
+  display: none !important;  /* Safari and Chrome */
 }
 
 .haltip:hover {
@@ -947,4 +947,30 @@ input[type="search"]::-webkit-search-cancel-button {
   );
   background-size: 250% 250%, 100% 100%;
   animation: shine-pulse 6.5s infinite;
+}
+/* .................................................. */
+.spinner {
+  background-image: linear-gradient(rgb(186, 66, 255) 35%,rgb(0, 225, 255));
+  width: 100px;
+  height: 100px;
+  animation: spinning82341 1.7s linear infinite;
+  text-align: center;
+  border-radius: 50px;
+  filter: blur(1px);
+  margin-bottom: 20px;
+  /* box-shadow: 0px -5px 20px 0px rgb(186, 66, 255), 0px 5px 20px 0px rgb(0, 225, 255); */
+}
+
+.spinner1 {
+  background-color: rgb(0, 46, 77);
+  width: 100px;
+  height: 100px;
+  border-radius: 50px;
+  filter: blur(10px);
+}
+
+@keyframes spinning82341 {
+  to {
+    transform: rotate(360deg);
+  }
 }

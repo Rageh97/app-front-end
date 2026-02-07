@@ -9,9 +9,36 @@ import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Brush, Upload, Download, RefreshCw, X, 
   CreditCard, Crown, Sparkles, Wand2, Type, Image as ImageIcon,
-  Trash2, Maximize2, Plus, Info
+  Trash2, Maximize2, Plus, Info, Coins, Palette
 } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
+
+const downloadImage = async (url: string, filename: string) => {
+  try {
+    const toastId = toast.loading('جاري التحميل...');
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+    toast.dismiss(toastId);
+    toast.success('تم التحميل بنجاح');
+  } catch (error) {
+    toast.dismiss();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -20,6 +47,7 @@ type CreditsRecord = {
   plan_name: string;
   total_credits: number;
   remaining_credits: number;
+  plan?: { image_profit: number; };
 };
 
 export default function SketchToImagePage() {
@@ -34,6 +62,18 @@ export default function SketchToImagePage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '60px'; 
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 60) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [prompt]);
 
   const [userImages, setUserImages] = useState<any[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
@@ -45,6 +85,9 @@ export default function SketchToImagePage() {
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
+  const baseCredits = 5;
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  const creditsNeeded = baseCredits + imageProfit;
   
   const getToken = () => typeof window !== 'undefined' ? localStorage.getItem("a") : null;
 
@@ -120,7 +163,7 @@ export default function SketchToImagePage() {
     if (!apiBase || !sketchImage) return toast.error('يرجى رفع الرسمة');
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -191,124 +234,99 @@ export default function SketchToImagePage() {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[320px] md:w-[360px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col p-5 shrink-0">
-                <div className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide"><Upload size={14} className="text-amber-400" /> ارفع رسمتك (Sketch)</label>
-                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-2xl p-6 text-center hover:bg-amber-500/5 hover:border-amber-500/40 cursor-pointer transition-all">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide"><Upload size={12} className="text-amber-400" /> ارفع رسمتك (Sketch)</label>
+                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-xl p-4 text-center hover:bg-amber-500/5 hover:border-amber-500/40 cursor-pointer transition-all">
                             {sketchImage ? (
-                                <div className="space-y-2 relative">
-                                    <img src={sketchImage} className="h-40 mx-auto rounded-xl object-contain shadow-2xl" />
+                                <div className="space-y-1 relative">
+                                    <img src={sketchImage} className="h-24 mx-auto rounded-lg object-contain shadow-2xl" />
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); setSketchImage(null); }} 
-                                        className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 rounded-full transition-all"
+                                        className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 rounded-full transition-all"
                                     >
-                                        <X size={14} />
+                                        <X size={10} />
                                     </button>
-                                    <span className="text-[10px] text-amber-400 font-bold block">تغيير الرسمة</span>
+                                    <span className="text-[9px] text-amber-400 font-bold block">تغيير الرسمة</span>
                                 </div>
                             ) : (
-                                <div className="py-8">
-                                    <Plus className="mx-auto text-gray-600 mb-2" />
-                                    <p className="text-[10px] text-gray-400 font-medium">ارفع رسمة بسيطة بالقلم</p>
-                                    <p className="text-[9px] text-gray-600 mt-1">PNG, JPG, WEBP (حتى 10MB)</p>
+                                <div className="py-2">
+                                    <Plus size={20} className="mx-auto text-gray-600 mb-1" />
+                                    <p className="text-[9px] text-gray-400 font-medium">ارفع رسمة بسيطة</p>
                                 </div>
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                            <Type size={14} className="text-amber-400" /> وصف إضافي (اختياري)
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                            <Type size={12} className="text-amber-400" /> وصف إضافي (اختياري)
                          </label>
-                         <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="مثال: في يوم مشمس، إضاءة طبيعية، ألوان دافئة..." className="w-full h-24 p-3 rounded-xl bg-white/5 border border-white/10 text-xs focus:border-amber-500/40 outline-none resize-none transition-all" />
-                         <p className="text-[9px] text-gray-600">يمكنك إضافة تفاصيل عن الإضاءة، الألوان، أو الأجواء المطلوبة</p>
+                         <textarea 
+                            ref={promptRef}
+                            value={prompt} 
+                            onChange={(e) => setPrompt(e.target.value)} 
+                            placeholder="مثال: في يوم مشمس، إضاءة طبيعية..." 
+                            className="w-full min-h-[60px] p-2 rounded-lg bg-white/5 border border-white/10 text-[10px] focus:border-amber-500/40 outline-none resize-none transition-all overflow-hidden" 
+                         />
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                            <Wand2 size={14} className="text-amber-400" /> نمط الصورة
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                            <Wand2 size={12} className="text-amber-400" /> نمط الصورة
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button 
-                                onClick={() => setStyle('realistic')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${style === 'realistic' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                واقعي 
-                            </button>
-                            <button 
-                                onClick={() => setStyle('artistic')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${style === 'artistic' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                فني 
-                            </button>
-                            <button 
-                                onClick={() => setStyle('cartoon')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${style === 'cartoon' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                كرتون 
-                            </button>
-                            <button 
-                                onClick={() => setStyle('anime')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${style === 'anime' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                أنمي 
-                            </button>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            {['realistic', 'artistic', 'cartoon', 'anime'].map(s => (
+                                <button 
+                                    key={s}
+                                    onClick={() => setStyle(s as any)} 
+                                    className={`p-2 rounded-lg text-[10px] font-bold transition-all ${style === s ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                                >
+                                    {s === 'realistic' ? 'واقعي' : s === 'artistic' ? 'فني' : s === 'cartoon' ? 'كرتون' : 'أنمي'}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                            <Type size={14} className="text-amber-400" /> نظام الألوان
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                            <Palette size={12} className="text-amber-400" /> نظام الألوان
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button 
-                                onClick={() => setColorScheme('natural')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${colorScheme === 'natural' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                طبيعي 
-                            </button>
-                            <button 
-                                onClick={() => setColorScheme('vibrant')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${colorScheme === 'vibrant' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                نابض 
-                            </button>
-                            <button 
-                                onClick={() => setColorScheme('monochrome')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${colorScheme === 'monochrome' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                أبيض وأسود 
-                            </button>
-                            <button 
-                                onClick={() => setColorScheme('sepia')} 
-                                className={`p-3 rounded-xl text-xs font-bold transition-all ${colorScheme === 'sepia' ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-                            >
-                                سيبيا 
-                            </button>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            {['natural', 'vibrant', 'monochrome', 'sepia'].map(c => (
+                                <button 
+                                    key={c}
+                                    onClick={() => setColorScheme(c as any)} 
+                                    className={`p-2 rounded-lg text-[10px] font-bold transition-all ${colorScheme === c ? 'bg-amber-500 text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                                >
+                                    {c === 'natural' ? 'طبيعي' : c === 'vibrant' ? 'نابض' : c === 'monochrome' ? 'أبيض وأسود' : 'سيبيا'}
+                                </button>
+                            ))}
                         </div>
                     </div>
-
-                    {/* <div className="p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10 flex gap-3 items-start">
-                        <Info size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium">
-                            {style === 'realistic' && 'النمط الواقعي: يحول الرسم إلى صورة فوتوغرافية واقعية بتفاصيل دقيقة.'}
-                            {style === 'artistic' && 'النمط الفني: يحول الرسم إلى لوحة فنية بضربات فرشاة احترافية.'}
-                            {style === 'cartoon' && 'نمط الكرتون: يحول الرسم إلى رسوم متحركة ملونة وجذابة.'}
-                            {style === 'anime' && 'نمط الأنمي: يحول الرسم إلى أسلوب الأنمي الياباني الشهير.'}
-                        </p>
-                    </div> */}
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    {error && <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center">{error}</div>}
-                    <PremiumButton label={isGenerating ? "جاري التحويل..." : "تحويل إلى صورة"} icon={isGenerating ? RefreshCw : Sparkles} onClick={onGenerate} disabled={!sketchImage || isGenerating} className="w-full py-4 text-sm rounded-xl" />
+                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">{error}</div>}
+                    
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+
+                    <PremiumButton label={isGenerating ? "جاري التحويل..." : "تحويل إلى صورة"} icon={isGenerating ? RefreshCw : Sparkles} onClick={onGenerate} disabled={!sketchImage || isGenerating} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar order-2">
                 <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
                     {isGenerating && (
                          <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-square border border-white/10 ring-1 ring-amber-500/30 flex flex-col items-center justify-center p-4">
@@ -342,7 +360,7 @@ export default function SketchToImagePage() {
                              <div className="bg-white/5 p-4 rounded-xl text-xs text-gray-400 leading-relaxed font-medium">{selectedImage.prompt}</div>
                         </div>
                         <div className="space-y-3 pt-6 border-t border-white/10">
-                             <button onClick={() => { const link = document.createElement('a'); link.href = selectedImage.url; link.download = `sketch_${selectedImage.id}.png`; document.body.appendChild(link); link.click(); document.body.removeChild(link); }} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
+                             <button onClick={() => downloadImage(selectedImage.url, `sketch_${selectedImage.id}.png`)} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
                              <button onClick={(e) => deleteImage(selectedImage.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف</button>
                         </div>
                     </div>

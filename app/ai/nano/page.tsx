@@ -9,9 +9,39 @@ import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Zap, Sparkles, RefreshCw, Download, X, Wand2, 
   CreditCard, Crown, Image as ImageIcon, Trash2, Settings2, 
-  Maximize2, Palette, Star, Check, Plus, Copy, Upload, XCircle
-} from 'lucide-react';
+  Maximize2, Palette, Star, Check, Plus, Copy, Upload, XCircle, Coins
+, Cpu} from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
+
+const downloadImage = async (url: string, filename: string) => {
+  try {
+    const toastId = toast.loading('جاري التحميل...');
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+    toast.dismiss(toastId);
+    toast.success('تم التحميل بنجاح');
+  } catch (error) {
+    toast.dismiss();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
+import { NANO_MODELS, AIModel, calculateImageCost, syncModelsWithDynamicPricing } from '@/lib/ai-models-config';
+import { ModelSelector } from '@/components/ModelSelector';
+import { processImagePrompt } from '@/lib/prompt-utils';
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -49,6 +79,16 @@ export default function NanoBananaPage() {
   
   const [selectedStyle, setSelectedStyle] = useState('auto');
   const [selectedSize, setSelectedSize] = useState('1024x1024');
+  
+  // Model Selection State
+  const [selectedModelId, setSelectedModelId] = useState(NANO_MODELS[0].id);
+  const [dynamicPrices, setDynamicPrices] = useState<Record<string, number>>({});
+
+  const dynamicModels = useMemo(() => {
+    return syncModelsWithDynamicPricing(NANO_MODELS, dynamicPrices);
+  }, [dynamicPrices]);
+
+  const selectedModel = dynamicModels.find(m => m.id === selectedModelId) || dynamicModels[0];
 
   // Reference Image State
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
@@ -62,7 +102,20 @@ export default function NanoBananaPage() {
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
+  
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  // Calculate cost based on selected model + size + profit margin
+  const creditsNeeded = calculateImageCost(selectedModel, selectedSize, imageProfit);
+
+  useEffect(() => {
+    if (promptRef.current) {
+        promptRef.current.style.height = 'auto';
+        promptRef.current.style.height = promptRef.current.scrollHeight + 'px';
+    }
+  }, [prompt]);
   
   const getToken = () => typeof window !== 'undefined' ? localStorage.getItem("a") : null;
 
@@ -113,6 +166,7 @@ export default function NanoBananaPage() {
           fetchBalance();
           fetchUserImages();
           loadPlans();
+          loadDynamicPricing();
         }
       } catch (e) {}
     };
@@ -120,11 +174,24 @@ export default function NanoBananaPage() {
     return () => { cancelled = true; };
   }, []);
 
+  const loadDynamicPricing = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings/public/ai-pricing`);
+      if (res.status === 200) {
+        const data = await res.json();
+        setDynamicPrices(data);
+      }
+    } catch (e) {
+      console.error("Failed to load dynamic pricing", e);
+    }
+  };
+
   const onGenerate = async () => {
     if (!apiBase || !prompt) return;
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -141,13 +208,26 @@ export default function NanoBananaPage() {
     }, 400);
     
     try {
+      // معالجة البرومبت العربي وتحسينه
+      const styleValue = IMAGE_STYLES.find(s => s.id === selectedStyle)?.label || '';
+      const processedPrompt = processImagePrompt(prompt, styleValue);
+      
+      console.log('[NANO] Sending generation request with:', {
+        model: selectedModelId,
+        size: selectedSize,
+        expectedCost: creditsNeeded,
+        originalPrompt: prompt,
+        processedPrompt: processedPrompt
+      });
+      
       const res = await fetch(`${apiBase}/api/ai/nano-generate`, {
         method: "POST",
         headers: { 'Authorization': getToken() as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 },
         body: JSON.stringify({ 
-          prompt, 
+          prompt: processedPrompt, // استخدام البرومبت المحسّن
           style: selectedStyle, 
           size: selectedSize,
+          model: selectedModelId, // إرسال النموذج المختار
           reference_image: referenceImage // إرسال الصورة المرجعية
         }),
       });
@@ -157,6 +237,7 @@ export default function NanoBananaPage() {
       
       if (res.status === 200) {
         const data = await res.json();
+        console.log('[NANO] Generation successful, credits used:', data.credits_used);
         toast.success('تم التوليد بنجاح!');
         
         // Add newest image directly to UI
@@ -221,7 +302,7 @@ export default function NanoBananaPage() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="h-screen flex flex-col bg-[#010101] text-white selection:bg-yellow-500/30 overflow-hidden" dir="rtl">
+      <div className="h-screen flex flex-col bg-[#010101] text-white selection:bg-yellow-500/30 overflow-hidden no-scrollbar" dir="rtl">
         <header className="shrink-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex justify-between items-center">
             <div className="flex items-center gap-4">
               <Link href="/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-xs"><ArrowRight size={14} /> عودة</Link>
@@ -239,23 +320,30 @@ export default function NanoBananaPage() {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[320px] md:w-[360px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col p-5 shrink-0">
-                <div className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">وصف الصورة السريع</label>
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">وصف الصورة السريع</label>
                         <div className="relative">
-                            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="اكتب ما تتخيله هنا..." maxLength={20000} className="w-full h-32 p-4 rounded-2xl bg-white/5 border border-white/5 focus:border-yellow-500/40 outline-none resize-none transition-all text-sm leading-relaxed" />
-                            <div className="absolute bottom-3 right-3 text-[10px] bg-black/50 px-2 py-0.5 rounded text-gray-400 border border-white/5">
+                            <textarea 
+                                ref={promptRef}
+                                value={prompt} 
+                                onChange={(e) => setPrompt(e.target.value)} 
+                                placeholder="اكتب ما تتخيله هنا..." 
+                                maxLength={20000} 
+                                className="w-full min-h-[100px] p-3 rounded-xl bg-white/5 border border-white/5 focus:border-yellow-500/40 outline-none resize-none transition-all text-xs leading-relaxed no-scrollbar" 
+                            />
+                            <div className="absolute bottom-2 right-2 text-[8px] bg-black/50 px-1.5 py-0.5 rounded text-gray-400 border border-white/5">
                                 {prompt.length}/20000
                             </div>
                         </div>
                     </div>
 
                     {/* Reference Image Upload */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                            <Upload size={12} className="text-yellow-400" />
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Upload size={10} className="text-yellow-400" />
                             صورة مرجعية (اختياري)
                         </label>
                         {!referenceImage ? (
@@ -263,9 +351,9 @@ export default function NanoBananaPage() {
                                 onClick={() => fileInputRef.current?.click()}
                                 className="relative group cursor-pointer"
                             >
-                                <div className="w-full h-24 rounded-2xl bg-white/5 border-2 border-dashed border-white/5 hover:border-yellow-500/40 transition-all flex flex-col items-center justify-center gap-1.5 hover:bg-white/[0.07]">
-                                    <Upload size={20} className="text-gray-600 group-hover:text-yellow-400 transition-colors" />
-                                    <span className="text-[10px] text-gray-600 group-hover:text-yellow-300 transition-colors">انقر لرفع صورة</span>
+                                <div className="w-full h-20 rounded-xl bg-white/5 border border-dashed border-white/10 hover:border-yellow-500/40 transition-all flex flex-col items-center justify-center gap-1.5 hover:bg-white/[0.07]">
+                                    <Upload size={16} className="text-gray-600 group-hover:text-yellow-400 transition-colors" />
+                                    <span className="text-[9px] text-gray-600 group-hover:text-yellow-300 transition-colors">انقر لرفع صورة</span>
                                 </div>
                                 <input 
                                     ref={fileInputRef}
@@ -280,52 +368,77 @@ export default function NanoBananaPage() {
                                 <img 
                                     src={referenceImage} 
                                     alt="Reference" 
-                                    className="w-full h-24 object-cover rounded-2xl border border-white/10"
+                                    className="w-full h-20 object-cover rounded-xl border border-white/10"
                                 />
                                 <button
                                     onClick={removeReferenceImage}
-                                    className="absolute top-2 left-2 p-1 bg-red-500/80 hover:bg-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                    className="absolute top-1 left-1 p-1 bg-red-500/80 hover:bg-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                 >
-                                    <XCircle size={14} />
+                                    <XCircle size={12} />
                                 </button>
-                                <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/70 rounded text-[8px] text-yellow-400 font-bold">
+                                <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded text-[8px] text-yellow-400 font-bold">
                                     ✓ مرجع
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">النمط</label>
-                         <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">النمط</label>
+                         <div className="grid grid-cols-2 gap-1.5">
                              {IMAGE_STYLES.map(s => (
-                                 <button key={s.id} onClick={() => setSelectedStyle(s.id)} className={`flex items-center gap-2 p-3 rounded-xl border text-right transition-all ${selectedStyle === s.id ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
-                                     <s.icon size={14} /> <span className="text-[11px] font-bold">{s.label}</span>
+                                 <button key={s.id} onClick={() => setSelectedStyle(s.id)} className={`flex items-center gap-2 p-2.5 rounded-lg border text-right transition-all ${selectedStyle === s.id ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
+                                     <s.icon size={12} /> <span className="text-[10px] font-bold">{s.label}</span>
                                  </button>
                              ))}
                          </div>
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">الأبعاد</label>
-                         <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">الأبعاد</label>
+                         <div className="grid grid-cols-3 gap-1.5">
                              {IMAGE_SIZES.map(s => (
-                                 <button key={s.id} onClick={() => setSelectedSize(s.id)} className={`p-3 rounded-xl border text-center transition-all ${selectedSize === s.id ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
-                                     <div className="text-lg mb-1">{s.icon}</div>
-                                     <span className="text-[10px] font-bold block">{s.label}</span>
+                                 <button key={s.id} onClick={() => setSelectedSize(s.id)} className={`p-2.5 rounded-lg border text-center transition-all ${selectedSize === s.id ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
+                                     <div className="text-sm mb-0.5">{s.icon}</div>
+                                     <span className="text-[9px] font-black block">{s.label}</span>
                                  </button>
                              ))}
                          </div>
+                    </div>
+
+                    {/* Model Selection Section */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Cpu size={10} className="text-yellow-400" />
+                            اختر النموذج
+                        </label>
+                        <ModelSelector
+                            models={dynamicModels}
+                            selectedModelId={selectedModelId}
+                            onSelectModel={setSelectedModelId}
+                            size={selectedSize}
+                            profit={imageProfit}
+                            compact={true}
+                        />
                     </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    {error && <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center">{error}</div>}
-                    <PremiumButton label={isGenerating ? "جاري التوليد السريع..." : "توليد الآن"} icon={isGenerating ? RefreshCw : Zap} onClick={onGenerate} disabled={!prompt || isGenerating} className="w-full py-4 text-sm rounded-xl" />
+                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                    {error && <div className="mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[9px] font-bold text-center truncate">{error}</div>}
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+                    <PremiumButton label={isGenerating ? "جاري التوليد..." : "توليد الآن"} icon={isGenerating ? RefreshCw : Zap} onClick={onGenerate} disabled={!prompt || isGenerating} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 no-scrollbar order-2">
                 <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
                     {isGenerating && (
                          <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-square border border-white/10 ring-1 ring-yellow-500/30 flex flex-col items-center justify-center p-4">
@@ -362,7 +475,7 @@ export default function NanoBananaPage() {
                              <div className="bg-white/5 p-4 rounded-xl text-xs text-gray-400 leading-relaxed font-medium break-words whitespace-pre-wrap">{selectedImage.prompt}</div>
                         </div>
                         <div className="space-y-3 pt-6 border-t border-white/10 shrink-0">
-                             <button onClick={() => { const link = document.createElement('a'); link.href = selectedImage.url; link.download = `nano_${selectedImage.id}.png`; document.body.appendChild(link); link.click(); document.body.removeChild(link); }} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
+                             <button onClick={() => downloadImage(selectedImage.url, `nano_${selectedImage.id}.png`)} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
                              <button onClick={(e) => deleteImage(selectedImage.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف</button>
                         </div>
                     </div>

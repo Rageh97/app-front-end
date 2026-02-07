@@ -6,7 +6,7 @@ import PaymentModal from "@/components/Modals/PaymentModal";
 import UpgradeModal from "@/components/Modals/UpgradeModal";
 import Link from "next/link";
 import { toast, Toaster } from 'react-hot-toast';
-import { ArrowRight, Users, Download, X, RefreshCw, CreditCard, Crown, ArrowLeft, Play, Layers, Heart, MessageCircle, Share2, Trash2, Film } from 'lucide-react';
+import { ArrowRight, Users, Download, X, RefreshCw, CreditCard, Crown, ArrowLeft, Play, Layers, Heart, MessageCircle, Share2, Trash2, Film, Coins, Sparkles } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
 
 type CreditsRecord = {
@@ -60,6 +60,22 @@ export default function UGCPage() {
   const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
 
   const [clientReady, setClientReady] = useState(false);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '80px'; 
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 80) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [prompt]);
+
+  const baseCredits = 20;
+  const videoProfit = balance?.plan?.video_profit ?? 0;
+  const creditsNeeded = baseCredits + videoProfit;
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
 
@@ -161,7 +177,7 @@ export default function UGCPage() {
   const onGenerate = async () => {
     if (!apiBase || !prompt.trim() || !clientReady) return;
     
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -297,7 +313,7 @@ export default function UGCPage() {
     <>
       <Toaster position="top-right" />
 
-      <div className="min-h-screen bg-[#000000] text-white selection:bg-pink-500/30 font-sans" dir="rtl">
+      <div className="min-h-screen bg-[#000000] text-white selection:bg-pink-500/30 font-sans no-scrollbar" dir="rtl">
         {/* Background Ambient */}
         <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
         <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-pink-900/5 blur-[120px] rounded-full pointer-events-none"></div>
@@ -352,70 +368,72 @@ export default function UGCPage() {
             
             {/* Left Panel */}
             <div className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-28">
-               <div className="mb-2">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-[2px] bg-pink-500"></div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400">Social Studio</span>
-                </div>
-                <div className="text-sm text-gray-500 font-bold leading-relaxed">
-                   أنشئ فيديوهات تبدو كأنها مصورة من قبل مستخدمين حقيقيين لزيادة الثقة والتفاعل.
-                </div>
-              </div>
-
-               <div className="bg-[#0c0c0c] rounded-[2rem] p-6 border border-white/5 relative group shadow-2xl overflow-hidden mb-4">
+               <div className="bg-[#0c0c0c] rounded-3xl p-5 border border-white/5 relative group shadow-2xl overflow-hidden mb-4">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-rose-600 to-red-600 opacity-50"></div>
                 
-                <div className="relative space-y-6">
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">موضوع الفيديو</span>
+                <div className="relative space-y-4">
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest flex items-center gap-2">
+                        <Sparkles size={12} className="text-pink-400" /> موضوع الفيديو
+                    </span>
                     <textarea 
+                        ref={promptRef}
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         placeholder="صف محتوى الفيديو التفاعلي..."
-                        className="w-full px-4 py-4 rounded-2xl bg-white/5 border border-white/10 focus:border-pink-500/50 outline-none text-white font-bold transition-all placeholder:text-gray-700 min-h-[120px] resize-none"
+                        className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-pink-500/50 outline-none text-white text-xs font-bold transition-all placeholder:text-gray-700 min-h-[80px] resize-none overflow-hidden"
                     />
                   </div>
 
-                  <div>
-                     <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">طابع المحتوى</span>
-                     <div className="grid grid-cols-1 gap-2">
+                  <div className="space-y-2">
+                     <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block mb-1">طابع المحتوى</span>
+                     <div className="grid grid-cols-1 gap-1.5">
                          {UGC_STYLES.map((s) => (
                              <button
                                 key={s.id}
                                 onClick={() => setStyle(s.id)}
-                                className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 border ${
+                                className={`flex items-center gap-3 p-2 rounded-xl transition-all duration-300 border ${
                                     style === s.id
-                                    ? 'bg-pink-500/10 border-pink-500/50 text-pink-300 shadow-[0_0_20px_rgba(236,72,153,0.1)]'
+                                    ? 'bg-pink-500/10 border-pink-500/50 text-pink-300'
                                     : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'
                                 }`}
                              >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${style === s.id ? 'bg-pink-500/20' : 'bg-white/5'}`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${style === s.id ? 'bg-pink-500/20' : 'bg-white/5'}`}>
                                     {getUgcIcon(s.iconType)}
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-[11px] font-black">{s.name}</div>
-                                    <div className="text-[9px] text-gray-600">{s.desc}</div>
+                                <div className="text-right truncate">
+                                    <div className="text-[10px] font-bold">{s.name}</div>
+                                    <div className="text-[8px] text-gray-600 truncate">{s.desc}</div>
                                 </div>
                              </button>
                          ))}
                      </div>
                   </div>
 
-                  <div className="mt-8 border-t border-white/5 pt-6">
+                  <div className="pt-4 border-t border-white/5 space-y-3">
+                     <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                     </div>
+
                     <PremiumButton 
                         label={isGenerating ? "جاري الإنشاء..." : "إنشاء فيديو UGC"}
                         icon={isGenerating ? RefreshCw : Users}
-                        secondaryIcon={ArrowLeft}
                         onClick={onGenerate}
                         disabled={!prompt.trim() || isGenerating}
-                        className="w-full py-4 text-base"
+                        className="w-full py-3 text-xs rounded-xl"
                     />
                   </div>
                 </div>
               </div>
 
               {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-black text-center flex items-center justify-center gap-2">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center flex items-center justify-center gap-2 truncate">
                   <X size={14} />
                   {error}
                 </div>

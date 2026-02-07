@@ -9,9 +9,36 @@ import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Camera, Upload, Download, X, RefreshCw, Wand2, 
   CreditCard, Crown, Sparkles, Image as ImageIcon, Trash2, 
-  Maximize2, Plus, Layout
+  Maximize2, Plus, Layout, Coins
 } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
+
+const downloadImage = async (url: string, filename: string) => {
+  try {
+    const toastId = toast.loading('جاري التحميل...');
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+    toast.dismiss(toastId);
+    toast.success('تم التحميل بنجاح');
+  } catch (error) {
+    toast.dismiss();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -43,6 +70,18 @@ export default function ProductModelsPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '60px'; 
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 60) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [customPrompt]);
 
   const [userImages, setUserImages] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
@@ -53,6 +92,9 @@ export default function ProductModelsPage() {
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
+  const baseCredits = 5;
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  const creditsNeeded = baseCredits + imageProfit;
   
   const getToken = () => typeof window !== 'undefined' ? localStorage.getItem("a") : null;
 
@@ -114,7 +156,7 @@ export default function ProductModelsPage() {
     if (!apiBase || !uploadedProduct) return;
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -195,51 +237,69 @@ export default function ProductModelsPage() {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[320px] md:w-[360px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col p-5 shrink-0">
-                <div className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide"><Upload size={14} className="text-rose-400" /> صورة المنتج</label>
-                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-2xl p-6 text-center hover:bg-rose-500/5 hover:border-rose-500/40 cursor-pointer transition-all">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide"><Upload size={12} className="text-rose-400" /> صورة المنتج</label>
+                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-xl p-4 text-center hover:bg-rose-500/5 hover:border-rose-500/40 cursor-pointer transition-all">
                             {uploadedProduct ? (
-                                <div className="space-y-2">
-                                    <img src={uploadedProduct} className="h-40 mx-auto rounded-xl object-cover shadow-2xl" />
-                                    <span className="text-[10px] text-rose-400 font-bold block">تغيير المنتج</span>
+                                <div className="space-y-1">
+                                    <img src={uploadedProduct} className="h-24 mx-auto rounded-lg object-cover shadow-2xl" />
+                                    <span className="text-[9px] text-rose-400 font-bold block">تغيير المنتج</span>
                                 </div>
                             ) : (
-                                <div className="py-8">
-                                    <Plus className="mx-auto text-gray-600 mb-2" />
-                                    <p className="text-[10px] text-gray-400 font-medium">ارفع صورة المنتج بخلفية واضحة</p>
+                                <div className="py-2">
+                                    <Plus size={20} className="mx-auto text-gray-600 mb-1" />
+                                    <p className="text-[9px] text-gray-400 font-medium">ارفع صورة المنتج</p>
                                 </div>
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProductUpload} className="hidden" />
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">بيئة التصوير</label>
-                         <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">بيئة التصوير</label>
+                         <div className="grid grid-cols-2 gap-1.5">
                              {BACKGROUND_OPTIONS.map(bg => (
-                                 <button key={bg.id} onClick={() => setSelectedBackground(bg.id)} className={`flex items-center gap-2 p-3 rounded-xl border text-right transition-all ${selectedBackground === bg.id ? 'bg-rose-500/10 border-rose-500/40 text-rose-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
-                                     {bg.icon} <span className="text-[11px] font-bold">{bg.name}</span>
+                                 <button key={bg.id} onClick={() => setSelectedBackground(bg.id)} className={`flex items-center gap-1.5 p-2 rounded-lg border text-right transition-all truncate ${selectedBackground === bg.id ? 'bg-rose-500/10 border-rose-500/40 text-rose-300' : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'}`}>
+                                     <span className="shrink-0">{bg.icon}</span>
+                                     <span className="text-[10px] font-bold truncate">{bg.name}</span>
                                  </button>
                              ))}
                          </div>
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">تعليمات إضافية (اختياري)</label>
-                         <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} placeholder="مثال: إضاءة دافئة، خلفية رخامية..." className="w-full h-24 p-3 rounded-xl bg-white/5 border border-white/10 text-xs focus:border-rose-500/40 outline-none resize-none transition-all" />
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">تعليمات إضافية (اختياري)</label>
+                         <textarea 
+                            ref={promptRef}
+                            value={customPrompt} 
+                            onChange={(e) => setCustomPrompt(e.target.value)} 
+                            placeholder="مثال: إضاءة دافئة، خلفية رخامية..." 
+                            className="w-full min-h-[60px] p-2 rounded-lg bg-white/5 border border-white/10 text-[10px] focus:border-rose-500/40 outline-none resize-none transition-all overflow-hidden" 
+                         />
                     </div>
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    {error && <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center">{error}</div>}
-                    <PremiumButton label={isGenerating ? "جاري الإخراج..." : "بدء الجلسة"} icon={isGenerating ? RefreshCw : Camera} onClick={onGenerate} disabled={!uploadedProduct || isGenerating} className="w-full py-4 text-sm rounded-xl" />
+                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[9px] font-bold text-center truncate">{error}</div>}
+                    
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+
+                    <PremiumButton label={isGenerating ? "جاري الإخراج..." : "بدء الجلسة"} icon={isGenerating ? RefreshCw : Camera} onClick={onGenerate} disabled={!uploadedProduct || isGenerating} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar order-2">
                 <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
                     {isGenerating && (
                          <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-square border border-white/10 ring-1 ring-rose-500/30 flex flex-col items-center justify-center p-4">
@@ -272,7 +332,7 @@ export default function ProductModelsPage() {
                              <div className="bg-white/5 p-4 rounded-xl text-xs text-gray-400 leading-relaxed font-medium">{selectedImage.prompt || "جلسة تصوير منتجات احترافية."}</div>
                         </div>
                         <div className="space-y-3 pt-6 border-t border-white/10">
-                             <button onClick={() => { const link = document.createElement('a'); link.href = selectedImage.url; link.download = `product_${selectedImage.id}.png`; document.body.appendChild(link); link.click(); document.body.removeChild(link); }} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
+                             <button onClick={() => downloadImage(selectedImage.url, `product_${selectedImage.id}.png`)} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 text-sm"><Download size={18} /> تحميل</button>
                              <button onClick={(e) => deleteImage(selectedImage.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف</button>
                         </div>
                     </div>

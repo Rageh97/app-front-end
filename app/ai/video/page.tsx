@@ -9,9 +9,39 @@ import { toast, Toaster } from 'react-hot-toast';
 import { 
   ArrowRight, Video, Download, X, Sparkles, Play, Film, Camera, 
   Palette, Zap, CreditCard, Crown, RefreshCw, Trash2, Maximize2, 
-  Plus, Settings2, Clock, History, MonitorPlay, Upload, XCircle, Image as ImageIcon
-} from 'lucide-react';
+  Plus, Settings2, Clock, History, MonitorPlay, Upload, XCircle, Image as ImageIcon, Coins
+, Cpu} from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
+
+const downloadVideo = async (url: string, filename: string) => {
+  try {
+    const toastId = toast.loading('جاري التحميل...');
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+    toast.dismiss(toastId);
+    toast.success('تم التحميل بنجاح');
+  } catch (error) {
+    toast.dismiss();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
+import { VIDEO_MODELS, VideoModel, calculateVideoCost, syncVideoWithDynamicPricing } from '@/lib/ai-models-config';
+import { ModelSelector } from '@/components/ModelSelector';
+import { processVideoPrompt } from '@/lib/prompt-utils';
 
 type CreditsRecord = {
   remaining_credits: number;
@@ -25,22 +55,55 @@ const VIDEO_STYLES = [
   { label: "إبداعي", value: "artistic style", icon: <Sparkles size={14} /> },
 ];
 
-const VIDEO_DURATIONS = [
-  { label: "5 ثوانٍ", value: 5 },
-  { label: "10 ثوانٍ", value: 10 },
-  { label: "15 ثانية", value: 15 },
-];
-
 export default function VideoGenerationPage() {
   const [balance, setBalance] = useState<CreditsRecord | null>(null);
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState(VIDEO_STYLES[0].value);
-  const [duration, setDuration] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Model Selection State
+  const [selectedModelId, setSelectedModelId] = useState(VIDEO_MODELS[0].id);
+  const [dynamicPrices, setDynamicPrices] = useState<Record<string, number>>({});
+
+  const dynamicModels = useMemo(() => {
+    return syncVideoWithDynamicPricing(VIDEO_MODELS, dynamicPrices);
+  }, [dynamicPrices]);
+
+  const selectedModel = dynamicModels.find(m => m.id === selectedModelId) || dynamicModels[0];
+
+  // Dynamic Durations based on model
+  const availableDurations = useMemo(() => {
+    return selectedModel.supportedDurations || [5];
+  }, [selectedModel]);
+
+  const [duration, setDuration] = useState(availableDurations[0]);
+
+  // Reset duration if current is not supported by new model
+  useEffect(() => {
+    if (!availableDurations.includes(duration)) {
+      setDuration(availableDurations[0]);
+    }
+  }, [selectedModelId, availableDurations]);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '80px'; 
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 80) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [prompt]);
+
+  const videoProfit = Number(balance?.plan?.video_profit ?? 0);
+  // Calculate cost based on selected model + duration + profit margin
+  const creditsNeeded = calculateVideoCost(selectedModel, duration, videoProfit);
 
   // Reference Image/Video State
   const [referenceMedia, setReferenceMedia] = useState<string | null>(null);
@@ -109,6 +172,7 @@ export default function VideoGenerationPage() {
           fetchBalance();
           fetchUserVideos();
           loadPlans();
+          loadDynamicPricing();
         }
       } catch (e) {}
     };
@@ -116,11 +180,24 @@ export default function VideoGenerationPage() {
     return () => { cancelled = true; };
   }, []);
 
+  const loadDynamicPricing = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings/public/ai-pricing`);
+      if (res.status === 200) {
+        const data = await res.json();
+        setDynamicPrices(data);
+      }
+    } catch (e) {
+      console.error("Failed to load dynamic pricing", e);
+    }
+  };
+
   const onGenerate = async () => {
     if (!apiBase || !prompt) return;
     
     // فحص الرصيد
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -137,13 +214,25 @@ export default function VideoGenerationPage() {
     }, 1000);
     
     try {
+      // معالجة البرومبت العربي وتحسينه للفيديو
+      const processedPrompt = processVideoPrompt(prompt, style);
+      
+      console.log('[VIDEO] Sending generation request with:', {
+        model: selectedModelId,
+        duration: duration,
+        expectedCost: creditsNeeded,
+        originalPrompt: prompt,
+        processedPrompt: processedPrompt
+      });
+      
       const res = await fetch(`${apiBase}/api/ai/text-to-video`, {
         method: "POST",
         headers: { 'Authorization': getToken() as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 },
         body: JSON.stringify({ 
-          prompt, 
+          prompt: processedPrompt, // استخدام البرومبت المحسّن
           style, 
           duration,
+          model: selectedModelId, // إرسال النموذج المختار
           reference_media: referenceMedia, // إرسال الصورة/الفيديو المرجعي
           reference_type: referenceType
         }),
@@ -153,9 +242,10 @@ export default function VideoGenerationPage() {
       setGenerationProgress(100);
       
       if (res.status === 200) {
+        const data = await res.json();
+        console.log('[VIDEO] Generation successful, credits used:', data.credits_used);
         toast.success('تم إنشاء الفيديو بنجاح!');
         fetchBalance();
-        const data = await res.json();
         if (data.video_url) {
             const newVid = { id: data.video_id, url: data.video_url, date: new Date(), prompt: prompt, thumbnail: null };
             setActiveVideo(newVid);
@@ -244,7 +334,7 @@ export default function VideoGenerationPage() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="h-screen flex flex-col bg-[#010101] text-white selection:bg-blue-500/30 overflow-hidden" dir="rtl">
+      <div className="h-screen flex flex-col bg-[#010101] text-white selection:bg-blue-500/30 overflow-hidden no-scrollbar" dir="rtl">
         <header className="shrink-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex justify-between items-center">
             <div className="flex items-center gap-4">
               <Link href="/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-xs transition-all"><ArrowRight size={14} /> عودة</Link>
@@ -262,41 +352,49 @@ export default function VideoGenerationPage() {
             </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
             {/* Control Sidebar */}
-            <aside className="w-[320px] md:w-[360px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col p-5 shrink-0">
-                <div className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">المشهد المتخيّل</label>
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                             <Sparkles size={12} className="text-blue-400" />
+                             المشهد المتخيّل
+                        </label>
                         <div className="relative">
                             <textarea 
+                                ref={promptRef}
                                 value={prompt} 
                                 onChange={(e) => setPrompt(e.target.value)} 
                                 placeholder="صف المشهد السينمائي الذي تريده..." 
                                 maxLength={20000}
-                                className="w-full h-40 p-5 rounded-[2rem] bg-white/[0.03] border border-white/5 focus:border-blue-500/40 outline-none resize-none transition-all text-sm leading-relaxed placeholder:text-gray-600 shadow-inner" 
+                                className="w-full min-h-[80px] p-3 rounded-lg bg-white/[0.03] border border-white/5 focus:border-blue-500/40 outline-none resize-none transition-all text-xs leading-relaxed placeholder:text-gray-600 shadow-inner overflow-hidden" 
                             />
-                            <div className="absolute bottom-3 right-3 text-[10px] bg-black/50 px-2 py-0.5 rounded text-gray-400 border border-white/5">
-                                {prompt.length}/20000
+                        </div>
+                        <div className="flex justify-between items-center px-1">
+                            <div className="text-[9px] text-gray-600">
+                                {/* تم إخفاء الربح */}
+                            </div>
+                            <div className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded text-gray-500 border border-white/5">
+                                {prompt.length}/20000 حرف
                             </div>
                         </div>
                     </div>
 
                     {/* Reference Media Upload Section */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                            <Upload size={14} className="text-blue-400" />
-                            صورة أو فيديو مرجعي (اختياري)
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Upload size={12} className="text-blue-400" />
+                            مرجع (اختياري)
                         </label>
                         {!referenceMedia ? (
                             <div 
                                 onClick={() => fileInputRef.current?.click()}
                                 className="relative group cursor-pointer"
                             >
-                                <div className="w-full h-32 rounded-[2rem] bg-white/[0.03] border-2 border-dashed border-white/5 hover:border-blue-500/40 transition-all flex flex-col items-center justify-center gap-2 hover:bg-white/[0.05]">
-                                    <Upload size={24} className="text-gray-600 group-hover:text-blue-400 transition-colors" />
-                                    <span className="text-xs text-gray-600 group-hover:text-blue-300 transition-colors font-bold">انقر لرفع صورة أو فيديو</span>
-                                    <span className="text-[10px] text-gray-700">سيتم استخدامه كمرجع للتوليد</span>
+                                <div className="w-full h-20 rounded-lg bg-white/[0.03] border-2 border-dashed border-white/5 hover:border-blue-500/40 transition-all flex flex-col items-center justify-center gap-1 hover:bg-white/[0.05]">
+                                    <Upload size={18} className="text-gray-600 group-hover:text-blue-400 transition-colors" />
+                                    <span className="text-[10px] text-gray-600 group-hover:text-blue-300 transition-colors font-bold">ارفع ملف</span>
                                 </div>
                                 <input 
                                     ref={fileInputRef}
@@ -312,12 +410,12 @@ export default function VideoGenerationPage() {
                                     <img 
                                         src={referenceMedia} 
                                         alt="Reference" 
-                                        className="w-full h-32 object-cover rounded-[2rem] border border-white/10"
+                                        className="w-full h-20 object-cover rounded-lg border border-white/10"
                                     />
                                 ) : (
                                     <video 
                                         src={referenceMedia} 
-                                        className="w-full h-32 object-cover rounded-[2rem] border border-white/10"
+                                        className="w-full h-20 object-cover rounded-lg border border-white/10"
                                         muted
                                         loop
                                         autoPlay
@@ -325,53 +423,93 @@ export default function VideoGenerationPage() {
                                 )}
                                 <button
                                     onClick={removeReferenceMedia}
-                                    className="absolute top-3 left-3 p-2 bg-red-500/80 hover:bg-red-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                    className="absolute top-1 left-1 p-1 bg-red-500/80 hover:bg-red-500 rounded transition-all opacity-0 group-hover:opacity-100"
                                 >
-                                    <XCircle size={16} />
+                                    <XCircle size={12} />
                                 </button>
-                                <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/70 rounded-xl text-[10px] text-blue-400 font-black flex items-center gap-1.5 border border-blue-500/30">
-                                    {referenceType === 'image' ? <ImageIcon size={12} /> : <Video size={12} />}
-                                    ✓ {referenceType === 'image' ? 'صورة' : 'فيديو'} مرجعي
+                                <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 rounded-lg text-[8px] text-blue-400 font-black flex items-center gap-1 border border-blue-500/30">
+                                    {referenceType === 'image' ? <ImageIcon size={8} /> : <Video size={8} />}
+                                    ✓ مرجع
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">نمط الإخراج</label>
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Palette size={12} className="text-blue-400" />
+                            نمط الإخراج
+                         </label>
                          <div className="grid grid-cols-2 gap-2">
                              {VIDEO_STYLES.map(s => (
-                                 <button key={s.value} onClick={() => setStyle(s.value)} className={`flex items-center gap-2 p-3 rounded-2xl border text-right transition-all group ${style === s.value ? 'bg-blue-500/10 border-blue-500/40 text-blue-300' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}>
-                                     <span className={`p-1.5 rounded-lg ${style === s.value ? 'bg-blue-500 text-white' : 'bg-white/5'} transition-all group-hover:scale-110`}>{s.icon}</span>
-                                     <span className="text-[11px] font-bold">{s.label}</span>
+                                 <button key={s.value} onClick={() => setStyle(s.value)} className={`flex items-center gap-2 p-2 rounded-xl border text-right transition-all group ${style === s.value ? 'bg-blue-500/10 border-blue-500/40 text-blue-300' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}>
+                                     <span className={`shrink-0 ${style === s.value ? 'text-blue-500' : 'text-gray-600'}`}>
+                                        {React.cloneElement(s.icon as React.ReactElement, { size: 12 })}
+                                     </span>
+                                     <span className="text-[10px] font-bold truncate">{s.label}</span>
                                  </button>
                              ))}
                          </div>
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">المدة الزمنية</label>
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Clock size={12} className="text-blue-400" />
+                            المدة
+                         </label>
                          <div className="grid grid-cols-3 gap-2">
-                             {VIDEO_DURATIONS.map(d => (
-                                 <button key={d.value} onClick={() => setDuration(d.value)} className={`p-3 rounded-2xl border text-center transition-all group ${duration === d.value ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}>
-                                     <Clock size={16} className={`mx-auto mb-1 transition-transform group-hover:scale-110 ${duration === d.value ? 'text-blue-500' : 'opacity-40'}`} />
-                                     <span className="text-[10px] font-bold block">{d.label}</span>
-                                 </button>
-                             ))}
+                             {availableDurations.map(d => {
+                                 const cost = calculateVideoCost(selectedModel, d, videoProfit);
+                                 return (
+                                     <button key={d} onClick={() => setDuration(d)} className={`p-2 rounded-xl border text-center transition-all group ${duration === d ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}>
+                                         <span className="text-[10px] font-bold block">{d} ثوانٍ</span>
+                                         <div className="flex items-center justify-center gap-1 mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-[8px] font-black">{cost}</span>
+                                            <Coins size={8} className="text-yellow-500" />
+                                         </div>
+                                     </button>
+                                 );
+                             })}
                          </div>
+                    </div>
+
+                    {/* Model Selection Section */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                            <Cpu size={12} className="text-blue-400" />
+                            اختر النموذج
+                        </label>
+                        <ModelSelector
+                            models={dynamicModels}
+                            selectedModelId={selectedModelId}
+                            onSelectModel={setSelectedModelId}
+                            duration={duration}
+                            profit={videoProfit}
+                            compact={true}
+                        />
                     </div>
 
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
-                    {error && <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center">{error}</div>}
-                    <PremiumButton label={isGenerating ? "جاري الإنتاج..." : "بدء الإنتاج"} icon={isGenerating ? RefreshCw : Video} onClick={onGenerate} disabled={!prompt || isGenerating} className="w-full py-4 text-sm rounded-2xl" />
-                    <p className="text-[9px] text-gray-600 text-center mt-3 font-medium uppercase tracking-tighter">Powered by NEXUS VEO 2.0 Engine</p>
+                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                    {error && <div className="mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[10px] font-bold text-center truncate">{error}</div>}
+                    
+                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                    </div>
+
+                    <PremiumButton label={isGenerating ? "جاري الإنتاج..." : "بدء الإنتاج"} icon={isGenerating ? RefreshCw : Video} onClick={onGenerate} disabled={!prompt || isGenerating} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
             {/* Main Stage & Gallery */}
-            <main className="flex-1 flex flex-col bg-[#020202] overflow-hidden">
+            <main className="flex-1 flex flex-col bg-[#020202] overflow-hidden order-2">
                 {/* Gallery Section */}
                 <div className="flex-1 min-h-0 flex flex-col p-6 overflow-hidden">
                     <div className="flex items-center justify-between mb-4 px-2">
@@ -384,7 +522,7 @@ export default function VideoGenerationPage() {
                         <span className="text-[10px] font-bold text-gray-600 uppercase">{userVideos.length} CLIP(S) FOUND</span>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar-thin">
+                    <div className="flex-1 overflow-y-auto no-scrollbar">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                             
                             {/* Loading Card */}
@@ -459,7 +597,7 @@ export default function VideoGenerationPage() {
                                 {selectedVideoModal.is_public ? 'منشور في المعرض' : 'نشر في معرض المحترفين'}
                              </button>
                              <div className="flex gap-2">
-                                <button onClick={() => { const link = document.createElement('a'); link.href = selectedVideoModal.url; link.download = `video_${selectedVideoModal.id}.mp4`; document.body.appendChild(link); link.click(); document.body.removeChild(link); }} className="flex-1 py-4 bg-white text-black font-black rounded-2xl flex items-center justify-center gap-2 text-sm transition-all"><Download size={20} /> تحميل</button>
+                                <button onClick={() => downloadVideo(selectedVideoModal.url, `video_${selectedVideoModal.id}.mp4`)} className="flex-1 py-4 bg-white text-black font-black rounded-2xl flex items-center justify-center gap-2 text-sm transition-all"><Download size={20} /> تحميل</button>
                                 <button onClick={(e) => deleteVideo(selectedVideoModal.id, e)} className="px-6 py-4 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"><Trash2 size={20} /></button>
                              </div>
                         </div>
@@ -495,7 +633,7 @@ export default function VideoGenerationPage() {
                                 <Sparkles size={20} className={selectedVideoModal.is_public ? 'animate-pulse' : ''} />
                                 {selectedVideoModal.is_public ? 'منشور في المعرض' : 'نشر في معرض المحترفين'}
                              </button>
-                             <button onClick={() => { const link = document.createElement('a'); link.href = selectedVideoModal.url; link.download = `video_${selectedVideoModal.id}.mp4`; document.body.appendChild(link); link.click(); document.body.removeChild(link); }} className="w-full py-4 bg-white text-black font-black rounded-2xl flex items-center justify-center gap-2 text-sm hover:scale-[1.02] transition-all shadow-xl"><Download size={20} />  تحميل</button>
+                             <button onClick={() => downloadVideo(selectedVideoModal.url, `video_${selectedVideoModal.id}.mp4`)} className="w-full py-4 bg-white text-black font-black rounded-2xl flex items-center justify-center gap-2 text-sm hover:scale-[1.02] transition-all shadow-xl"><Download size={20} />  تحميل</button>
                              <button onClick={(e) => deleteVideo(selectedVideoModal.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف</button>
                         </div>
                     </div>

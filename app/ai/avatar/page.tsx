@@ -10,7 +10,7 @@ import {
   ArrowRight, Users, Upload, Download, X, RefreshCw, 
   CreditCard, Crown, ChevronLeft, ArrowLeft, 
   Image as ImageIcon, Trash2, Zap, Move3D, Sparkles,
-  Maximize2, Plus
+  Maximize2, Plus, Coins
 } from 'lucide-react';
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -51,6 +51,18 @@ export default function AvatarCreatorPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize prompt textarea
+  useEffect(() => {
+    if (promptRef.current) {
+      promptRef.current.style.height = '60px'; 
+      const scrollHeight = promptRef.current.scrollHeight;
+      if (scrollHeight > 60) {
+        promptRef.current.style.height = `${scrollHeight}px`;
+      }
+    }
+  }, [customPrompt]);
 
   // Gallery & Interaction
   const [userImages, setUserImages] = useState<any[]>([]);
@@ -168,14 +180,16 @@ export default function AvatarCreatorPage() {
     setOpenPaymentModal(true);
   };
 
-  const creditsNeeded = 2 + (balance?.plan?.image_profit ?? 0);
+  const baseCredits = 5;
+  const imageProfit = balance?.plan?.image_profit ?? 0;
+  const creditsNeeded = baseCredits + imageProfit;
   const canGenerate = clientReady && !!uploadedImage && !isGenerating;
 
   const onGenerate = async () => {
     if (!apiBase || !uploadedImage) return;
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -239,13 +253,25 @@ export default function AvatarCreatorPage() {
       } catch (e) { setUserImages(prev); }
   };
 
-  const downloadUtils = (url: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `nexus_avatar_${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadUtils = async (url: string) => {
+    try {
+      const toastId = toast.loading('وجاري التحميل...');
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `nexus_avatar_${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.dismiss(toastId);
+      toast.success('تم التحميل');
+    } catch (e) {
+      toast.dismiss();
+      window.open(url, '_blank');
+    }
   };
 
   return (
@@ -282,57 +308,76 @@ export default function AvatarCreatorPage() {
           </div>
         </header>
 
-        <div className="flex-1 flex overflow-hidden relative z-10">
-            <aside className="w-[320px] md:w-[360px] flex flex-col border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0">
-                <div className="p-5 space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
-                            <Upload size={14} className="text-orange-400" /> ارفع صورتك
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10">
+            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full flex flex-col border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0 order-1">
+                <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
+                            <Upload size={12} className="text-orange-400" /> ارفع صورتك
                         </label>
-                        <div onClick={() => fileInputRef.current?.click()} className="relative group cursor-pointer border-2 border-dashed border-white/10 rounded-2xl p-6 text-center hover:border-orange-500/40 hover:bg-orange-500/5 transition-all">
+                        <div onClick={() => fileInputRef.current?.click()} className="relative group cursor-pointer border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-orange-500/40 hover:bg-orange-500/5 transition-all">
                             {uploadedImage ? (
-                                <div className="space-y-2">
-                                    <img src={uploadedImage} alt="Up" className="h-32 mx-auto rounded-xl object-cover" />
-                                    <span className="text-[10px] text-orange-400 font-bold">تغيير الصورة</span>
+                                <div className="space-y-1">
+                                    <img src={uploadedImage} alt="Up" className="h-24 mx-auto rounded-lg object-cover" />
+                                    <span className="text-[9px] text-orange-400 font-bold">تغيير الصورة</span>
                                 </div>
                             ) : (
-                                <div className="py-4">
-                                    <Plus size={24} className="mx-auto text-gray-600 mb-2" />
-                                    <p className="text-[10px] text-gray-500">اضغط لرفع صورة شخصية واضحة</p>
+                                <div className="py-2">
+                                    <Plus size={20} className="mx-auto text-gray-600 mb-1" />
+                                    <p className="text-[9px] text-gray-500">ارفع صورة شخصية</p>
                                 </div>
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
-                            <Sparkles size={14} className="text-yellow-400" /> النمط الفني
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
+                            <Sparkles size={12} className="text-yellow-400" /> النمط الفني
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-1.5">
                              {AVATAR_STYLES.map((s) => (
-                                <button key={s.id} onClick={() => setSelectedStyle(s.id)} className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                                <button key={s.id} onClick={() => setSelectedStyle(s.id)} className={`flex items-center gap-1.5 p-2 rounded-lg border transition-all truncate ${
                                     selectedStyle === s.id ? 'bg-orange-500/10 border-orange-500/40 text-orange-300' : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'}`}>
-                                    {s.icon} <span className="text-[10px] font-bold">{s.name}</span>
+                                    <span className={`shrink-0 ${selectedStyle === s.id ? 'text-orange-400' : 'text-gray-600'}`}>
+                                        {React.cloneElement(s.icon as React.ReactElement, { size: 12 })}
+                                    </span>
+                                    <span className="text-[10px] font-bold truncate">{s.name}</span>
                                 </button>
                              ))}
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wide">وصف إضافي</label>
-                         <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} placeholder="مثال: خلفية فضاء، ملابس ملكية..." className="w-full h-24 p-3 rounded-xl bg-white/5 border border-white/10 focus:border-orange-500/40 text-xs outline-none transition-all resize-none" />
+                    <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">وصف إضافي</label>
+                         <textarea 
+                            ref={promptRef}
+                            value={customPrompt} 
+                            onChange={(e) => setCustomPrompt(e.target.value)} 
+                            placeholder="مثال: خلفية فضاء، ملابس ملكية..." 
+                            className="w-full min-h-[60px] p-2 rounded-lg bg-white/5 border border-white/10 focus:border-orange-500/40 text-[10px] outline-none transition-all resize-none overflow-hidden" 
+                         />
                     </div>
                 </div>
 
-                <div className="p-5 mt-auto border-t border-white/10 bg-[#080808]">
-                     {error && <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-bold">{error}</div>}
-                     <div className="flex justify-between text-[10px] text-gray-500 mb-2"><span>التكلفة:</span><span className="text-white font-bold">{creditsNeeded} نقطة</span></div>
-                     <PremiumButton label={isGenerating ? "جاري الإنشاء..." : "إنشاء الأفاتار"} icon={isGenerating ? RefreshCw : Users} onClick={onGenerate} disabled={!canGenerate} className="w-full py-4 text-sm rounded-xl" />
+                <div className="p-4 mt-auto border-t border-white/10 bg-[#080808]">
+                     {error && <div className="mb-2 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold truncate">{error}</div>}
+                     
+                     <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                     </div>
+
+                     <PremiumButton label={isGenerating ? "جاري الإنشاء..." : "إنشاء الأفاتار"} icon={isGenerating ? RefreshCw : Users} onClick={onGenerate} disabled={!canGenerate} className="w-full py-3 text-xs rounded-xl" />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar order-2">
                 <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
                     {isGenerating && (
                          <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-square border border-white/10 ring-1 ring-orange-500/30 animate-pulse flex flex-col items-center justify-center p-4">

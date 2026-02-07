@@ -6,7 +6,7 @@ import PaymentModal from "@/components/Modals/PaymentModal";
 import UpgradeModal from "@/components/Modals/UpgradeModal";
 import Link from "next/link";
 import { toast, Toaster } from 'react-hot-toast';
-import { ArrowRight, Wand2, Upload, Download, X, RefreshCw, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Play, Layers, Trash2 } from 'lucide-react';
+import { ArrowRight, Wand2, Upload, Download, X, RefreshCw, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Play, Layers, Trash2, Coins } from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
 
@@ -52,6 +52,10 @@ export default function VideoEffectsPage() {
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const baseCredits = 15;
+  const videoProfit = balance?.plan?.video_profit ?? 0;
+  const creditsNeeded = baseCredits + videoProfit;
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
 
@@ -127,7 +131,7 @@ export default function VideoEffectsPage() {
     if (!apiBase || !videoFile || selectedEffects.length === 0) return;
     
     // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits <= 0) {
+    if (!balance || balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
@@ -293,64 +297,63 @@ export default function VideoEffectsPage() {
             
             {/* Left Panel */}
             <div className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-28">
-               <div className="mb-2">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-[2px] bg-purple-500"></div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">FX Studio</span>
-                </div>
-                <div className="text-sm text-gray-500 font-bold leading-relaxed">
-                   أضف طبقات من الجمال والاحترافية على فيديوهاتك بلمسات بصرية ذكية.
-                </div>
-              </div>
-
-               <div className="bg-[#0c0c0c] rounded-[2rem] p-6 border border-white/5 relative group shadow-2xl overflow-hidden mb-4">
+               <div className="bg-[#0c0c0c] rounded-3xl p-5 border border-white/5 relative group shadow-2xl overflow-hidden mb-4">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-fuchsia-600 to-pink-600 opacity-50"></div>
                 
-                <div className="relative space-y-6">
-                  <div>
-                    <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">ملف الفيديو</span>
+                <div className="relative space-y-5">
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block">ملف الفيديو</span>
                     <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="hidden" id="v-fx-up" />
-                    <label htmlFor="v-fx-up" className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 cursor-pointer hover:border-purple-500/30 transition-all">
-                        <span className="text-xs text-gray-400 max-w-[200px] truncate">{videoFile ? videoFile.name : "ارفع الفيديو هنا..."}</span>
-                        <Layers size={18} className="text-purple-500" />
+                    <label htmlFor="v-fx-up" className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-purple-500/30 transition-all">
+                        <span className="text-[10px] text-gray-400 max-w-[180px] truncate">{videoFile ? videoFile.name : "ارفع الفيديو هنا..."}</span>
+                        <Layers size={16} className="text-purple-500" />
                     </label>
                   </div>
 
-                  <div>
-                     <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-4">اختر التأثيرات</span>
-                     <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-2">
+                     <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block mb-2">اختر التأثيرات</span>
+                     <div className="grid grid-cols-3 gap-1.5">
                          {VIDEO_EFFECTS.map((fx) => (
                              <button
                                 key={fx.id}
                                 onClick={() => toggleEffect(fx.id)}
-                                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all duration-300 border ${
+                                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 border ${
                                     selectedEffects.includes(fx.id)
                                     ? 'bg-purple-500/10 border-purple-500/50 text-purple-300'
-                                    : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'
+                                    : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'
                                 }`}
                              >
                                 <span className="text-lg">{fx.icon}</span>
-                                <span className="text-[9px] font-black">{fx.name}</span>
+                                <span className="text-[8px] font-black truncate w-full">{fx.name}</span>
                              </button>
                          ))}
                      </div>
                   </div>
 
-                  <div className="mt-8 border-t border-white/5 pt-6">
+                  <div className="pt-4 border-t border-white/5 space-y-3">
+                     <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                <Coins size={10} className="text-yellow-500" />
+                            </div>
+                            <span>التكلفة المتوقعه:</span>
+                        </div>
+                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
+                     </div>
+
                     <PremiumButton 
                         label={isProcessing ? "جاري المعالجة..." : "تطبيق التأثيرات"}
                         icon={isProcessing ? RefreshCw : Wand2}
-                        secondaryIcon={ArrowLeft}
                         onClick={onProcess}
                         disabled={!videoFile || selectedEffects.length === 0 || isProcessing}
-                        className="w-full py-4 text-base"
+                        className="w-full py-3 text-xs rounded-xl"
                     />
                   </div>
                 </div>
               </div>
 
               {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-black text-center flex items-center justify-center gap-2">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center flex items-center justify-center gap-2 truncate">
                   <X size={14} />
                   {error}
                 </div>

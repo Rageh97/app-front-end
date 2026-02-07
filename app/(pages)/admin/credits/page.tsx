@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 type CreditPlan = {
   plan_id: number;
@@ -50,7 +51,7 @@ const ALL_TOOLS = [
   { id: 'video', name: 'انشاء فيديوهات احترافية', category: 'video' },
   // { id: 'lipsync', name: 'تحريك الشفاه', category: 'video' },
   // { id: 'effects', name: 'تأثيرات الفيديو', category: 'video' },
-  { id: 'long-video', name: 'الفيديو الطويل', category: 'video' },
+  // { id: 'long-video', name: 'الفيديو الطويل', category: 'video' },
   { id: 'motion', name: 'تحريك الصور', category: 'video' },
   // { id: 'ugc', name: 'محتوى المستخدم', category: 'video' },
   // { id: 'vupscale', name: 'تحسين الفيديو', category: 'video' },
@@ -153,10 +154,77 @@ export default function AdminCreditsPage() {
     }
   };
 
+  const [aiModelPrices, setAiModelPrices] = useState<Record<string, number>>({});
+  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [savingPrices, setSavingPrices] = useState(false);
+
+  const loadAiModelPrices = async () => {
+    if (!apiBase) return;
+    setLoadingPrices(true);
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings/ai_pricing_config`, { headers });
+      if (res.status === 200) {
+        const data = await res.json();
+        if (data && data.value) {
+          try {
+            setAiModelPrices(JSON.parse(data.value));
+          } catch (e) {
+            console.error("Failed to parse pricing JSON:", e);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error loading AI model prices:', e);
+    } finally {
+      setLoadingPrices(false);
+    }
+  };
+
+  const saveAiModelPrices = async () => {
+    if (!apiBase) return;
+    setSavingPrices(true);
+    try {
+      const res = await fetch(`${apiBase}/api/admin/settings/ai_pricing_config`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ value: JSON.stringify(aiModelPrices) }),
+      });
+      if (res.status === 200) {
+        toast.success("تم حفظ أسعار الموديلات بنجاح");
+      } else {
+        toast.error("فشل في حفظ أسعار الموديلات");
+        setError("فشل في حفظ أسعار الموديلات");
+      }
+    } catch (e) {
+      toast.error("خطأ في الشبكة");
+      setError("خطأ في الشبكة");
+    } finally {
+      setSavingPrices(false);
+    }
+  };
+
   useEffect(() => {
     loadPlans();
     loadAiHubStatus();
+    loadAiModelPrices();
   }, []);
+
+  // Filter models for display in sections
+  const imageModelList = [
+    { id: 'imagen-4', name: 'Imagen 4' },
+    { id: 'imagen-3', name: 'Imagen 3' },
+    { id: 'dall-e-3', name: 'DALL-E 3' },
+    { id: 'nano-standard', name: 'Nano Standard (Imagen 3)' },
+    { id: 'nano-ultra', name: 'Nano Ultra (Imagen 4)' },
+    { id: 'nano-creative', name: 'Nano Creative (Ultra)' },
+  ];
+
+  const videoModelList = [
+    { id: 'veo-ultra', name: 'Veo Ultra', durations: [5, 8, 15] },
+    { id: 'veo-pro', name: 'Veo Pro', durations: [5, 8, 15] },
+    { id: 'veo-fast', name: 'Veo Fast', durations: [5, 8, 15] },
+    { id: 'sora', name: 'Sora 2.0', durations: [5, 10, 15, 20] },
+  ];
 
   const startEdit = (plan: CreditPlan) => {
     setEditingId(plan.plan_id);
@@ -219,11 +287,14 @@ export default function AdminCreditsPage() {
           image_profit: 1,
           video_profit: 2
         });
+        toast.success("تم إنشاء الباقة بنجاح");
         await loadPlans();
       } else {
+        toast.error("فشل في إنشاء الباقة");
         setError("فشل في إنشاء الباقة");
       }
     } catch (e) {
+      toast.error("خطأ في الشبكة");
       setError("خطأ في الشبكة");
     } finally {
       setSaving(false);
@@ -240,10 +311,14 @@ export default function AdminCreditsPage() {
         body: JSON.stringify(data),
       });
       if (res.status === 200) {
+        toast.success("تم تحديث الباقة بنجاح");
         setEditingId(null);
         await loadPlans();
+      } else {
+        toast.error("فشل في تحديث الباقة");
       }
     } catch (e) {
+      toast.error("فشل في التحديث");
       setError("فشل في التحديث");
     } finally {
       setSaving(false);
@@ -259,9 +334,13 @@ export default function AdminCreditsPage() {
         headers,
       });
       if (res.status === 200) {
+        toast.success("تم حذف الباقة بنجاح");
         await loadPlans();
+      } else {
+        toast.error("فشل في حذف الباقة");
       }
     } catch (e) {
+      toast.error("فشل في الحذف");
       setError("فشل في الحذف");
     } finally {
       setSaving(false);
@@ -341,6 +420,88 @@ export default function AdminCreditsPage() {
             </div>
         )}
 
+        {/* --- MODEL PRICING MANAGEMENT --- */}
+        <div className="mb-12 gradient-border-analysis border border-white/5 rounded-[2.5rem] p-8 shadow-2xl bg-[#1a1a1a]/50 relative overflow-hidden">
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h2 className="text-2xl font-black flex items-center gap-3">
+                        <Wand2 size={24} className="text-purple-400" />
+                        <span>تسعير الموديلات (التكلفة الأساسية)</span>
+                    </h2>
+                    <p className="text-gray-500 text-xs mt-1">حدد السعر الأساسي لكل موديل. السعر النهائي للمستخدم = (السعر الأساسي + ربح الباقة)</p>
+                </div>
+                <button 
+                    onClick={saveAiModelPrices}
+                    disabled={savingPrices}
+                    className="px-6 py-3 bg-white text-black rounded-xl font-black flex items-center gap-2 hover:scale-105 transition-all disabled:opacity-50"
+                >
+                    {savingPrices ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : <Save size={18} />}
+                    <span>حفظ الأسعار</span>
+                </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+                {/* Image Models */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <ImageIcon size={16} /> نماذج الصور
+                    </h3>
+                    <div className="grid gap-3">
+                        {imageModelList.map(m => (
+                            <div key={m.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10 hover:border-purple-500/30 transition-all">
+                                <span className="font-bold text-gray-300">{m.name}</span>
+                                <div className="flex items-center gap-3">
+                                    <input 
+                                        type="number"
+                                        className="w-20 bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-center font-black text-purple-400 outline-none focus:border-purple-500"
+                                        value={aiModelPrices[m.id] || 0}
+                                        onChange={e => setAiModelPrices({ ...aiModelPrices, [m.id]: parseInt(e.target.value) || 0 })}
+                                    />
+                                    <span className="text-[10px] text-gray-600 font-bold">كريدت</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Video Models */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <Video size={16} /> نماذج الفيديو (حسب المدة)
+                    </h3>
+                    <div className="grid gap-4">
+                        {videoModelList.map(m => (
+                            <div key={m.id} className="p-4 bg-white/5 rounded-2xl border border-white/10 hover:border-blue-500/30 transition-all">
+                                <span className="font-bold text-gray-300 block mb-3 border-b border-white/5 pb-2">{m.name}</span>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {m.durations.map(dur => {
+                                        const key = `${m.id}-${dur}`;
+                                        return (
+                                            <div key={key} className="space-y-1">
+                                                <label className="text-[10px] text-gray-500 font-bold block text-center">{dur} ثانية</label>
+                                                <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg p-1">
+                                                    <input 
+                                                        type="number"
+                                                        className="w-full bg-transparent py-1 px-1 text-center font-black text-blue-400 outline-none"
+                                                        value={aiModelPrices[key] || 0}
+                                                        onChange={e => setAiModelPrices({ ...aiModelPrices, [key]: parseInt(e.target.value) || 0 })}
+                                                    />
+                                                    <span className="text-[8px] text-gray-600 font-bold ml-1">C</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-[9px] text-orange-500 p-2 italic bg-orange-500/5 rounded-lg border border-orange-500/10">
+                        * ملاحظة: يرجى تحديد السعر لكل مدة زمنية. في حال تركها 0، سيحاول النظام حسابها تلقائياً.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         {/* Create Form Section */}
         <div className="grid lg:grid-cols-3 gap-8 mb-12">
             
@@ -412,7 +573,7 @@ export default function AdminCreditsPage() {
                                 value={form.chat_profit}
                                 onChange={e => setForm({...form, chat_profit: parseFloat(e.target.value) || 0})}
                             />
-                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ الكريديت الفعلي من جوجل</p>
+                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ السعر الأساسي</p>
                          </div>
 
                          <div className="p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 group/p shadow-inner transition-all hover:border-purple-500/20">
@@ -428,7 +589,7 @@ export default function AdminCreditsPage() {
                                 value={form.image_profit}
                                 onChange={e => setForm({...form, image_profit: parseFloat(e.target.value) || 0})}
                             />
-                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ الكريديت الفعلي من جوجل</p>
+                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ السعر الأساسي</p>
                          </div>
 
                          <div className="p-5 rounded-[2rem] bg-white/[0.02] border border-white/5 group/p shadow-inner transition-all hover:border-indigo-500/20">
@@ -444,7 +605,7 @@ export default function AdminCreditsPage() {
                                 value={form.video_profit}
                                 onChange={e => setForm({...form, video_profit: parseFloat(e.target.value) || 0})}
                             />
-                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ الكريديت الفعلي من جوجل</p>
+                            <p className="text-[9px] text-orange-400 mt-2 text-center">+ السعر الأساسي</p>
                          </div>
                     </div>
 
@@ -614,3 +775,4 @@ export default function AdminCreditsPage() {
     </div>
   );
 }
+

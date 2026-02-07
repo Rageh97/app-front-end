@@ -77,6 +77,14 @@ export default function ChatPage() {
   const [estimatedCredits, setEstimatedCredits] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isTypingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const skipNextLoadRef = useRef(false);
+
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+    }
+  };
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [chatImage, setChatImage] = useState<string | null>(null);
   const [chatDocument, setChatDocument] = useState<{ content: string; mimeType: string; fileName: string } | null>(null);
@@ -86,6 +94,17 @@ export default function ChatPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
 
@@ -225,6 +244,10 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (activeThreadId) {
+      if (skipNextLoadRef.current) {
+        skipNextLoadRef.current = false;
+        return;
+      }
       loadThreadMessages(activeThreadId);
     }
   }, [activeThreadId]);
@@ -247,6 +270,10 @@ export default function ChatPage() {
     setChatDocument(null);
     setIsLoadingChat(true);
 
+    // Setup AbortController
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const tempId = `user_${Date.now()}`;
     const assistantId = `assistant_${Date.now()}`;
     
@@ -262,10 +289,6 @@ export default function ChatPage() {
 
     try {
       let threadId = activeThreadId;
-      if (!threadId) {
-        threadId = await createThread(text.slice(0, 60));
-        if (!threadId) throw new Error('فشل إنشاء المحادثة');
-      }
 
       const res = await fetch(`${apiBase}/api/ai/chat`, {
         method: 'POST',
@@ -276,6 +299,7 @@ export default function ChatPage() {
           document: documentToSend || undefined,
           thread_id: threadId 
         }),
+        signal: controller.signal
       });
 
       if (res.ok) {
@@ -285,35 +309,61 @@ export default function ChatPage() {
         isTypingRef.current = true;
         
         // البدء في تلوين/كتابة الرد في نفس الحاوية المحجوزة
-        for (let i = 0; i <= responseText.length; i++) {
-          current = responseText.slice(0, i);
+        const step = 25; // Number of characters to add per tick (Faster)
+        for (let i = 0; i <= responseText.length; i += step) {
+          if (controller.signal.aborted) break;
+          const end = Math.min(i + step, responseText.length);
+          current = responseText.slice(0, end);
           setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: current } : m));
-          await new Promise(r => setTimeout(r, 8)); // توازن السرعة
+          if (end === responseText.length) break;
+          await new Promise(r => setTimeout(r, 1)); // (سرعة قصوى)
         }
         isTypingRef.current = false;
-        await fetchBalance();
-        await loadThreads();
+        
+        if (!controller.signal.aborted) {
+            if (!activeThreadId && data.thread_id) {
+                skipNextLoadRef.current = true;
+                setActiveThreadId(data.thread_id);
+            }
+            await fetchBalance();
+            await loadThreads();
+        }
       } else {
         toast.error("فشلت عملية المحادثة");
         setMessages(prev => prev.filter(m => m.id !== assistantId));
       }
-    } catch (e) {
-      toast.error("خطأ في الاتصال");
-      setMessages(prev => prev.filter(m => m.id !== assistantId));
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+          // If aborted (stopped by user)
+          // If we have content, keep it. If empty, remove it.
+          setMessages(prev => {
+              const lastMsg = prev.find(m => m.id === assistantId);
+              if (lastMsg && !lastMsg.content) {
+                  return prev.filter(m => m.id !== assistantId);
+              }
+              return prev;
+          });
+      } else {
+        toast.error("خطأ في الاتصال");
+        setMessages(prev => prev.filter(m => m.id !== assistantId));
+      }
     } finally {
       setIsLoadingChat(false);
+      abortControllerRef.current = null;
     }
   };
 
-  const createThread = async (title?: string | null) => {
+  const createThread = async (title?: string | null, selectNow: boolean = true) => {
     if (!apiBase) return null;
     try {
       const res = await fetch(`${apiBase}/api/ai/chat/threads`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ title: title || null }) });
       if (res.ok) {
         const data = await res.json();
         await loadThreads();
-        setActiveThreadId(data.thread_id);
-        setMessages([]);
+        if (selectNow) {
+          setActiveThreadId(data.thread_id);
+          setMessages([]);
+        }
         return data.thread_id as number;
       }
     } catch {}
@@ -639,7 +689,10 @@ export default function ChatPage() {
                 {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
                         <div className="relative mb-10">
-                          <img className="w-40 h-40" src="/images/Bot.gif" alt="" />
+                           <div className="spinner">
+                <div className="spinner1"></div>
+              </div>
+                          {/* <img className="w-40 h-40" src="/images/Bot.gif" alt="" /> */}
                             {/* <div className="w-24 h-24 bg-gradient-to-tr from-purple-600 to-cyan-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl animate-float">
                                 <Sparkles size={48} className="text-white" />
                             </div>
@@ -700,10 +753,13 @@ export default function ChatPage() {
                                         : ' text-gray-200 '
                                 }`}>
                                     {m.role === 'assistant' && m.content === '' ? (
-                                        <div className="flex gap-1 items-center py-1">
-                                            <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '0ms' }}></div>
-                                            <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '150ms' }}></div>
-                                            <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '300ms' }}></div>
+                                        <div className="flex flex-col gap-2 py-1">
+                                            <div className="flex gap-1 items-center">
+                                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '0ms' }}></div>
+                                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '150ms' }}></div>
+                                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '300ms' }}></div>
+                                            </div>
+                                            <span className="text-[10px] text-gray-500 animate-pulse font-mono">نيكسوس يفكر...</span>
                                         </div>
                                     ) : (
                                         renderMessageContent(m.content)
@@ -765,13 +821,13 @@ export default function ChatPage() {
                 <div className="relative group/input">
                     <div className="relative bg-[#0d0d0d] border border-white/20 rounded-[2rem] p-2 flex items-end gap-2 transition-all focus-within:border-white/30 shadow-lg">
                         {/* Image Upload Button */}
-                        <label className="flex items-center justify-center w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 text-gray-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer group/file shrink-0" title="إرفاق صورة">
+                        <label className="flex mb-1 items-center justify-center w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 text-gray-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer group/file shrink-0" title="إرفاق صورة">
                             <input type="file" accept="image/*" className="hidden" onChange={handleChatImageUpload} />
                             <ImageIcon size={18} className="group-hover/file:rotate-6 transition-transform" />
                         </label>
                         
                         {/* Document Upload Button */}
-                        <label className="flex items-center justify-center w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 text-gray-500 hover:text-purple-400 hover:bg-purple-500/10 active:scale-95 transition-all cursor-pointer group/doc shrink-0" title="إرفاق وثيقة (PDF, TXT, DOC)">
+                        <label className="flex mb-1 items-center justify-center w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 text-gray-500 hover:text-purple-400 hover:bg-purple-500/10 active:scale-95 transition-all cursor-pointer group/doc shrink-0" title="إرفاق وثيقة (PDF, TXT, DOC)">
                             <input type="file" accept=".pdf,.txt,.doc,.docx,application/pdf,text/plain" className="hidden" onChange={handleDocumentUpload} />
                             <Paperclip size={18} className="group-hover/doc:rotate-12 transition-transform" />
                         </label>
@@ -793,12 +849,16 @@ export default function ChatPage() {
                         </div>
 
                         <button
-                            onClick={sendChatMessage}
-                            disabled={isLoadingChat || (!inputMessage.trim() && !chatImage && !chatDocument)}
-                            className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:bg-gray-800 disabled:text-gray-600 shrink-0"
+                            onClick={isLoadingChat ? stopGeneration : sendChatMessage}
+                            disabled={!isLoadingChat && (!inputMessage.trim() && !chatImage && !chatDocument)}
+                            className={`w-10 h-10 mb-1 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shrink-0 ${
+                                isLoadingChat 
+                                    ? 'bg-red-500 text-white hover:bg-red-600' 
+                                    : 'bg-white text-black disabled:bg-gray-800 disabled:text-gray-600'
+                            }`}
                         >
                             {isLoadingChat ? (
-                                <div className="w-4 h-4 border-2 border-gray-400 border-t-black rounded-full animate-spin" />
+                                <div className="w-3 h-3 bg-white rounded-full" />
                             ) : (
                                 <ArrowUp size={20} strokeWidth={3} />
                             )}

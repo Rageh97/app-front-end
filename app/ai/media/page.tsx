@@ -171,6 +171,17 @@ const VIDEO_TOOLS = [
     featured: true
   },
   {
+    id: 'motion',
+    title: 'تحريك الصور',
+    description: 'أضف حركة حية لصورك الثابتة',
+    icon: Move3D,
+    category: 'video',
+    gradient: 'from-sky-600/80 to-blue-600/80',
+    image: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?q=80&w=1000&auto=format&fit=crop',
+    href: '/ai/motion',
+    featured: true
+  },
+  {
     id: 'lipsync',
     title: 'تحريك الشفاه',
     description: 'طابق حركة الشفاه مع الصوت بدقة مذهلة',
@@ -202,19 +213,10 @@ const VIDEO_TOOLS = [
     category: 'video',
     gradient: 'from-blue-600/80 to-indigo-600/80',
     image: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=1000&auto=format&fit=crop',
-    href: '/ai/long-video'
-  },
-  {
-    id: 'motion',
-    title: 'تحريك الصور',
-    description: 'أضف حركة حية لصورك الثابتة',
-    icon: Move3D,
-    category: 'video',
-    gradient: 'from-sky-600/80 to-blue-600/80',
-    image: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?q=80&w=1000&auto=format&fit=crop',
-    href: '/ai/motion',
+    href: '/ai/long-video',
     comingSoon: true
   },
+  
   {
     id: 'ugc',
     title: 'محتوى المستخدم',
@@ -396,7 +398,7 @@ export default function MediaPage() {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {currentTools.map((tool) => {
-                const isComingSoon = tool.comingSoon;
+                const isComingSoon = tool?.comingSoon;
                 return (
                     <div
                         key={tool.id}
