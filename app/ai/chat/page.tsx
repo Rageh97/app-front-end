@@ -737,10 +737,10 @@ export default function ChatPage() {
                 ) : (
                     messages.map((m, idx) => (
                         <div key={m.id} className={`flex gap-3 group ${m.role === 'user' ? 'flex-row-reverse' : ''} animate-fade-in`}>
-                            <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center shadow-lg ${
+                            <div className={`w-6 h-6 rounded-xl shrink-0 flex items-center justify-center shadow-lg ${
                                 m.role === 'user' ? 'bg-white text-black' : 'bg-gradient-to-tr from-purple-600 to-blue-600'
                             }`}>
-                                {m.role === 'user' ? <User size={16} /> : <Bot size={16} className="text-white" />}
+                                {m.role === 'user' ? <User size={16} /> : <img className="w-5 h-5" src="/images/bai.png" alt="" />}
                             </div>
                             
                             <div className={`flex flex-col max-w-[85%] ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -750,7 +750,7 @@ export default function ChatPage() {
                                     </div>
                                 )}
                                 
-                                <div className={`relative px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-300 ${
+                                <div className={`relative px-5 py-2 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-300 ${
                                     m.role === 'user' 
                                         ? 'bg-white/[0.07] border border-white/10 text-white rounded-tr-none' 
                                         : ' text-gray-200 '
@@ -769,7 +769,7 @@ export default function ChatPage() {
                                     )}
                                     
                                     {m.role === 'assistant' && !m.id.startsWith('typing_') && (
-                                        <div className="absolute left-0 bottom-0 -translate-y-1/2 flex gap-1 translate-x-1/2 transition-all">
+                                        <div className="absolute left-0 -bottom-10 -translate-y-1/2 flex gap-1 translate-x-1/2 transition-all">
                                             <button 
                                                 onClick={() => { navigator.clipboard.writeText(m.content); toast.success('تم النسخ'); setCopiedMessageId(m.id) }} 
                                                 className="p-1.5 bg-black border border-white/10 rounded-lg hover:bg-purple-600 transition-all shadow-xl text-gray-400 hover:text-white"
