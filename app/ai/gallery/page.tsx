@@ -11,6 +11,7 @@ import {
 import { toast, Toaster } from "react-hot-toast";
 import { BorderBeam } from "@/components/ui/border-beam";
 import Image from "next/image";
+import { PremiumButton } from "@/components/PremiumButton";
 
 export default function ProfessionalGalleryPage() {
     const [gallery, setGallery] = useState<any[]>([]);
@@ -133,7 +134,7 @@ export default function ProfessionalGalleryPage() {
                             <div 
                                 key={item.id || item.image_id || item.video_id}
                                 onClick={() => setSelectedItem(item)}
-                                className="break-inside-avoid group relative rounded-[2rem] overflow-hidden bg-[#0c0c0c] border border-white/5 hover:border-purple-500/30 transition-all duration-500 cursor-pointer shadow-2xl hover:translate-y-[-8px] hover:shadow-purple-500/10"
+                                className="break-inside-avoid group relative rounded-[2rem] overflow-hidden bg-[#0c0c0c] border border-white/5 hover:border-purple-500/30 transition-all duration-500 cursor-pointer shadow-2xl hover:translate-y-[-8px]"
                             >
                                 {/* Media Content */}
                                 {item.media_type === 'video' ? (
@@ -203,7 +204,7 @@ export default function ProfessionalGalleryPage() {
                     <div className="w-full max-w-7xl h-[85vh] flex flex-col lg:flex-row gap-8 items-stretch">
                         
                         {/* Content Area */}
-                        <div className="flex-1 overflow-hidden rounded-[3rem] bg-black border border-white/5 flex items-center justify-center shadow-2xl relative">
+                        <div className="flex-1 overflow-hidden rounded-[1rem] bg-black gradient-border-analysis flex items-center justify-center shadow-2xl relative">
                              {selectedItem.media_type === 'video' ? (
                                  <video 
                                     src={selectedItem.cloudinary_url || selectedItem.video_url} 
@@ -221,15 +222,15 @@ export default function ProfessionalGalleryPage() {
                         </div>
 
                         {/* Sidebar */}
-                        <div className="w-full lg:w-[400px] shrink-0 bg-white/[0.02] border border-white/5 rounded-[3rem] p-8 flex flex-col justify-between">
+                        <div className="w-full lg:w-[400px] shrink-0 gradient-border-analysis rounded-[1rem] p-8 flex flex-col justify-between">
                             <div className="space-y-8">
                                 <div className="flex items-center gap-4">
-                                     <div className="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center font-black text-xl text-white shadow-lg">
+                                     <div className="w-12 h-12 rounded-full bg-white/80 flex items-center justify-center font-black text-xl text-black shadow-lg">
                                         {selectedItem.user?.name?.[0] || 'N'}
                                      </div>
                                      <div>
                                          <h3 className="font-black text-white">{selectedItem.user?.name || 'مستخدم نيكسوس'}</h3>
-                                         <p className="text-xs text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                         <p className="text-xs text-emerald-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
                                             <Calendar size={10} /> 
                                             {new Date(selectedItem.created_at).toLocaleDateString('ar-EG')}
                                          </p>
@@ -238,10 +239,10 @@ export default function ProfessionalGalleryPage() {
 
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest">الوصف الأصلي (Prompt)</label>
+                                        <label className="text-[10px] font-black text-white uppercase tracking-widest">الوصف الأصلي (Prompt)</label>
                                         <button onClick={() => { navigator.clipboard.writeText(selectedItem.prompt); toast.success('تم نسخ البروميت!'); }} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all" title="نسخ البروميت"><Copy size={14} className="text-gray-400" /></button>
                                     </div>
-                                    <div className="p-5 bg-white/5 rounded-3xl border border-white/5 text-sm text-gray-300 leading-relaxed max-h-[250px] overflow-y-auto custom-scrollbar break-words">
+                                    <div className="p-5 bg-gray-900 rounded-xl border border-white/5 text-sm text-gray-300 leading-relaxed max-h-[250px] overflow-y-auto custom-scrollbar break-words">
                                         {selectedItem.prompt}
                                     </div>
                                 </div>
@@ -255,13 +256,21 @@ export default function ProfessionalGalleryPage() {
                                     <Download size={20} />
                                     تحميل العمل
                                 </button> */}
-                                <Link 
+                                {/* <Link 
                                     href="/ai/plans"
                                     className="w-full py-5 bg-purple-600/10 border border-purple-500/20 text-purple-400 font-black rounded-[1.5rem] hover:bg-purple-600 hover:text-white transition-all flex items-center justify-center gap-3"
                                 >
                                     <Sparkles size={18} />
                                     جرب نيكسوس الآن
+                                </Link> */}
+                                <Link href="/ai/plans">
+                                    <PremiumButton
+                                        label={"جرب نيكسوس الان"}
+                                        icon={Sparkles}
+                                        className="w-full py-4 text-xs rounded-xl"
+                                    />
                                 </Link>
+                                 
                             </div>
                         </div>
                     </div>
