@@ -219,11 +219,16 @@ export default function AdminCreditsPage() {
     { id: 'nano-creative', name: 'Nano Creative (Ultra)' },
   ];
 
+  // Video models with CORRECT durations per API specifications:
+  // - Veo (all variants): 4, 6, 8 seconds for text-to-video
+  // - Sora 2.0: 4, 8, 12 seconds
+  // - Sora 2 Pro: 5, 10, 15, 20 seconds (extended durations)
   const videoModelList = [
-    { id: 'veo-ultra', name: 'Veo Ultra', durations: [5, 8, 15] },
-    { id: 'veo-pro', name: 'Veo Pro', durations: [5, 8, 15] },
-    { id: 'veo-fast', name: 'Veo Fast', durations: [5, 8, 15] },
-    { id: 'sora', name: 'Sora 2.0', durations: [5, 10, 15, 20] },
+    { id: 'veo-ultra', name: 'Veo Ultra', durations: [4, 6, 8] },
+    { id: 'veo-pro', name: 'Veo Pro', durations: [4, 6, 8] },
+    { id: 'veo-fast', name: 'Veo Fast', durations: [4, 6, 8] },
+    { id: 'sora', name: 'Sora 2.0', durations: [4, 8, 12] },
+    { id: 'sora-pro', name: 'Sora 2 Pro', durations: [5, 10, 15, 20] },
   ];
 
   const startEdit = (plan: CreditPlan) => {

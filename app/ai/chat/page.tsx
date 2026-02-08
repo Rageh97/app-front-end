@@ -256,8 +256,9 @@ export default function ChatPage() {
     // Don't do anything if not ready, currently loading, or input is empty
     if (!clientReady || isLoadingChat || (!inputMessage.trim() && !chatImage && !chatDocument)) return;
 
-    // Show upgrade modal if user has no credits or no active plan balance
-    if (!balance || balance.remaining_credits <= 0) {
+    // Show upgrade modal if user has no active subscription (no balance record at all)
+    // Chat is UNLIMITED for subscribers - no credit check needed
+    if (!balance) {
         setShowUpgradeModal(true);
         return;
     }
@@ -584,7 +585,15 @@ export default function ChatPage() {
                                 {loadingBalance ? (
                                     <div className="h-3 w-20 bg-white/5 animate-pulse rounded"></div>
                                 ) : (
-                                    balance?.plan_name || userInfo?.userPlansData?.[0]?.plan_name || "Free Plan"
+                                    <div className="flex flex-col gap-1">
+                                        <span>{balance?.plan_name || userInfo?.userPlansData?.[0]?.plan_name || "Free Plan"}</span>
+                                        {balance && (
+                                            <div className="flex items-center gap-1 w-fit px-1.5 py-0.5 rounded-[4px] bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30">
+                                                <Zap size={8} className="text-yellow-400 fill-yellow-400" />
+                                                <span className="text-[8px] text-purple-200 tracking-wider font-medium">شات غير محدود</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -643,6 +652,10 @@ export default function ChatPage() {
                 
                 <div className="flex items-center gap-2">
                     <span className="text-lg font-bold">نيكسوس شات</span>
+                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-[9px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1">
+                        <Zap size={8} className="text-yellow-400 fill-yellow-400" />
+                        Unlimited
+                    </span>
                 </div>
             </div>
 
@@ -885,12 +898,10 @@ export default function ChatPage() {
                             <span className="text-[8px] font-black uppercase text-gray-600 tracking-tighter">السرعة القصوى مفعّلة</span>
                         </div>
                     </div>
-                    {estimatedCredits > 0 && (
-                        <div className="text-[8px] font-black uppercase text-purple-400 tracking-widest flex items-center gap-1.5">
-                            <span>التكلفة المقدرة: {estimatedCredits} نقطة</span>
-                            <div className="w-1 h-1 rounded-full bg-purple-500/50"></div>
-                        </div>
-                    )}
+                    <div className="text-[8px] font-black uppercase text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 tracking-widest flex items-center gap-1.5">
+                        <Sparkles size={10} className="text-yellow-400" />
+                        <span>استخدام مجاني وغير محدود للمشتركين</span>
+                    </div>
                 </div>
             </div>
         </footer>
