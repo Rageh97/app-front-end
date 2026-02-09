@@ -379,7 +379,9 @@ export default function PlansPage() {
 
                         <div className="mb-10 flex flex-col items-center">
                             <div className="flex items-baseline gap-1">
-                                <span className="text-4xl font-black text-white">${plan.amount}</span>
+                                <span className="text-4xl font-black text-white"><span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">
+  IQD
+</span>{plan.amount}</span>
                                 <span className="text-gray-500 text-xs font-bold">/ {plan.period === 'month' ? 'شهر' : 'سنة'}</span>
                             </div>
                         </div>

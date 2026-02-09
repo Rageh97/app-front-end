@@ -52,12 +52,12 @@ const { t } = useTranslation();
       {
         accessorKey: "monthly_price",
         header: () => t("packs.mPrice"),
-        cell: (info) => "$" + info.getValue() || "none",
+        cell: (info) => "IQD" + info.getValue() || "none",
       },
       {
         accessorKey: "yearly_price",
         header: () => t("packs.yPrice"),
-        cell: (info) => "$" + info.getValue() || "none",
+        cell: (info) => "IQD" + info.getValue() || "none",
       },
       {
         accessorKey: "discount_percentage",

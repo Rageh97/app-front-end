@@ -711,7 +711,7 @@ export default function AdminCreditsPage() {
                                     <td className="py-6 pr-4 font-black">{p.plan_name}</td>
                                     <td className="py-6 text-gray-400 font-bold">{p.period === 'month' ? 'شهري' : p.period === 'year' ? 'سنوي' : 'يومي'}</td>
                                     <td className="py-6 text-purple-400 font-black">{p.credits_per_period}</td>
-                                    <td className="py-6 font-black text-emerald-400">${p.amount}</td>
+                                    <td className="py-6 font-black text-emerald-400"><span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD</span>{p.amount}</td>
                                     <td className="py-6 font-bold text-gray-500">
                                         <div className="flex items-center gap-2">
                                             <span className="text-blue-500">+{p.chat_profit}</span>

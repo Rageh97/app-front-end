@@ -62,9 +62,9 @@ const ToolModalDetails: React.FC<
             </p>
             <p className="text-white  font-extrabold w-full text-2xl py-2">
               {toolData?.tool_day_price
-                ? "$" + toolData?.tool_day_price + " - "
-                : "$" + toolData?.tool_month_price + " - "}{" "}
-              {"$" + toolData?.tool_year_price}
+                ? "IQD " + toolData?.tool_day_price + " - "
+                : "IQD " + toolData?.tool_month_price + " - "}{" "}
+              {"IQD " + toolData?.tool_year_price}
             </p>
            <div className="bg-[#190237] w-full rounded-2xl p-1 border-2 border-[#ff7702]">
            <p className="text-white font-extrabold w-full text-[15px] px-2 pt-2">
@@ -134,7 +134,7 @@ const ToolModalDetails: React.FC<
               )}
             </div>
 
-            <div className="flex flex-col md:flex-row items-center justify-between gap-0 md:gap-30 mt-3">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-0 md:gap-5 mt-3">
 <div className="flex text-sm md:text-lg items-center justify-center border border-white font-bold text-white rounded-xl  bg-[#00c48c] gap-1 px-1 py-1">
             {isFree ? (
               <a
@@ -173,16 +173,16 @@ const ToolModalDetails: React.FC<
                 <span className="flex justify-center items-center gap-1">
                   <span className="text-[#F0D09C] text-sm line-through decoration-[#8E8E8E]">
                     {period === "month"
-                      ? "$" + toolData?.tool_none_price_month
+                      ? "IQD " + toolData?.tool_none_price_month
                       : null}
                     {period === "year"
-                      ? "$" + toolData?.tool_none_price_year
+                      ? "IQD " + toolData?.tool_none_price_year
                       : null}
                   </span>
                   <span className="text-white text-[17px]">
-                    {period === "day" ? "$" + toolData?.tool_day_price : null}
-                    {period === "month" ? "$" + toolData?.tool_month_price : null}
-                    {period === "year" ? "$" + toolData?.tool_year_price : null}
+                    {period === "day" ? "IQD " + toolData?.tool_day_price : null}
+                    {period === "month" ? "IQD " + toolData?.tool_month_price : null}
+                    {period === "year" ? "IQD " + toolData?.tool_year_price : null}
                   </span>
                 </span>
               </p>

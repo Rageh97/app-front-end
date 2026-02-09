@@ -935,7 +935,7 @@ export default function ChatPage() {
                         <div className="font-bold text-white group-hover:text-purple-400 transition-colors">{p.plan_name}</div>
                         <div className="text-gray-400 text-xs mt-1">{p.credits_per_period} نقطة / {p.period}</div>
                       </div>
-                      <div className="text-white font-bold text-xl bg-white/10 px-3 py-1 rounded-lg group-hover:bg-purple-500">${p.amount}</div>
+                      <div className="text-white font-bold text-xl bg-white/10 px-3 py-1 rounded-lg group-hover:bg-purple-500">{p.amount} <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD</span></div>
                     </button>
                   ))}
                 </div>

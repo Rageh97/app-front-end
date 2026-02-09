@@ -1,7 +1,7 @@
 import { FunctionComponent } from "react";
 
 interface ProductDetailProps {
-    currency: "MAD" | "$"
+    currency: "MAD" | "IQD"
     productType: "tool" | "pack" | "device" | "credits"
     productData: any;
     period: "month" | "year" | "day" | "same";
@@ -20,7 +20,7 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
         return price;
     };
 
-    const displayPrice = (currency: "MAD" | "$", productType: "tool" | "pack" | "device" | "credits") => {
+    const displayPrice = (currency: "MAD" | "IQD", productType: "tool" | "pack" | "device" | "credits") => {
 
 
         if (productType === "tool") {
@@ -36,7 +36,7 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
                 }
             }
 
-            if (currency === "$") {
+            if (currency === "IQD") {
 
                 switch (period) {
                     case "day":
@@ -61,7 +61,7 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
                 }
             }
 
-            if (currency === "$") {
+            if (currency === "IQD") {
                 switch (period) {
                     case "day":
                         return getDiscountedPrice(productData?.monthly_price) + ` ${currency}`
@@ -80,7 +80,7 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
                 return getDiscountedPrice(productData?.total_price_mad || (productData?.monthly_price * (productData?.quantity || 1) * 10)) + ` ${currency}`
             }
 
-            if (currency === "$") {
+            if (currency === "IQD") {
                 // Use base price, multiplied by quantity
                 return getDiscountedPrice(productData?.total_price || (productData?.monthly_price * (productData?.quantity || 1))) + ` ${currency}`
             }
@@ -92,7 +92,7 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
                 return getDiscountedPrice(productData?.amount * 10) + ` ${currency}`
             }
 
-            if (currency === "$") {
+            if (currency === "IQD") {
                 return getDiscountedPrice(productData?.amount) + ` ${currency}`
             }
         }

@@ -399,7 +399,7 @@ const OfflinePayment: FunctionComponent<NewOfflinePayment> = ({
               : productData?.total_price
           }} 
           period={period} 
-          currency="$" 
+          currency="IQD" 
         />
 
       

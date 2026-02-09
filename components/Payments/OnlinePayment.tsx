@@ -52,7 +52,7 @@ const OnlinePayment: FunctionComponent<NewOnlinePayment> = ({
   return (
     <>
       <div className="w-full h-full gap-3 flex flex-col justify-center items-center relative">
-        <ProductDetail productType={productType} productData={productData} period={period} currency="$" />
+        <ProductDetail productType={productType} productData={productData} period={period} currency="IQD" />
 
         {
           // paymentMethod === "paypal" &&

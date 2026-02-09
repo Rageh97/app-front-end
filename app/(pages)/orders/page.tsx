@@ -119,7 +119,7 @@ const OrdersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
       {
         accessorKey: "amount",
         header: () => t("orders.amount"),
-        cell: (info) => "$" + info.getValue() || "none",
+        cell: (info) => "IQD" + info.getValue() || "none",
       },
       {
         accessorKey: "createdAt",

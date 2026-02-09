@@ -191,7 +191,7 @@ const {data} = useMyInfo()
             }}
             className="skew-x-[50deg] px-3 py-2 flex items-center gap-4 text-2xl font-bold"
           >
-            Buy   <span className="text-[#00c48c] font-bold text-lg">${data?.userPacksData && data?.packsData ? (data?.packsData.find((pack: any) => pack.pack_id === data?.userPacksData[0]?.pack_id)?.additional_device_price * number) : 'N/A'}</span>
+            Buy   <span className="text-[#00c48c] font-bold text-lg">{data?.userPacksData && data?.packsData ? (data?.packsData.find((pack: any) => pack.pack_id === data?.userPacksData[0]?.pack_id)?.additional_device_price * number) : 'N/A'} IQD</span>
           </button>
        </div>
         
@@ -259,14 +259,14 @@ const {data} = useMyInfo()
             }}
             className="skew-x-[50deg] px-3 py-2 flex items-center gap-4 text-2xl font-bold"
           >
-            Buy   <span className="text-[#00c48c] font-bold text-lg">${data?.userToolsData && data?.toolsData ? (() => {
+            Buy   <span className="text-[#00c48c] font-bold text-lg">{data?.userToolsData && data?.toolsData ? (() => {
               const activeTool = data.userToolsData.find((ut: any) => ut.isActive);
               if (activeTool) {
                 const toolInfo = data.toolsData.find((t: any) => t.tool_id === activeTool.tool_id);
                 return toolInfo ? (toolInfo.additional_device_price * number) : 'N/A';
               }
               return 'N/A';
-            })() : 'N/A'}</span>
+            })() : 'N/A'} IQD</span>
           </button>
        </div>
         
@@ -410,7 +410,7 @@ const {data} = useMyInfo()
             ...deviceData,
             /* Add these properties to make it compatible with the ProductDetail component */
             pack_name: deviceData.isToolDevice ? deviceData.tool_name : deviceData.pack_name,
-            pack_price: deviceData.total_price / 10, // Convert back to original price for display
+            pack_price: deviceData.total_price / (deviceData.quantity || 1),
             quantity: deviceData.quantity,
             isToolDevice: deviceData.isToolDevice
           }}

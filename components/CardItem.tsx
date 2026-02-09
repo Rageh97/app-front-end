@@ -107,20 +107,20 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
               {toolData?.tool_content}
             </div>
             <div className="px-2 flex items-center gap-5 justify-center w-full ">
-              <div className="w-50 flex bg-[#ff7702] items-center justify-center gap-2 border border-[#00c48c] bg-inherit text-white rounded-md px-2 py-2 font-bold text-md">
+              {/* <div className="w-full flex bg-[#ff7702] items-center justify-center gap-2 border border-[#00c48c] bg-inherit text-white rounded-md px-2 py-2 font-bold text-md">
                 {t("dashboard.information")}
-              </div>
-              <div className="w-50   flex gap-1 items-center justify-center gradient-border-3 bg-inherit text-[#00c48c] rounded-md px-2 py-2 font-bold text-xs">
+              </div> */}
+              <div className="w-full   flex gap-1 items-center justify-center gradient-border-3 bg-inherit text-[#00c48c] rounded-md px-2 py-2 font-bold text-xs">
                 {isFree ? t("dashboard.useNow") : t("dashboard.buyNow")}
                 <p className="text-white">
                   {isFree
                     ? t("dashboard.free")
-                    : `$${toolData?.tool_month_price ?? "--"}`}
+                    : `IQD ${toolData?.tool_month_price ?? "--"}`}
                 </p>
                 {!isFree && (
                   <del>
                     <p className="text-[#ff7702]">
-                      ${toolData?.tool_none_price_month}
+                      IQD ${toolData?.tool_none_price_month}
                     </p>
                   </del>
                 )}

@@ -133,7 +133,7 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
       {
         accessorKey: "tool_day_price",
         header: () => t("toolsTable.dPrice"),
-        cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
+        cell: (info) => (info.getValue() && "IQD" + info.getValue()) || "none",
       },
       // {
       //   accessorKey: "tool_none_price_month",
@@ -143,7 +143,7 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
       {
         accessorKey: "tool_month_price",
         header: () => t("toolsTable.mPrice"),
-        cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
+        cell: (info) => (info.getValue() && "IQD" + info.getValue()) || "none",
       },
       // {
       //   accessorKey: "tool_none_price_year",
@@ -153,7 +153,7 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
       {
         accessorKey: "tool_year_price",
         header: () => t("toolsTable.yPrice"),
-        cell: (info) => (info.getValue() && "$" + info.getValue()) || "none",
+        cell: (info) => (info.getValue() && "IQD" + info.getValue()) || "none",
       },
       {
         accessorKey: "isActive",

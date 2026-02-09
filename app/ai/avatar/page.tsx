@@ -435,7 +435,7 @@ export default function AvatarCreatorPage() {
                                     <div className="font-bold text-gray-200 group-hover:text-orange-400">{p.plan_name}</div>
                                     <div className="text-[10px] text-gray-500">{p.credits_per_period} نقطة</div>
                                 </div>
-                                <div className="bg-white/10 px-3 py-1 rounded-lg font-bold">${p.amount}</div>
+                                <div className="bg-white/10 px-3 py-1 rounded-lg font-bold">{p.amount} <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD</span></div>
                             </button>
                         ))}
                     </div>
