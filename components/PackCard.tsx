@@ -52,12 +52,12 @@ const PackCard: FunctionComponent<PackCardProps> = ({
       <p className="text-[21px] py-6 text-white text-center">{title}</p>
       <div className="flex pb-3 pt-4">
         <div className="text-[20px] text-white text-center">
-         <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD </span>{discountedPrice}
+         <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD </span>{Number(discountedPrice).toLocaleString('de-DE')}
           {discountPercentage > 0 && (
-            <span className="text-[15px] text-[#ACADB1] line-through ml-2">IQD{originalPrice}</span>
+            <span className="text-[15px] text-[#ACADB1] line-through ml-2">IQD{Number(originalPrice).toLocaleString('de-DE')}</span>
           )}
         </div>
-        <div className="h-[30px] flex flex-col justify-between">
+        <div className=" flex flex-col justify-between">
           <div></div>
           <p className="text-[18px] px-1 font-bold text-[#00c48c]">/ {period === 'month' ? t("packs.month") : t("packs.year")}</p>
         </div>
@@ -171,7 +171,7 @@ const PackCard: FunctionComponent<PackCardProps> = ({
           onClick();
         }}
          className="absolute flex items-center justify-center w-50 bottom-0 right-5 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] skew-x-[-50deg] rounded-[15px] gradient-border-packet text-white">
-       <p className="skew-x-[50deg] px-2 py-3"> <span className="text-[#00c48c] mx-2">{t("packs.buyNow")}</span><span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD</span>{discountedPrice}</p>
+       <p className="skew-x-[50deg] px-2 py-3"> <span className="text-[#00c48c] mx-2">{t("packs.buyNow")}</span><span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD</span>{Number(discountedPrice).toLocaleString('de-DE')}</p>
     
       </LoadingButton>
  </div>

@@ -191,7 +191,7 @@ const {data} = useMyInfo()
             }}
             className="skew-x-[50deg] px-3 py-2 flex items-center gap-4 text-2xl font-bold"
           >
-            Buy   <span className="text-[#00c48c] font-bold text-lg">{data?.userPacksData && data?.packsData ? (data?.packsData.find((pack: any) => pack.pack_id === data?.userPacksData[0]?.pack_id)?.additional_device_price * number) : 'N/A'} IQD</span>
+            Buy   <span className="text-[#00c48c] font-bold text-lg">{data?.userPacksData && data?.packsData ? (data?.packsData.find((pack: any) => pack.pack_id === data?.userPacksData[0]?.pack_id)?.additional_device_price * number)?.toLocaleString('de-DE') : 'N/A'} IQD</span>
           </button>
        </div>
         
@@ -263,7 +263,7 @@ const {data} = useMyInfo()
               const activeTool = data.userToolsData.find((ut: any) => ut.isActive);
               if (activeTool) {
                 const toolInfo = data.toolsData.find((t: any) => t.tool_id === activeTool.tool_id);
-                return toolInfo ? (toolInfo.additional_device_price * number) : 'N/A';
+                return toolInfo ? (toolInfo.additional_device_price * number)?.toLocaleString('de-DE') : 'N/A';
               }
               return 'N/A';
             })() : 'N/A'} IQD</span>
