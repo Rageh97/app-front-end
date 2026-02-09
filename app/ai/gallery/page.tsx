@@ -138,10 +138,10 @@ export default function ProfessionalGalleryPage() {
                             >
                                 {/* Media Content */}
                                 {item.media_type === 'video' ? (
-                                    <div className="relative aspect-video flex items-center justify-center bg-black">
+                                    <div className="relative w-full flex items-center justify-center bg-black">
                                        <video 
                                             src={(item.cloudinary_url || item.video_url) + "#t=1"} 
-                                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
+                                            className="w-full h-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" 
                                             muted 
                                             preload="metadata"
                                             onMouseOver={e => (e.target as HTMLVideoElement).play()}
@@ -154,10 +154,10 @@ export default function ProfessionalGalleryPage() {
                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="relative aspect-[4/5] overflow-hidden bg-black">
+                                    <div className="relative w-full overflow-hidden bg-black">
                                         <img 
                                             src={item.cloudinary_url || item.image_url} 
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                                            className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-110" 
                                             alt={item.prompt} 
                                         />
                                     </div>

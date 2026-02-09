@@ -49,20 +49,20 @@ const ALL_TOOLS_MAPPING: Record<string, string> = {
   'bg-remove': 'حذف الخلفية',
   'restore': 'ترميم الصور',
   'avatar': 'صانع الأفاتار',
-  'nano': 'نانو بانانا برو',
+  'nano': 'نانو بانانا برو 🍌',
   'product': 'نماذج لمنتجك',
   'colorize': 'تلوين الصور',
   'edit': 'المحرر الذكي',
   'sketch': 'رسم إلى صورة',
   'logo': 'صانع الشعارات',
   'video': 'انشاء فيديوهات احترافية',
-  'lipsync': 'تحريك الشفاه',
-  'effects': 'تأثيرات الفيديو',
-  'long-video': 'الفيديو الطويل',
+  // 'lipsync': 'تحريك الشفاه',
+  // 'effects': 'تأثيرات الفيديو',
+  // 'long-video': 'الفيديو الطويل',
   'motion': 'تحريك الصور',
-  'ugc': 'محتوى المستخدم',
-  'vupscale': 'تحسين الفيديو',
-  'resize': 'تحجيم الفيديو',
+  // 'ugc': 'محتوى المستخدم',
+  // 'vupscale': 'تحسين الفيديو',
+  // 'resize': 'تحجيم الفيديو',
 };
 
 type CreditsRecord = {
@@ -155,20 +155,47 @@ export default function PlansPage() {
     try {
       // Parse allowed tools or default to all if "*" is present
       const allowed = JSON.parse(plan.allowed_tools || '["*"]');
-      
+      let toolsList: string[] = [];
+
       if (allowed.includes('*')) {
         // Show ALL tools definitely
-        Object.values(ALL_TOOLS_MAPPING).forEach(toolName => {
-          features.push(toolName);
+        // Prioritize specific tools: Nano, Video, then others
+        const priorityTools = ['nano', 'video'];
+        
+        // Add priority tools first
+        priorityTools.forEach(toolId => {
+            if (ALL_TOOLS_MAPPING[toolId]) {
+                toolsList.push(ALL_TOOLS_MAPPING[toolId]);
+            }
         });
+
+        // Add remaining tools
+        Object.keys(ALL_TOOLS_MAPPING).forEach(toolId => {
+            if (!priorityTools.includes(toolId)) {
+                toolsList.push(ALL_TOOLS_MAPPING[toolId]);
+            }
+        });
+
       } else {
         // Show only specifically allowed tools
-        allowed.forEach((toolId: string) => {
+        // Sort to prioritize Nano and Video if they exist in the allowed list
+        const sortedTools = allowed.sort((a: string, b: string) => {
+            if (a === 'nano') return -1;
+            if (b === 'nano') return 1;
+            if (a === 'video') return -1;
+            if (b === 'video') return 1;
+            return 0;
+        });
+
+        sortedTools.forEach((toolId: string) => {
           if (ALL_TOOLS_MAPPING[toolId]) {
-            features.push(ALL_TOOLS_MAPPING[toolId]);
+            toolsList.push(ALL_TOOLS_MAPPING[toolId]);
           }
         });
       }
+      
+      features.push(...toolsList);
+
     } catch (e) {
       // Fallback in case of JSON error
       features.push("الوصول لكامل الأدوات");
