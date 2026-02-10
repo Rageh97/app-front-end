@@ -87,6 +87,7 @@ const resources = {
         deleteFailed:"Failed to delete thread",
         renameFailed:"Failed to rename thread",
         confirmDelete:"Are you sure you want to delete this chat?",
+        aiCredits:"AI Credits",
       },
       common: {
         loading: "Loading...",
@@ -1005,6 +1006,7 @@ isInStable:"Unstable"
         deleteFailed:"فشل في حذف المحادثة",
         renameFailed:"فشل في إعادة تسمية المحادثة",
         confirmDelete:"هل أنت متأكد من حذف هذه المحادثة؟",
+        aiCredits:"AI Credits",
       },
       common: {
         loading: "جاري التحميل...",

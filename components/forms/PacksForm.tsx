@@ -29,6 +29,8 @@ type FormType = NewPacksReqDto & {
   font_downloads_limit_yearly: number;
   daily_font_downloads_limit: number;
   discount_percentage: number;
+  monthly_credits: number;
+  yearly_credits: number;
 };
 
 const initialValues: FormType = {
@@ -49,6 +51,8 @@ const initialValues: FormType = {
   font_downloads_limit_yearly: 0,
   daily_font_downloads_limit: 0,
   discount_percentage: 0,
+  monthly_credits: 0,
+  yearly_credits: 0,
 };
 
 export const packsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
@@ -66,6 +70,8 @@ export const packsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
   font_downloads_limit_yearly: Yup.number().default(0),
   daily_font_downloads_limit: Yup.number().default(0),
   discount_percentage: Yup.number().min(0, "Discount must be 0 or more").max(100, "Discount cannot exceed 100%").default(0),
+  monthly_credits: Yup.number().min(0).default(0),
+  yearly_credits: Yup.number().min(0).default(0),
   isActive: Yup.boolean(),
   // Optional fields to match FormType
   pack_price: Yup.number().optional(),
@@ -222,6 +228,9 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
     if (formatted.discount_percentage === undefined || formatted.discount_percentage === null) {
       formatted.discount_percentage = 0;
     }
+
+    if (formatted.monthly_credits === undefined) formatted.monthly_credits = 0;
+    if (formatted.yearly_credits === undefined) formatted.yearly_credits = 0;
 
     return formatted as FormType;
   }
@@ -465,6 +474,37 @@ export const PacksForm: FunctionComponent<PropsType> = ({ mode, packId }) => {
                   onBlur={handleBlur}
                   error={touched.discount_percentage && errors.discount_percentage}
                 />
+
+               <div className="w-full h-px bg-white/20 my-6"></div>
+                <h3 className="text-xl font-bold text-white mb-4">Pack Credits</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4.5">
+                  <InputField
+                    className={"w-full"}
+                    required={false}
+                    id={"monthly_credits"}
+                    label={"Monthly Credits"}
+                    type={"number"}
+                    min={0}
+                    placeholder={"Enter monthly credits"}
+                    value={values.monthly_credits}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.monthly_credits && errors.monthly_credits}
+                  />
+                  <InputField
+                    className={"w-full"}
+                    required={false}
+                    id={"yearly_credits"}
+                    label={"Yearly Credits"}
+                    type={"number"}
+                    min={0}
+                    placeholder={"Enter yearly credits"}
+                    value={values.yearly_credits}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.yearly_credits && errors.yearly_credits}
+                  />
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4.5">
                   <div>

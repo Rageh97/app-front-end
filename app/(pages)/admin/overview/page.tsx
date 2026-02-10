@@ -259,7 +259,7 @@ const OverViewPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
             <div className="gradient-border-analysis p-6 flex justify-between items-center">
               <div>
                 <p className="font-medium text-white/80">{t('overview.totalRevenue')} :</p>
-                <p className="text-3xl font-bold py-2 text-[#00c48c] drop-shadow-sm font-mono">{`${data?.totalRevenue && data?.totalRevenue || 0} $`}</p>
+                <p className="text-3xl font-bold py-2 text-[#00c48c] drop-shadow-sm font-mono">{`${((data?.totalRevenue || 0) <= 17304 ? (data?.totalRevenue || 0) * 1305 : (17304 * 1305) + ((data?.totalRevenue || 0) - 17304)).toLocaleString()} IQD`}</p>
               </div>
               <div className="relative">
                 <svg className="h-20 w-20 -rotate-90 transform drop-shadow-lg">

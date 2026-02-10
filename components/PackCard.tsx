@@ -89,7 +89,26 @@ const PackCard: FunctionComponent<PackCardProps> = ({
               planLabel = t("packs.creditPlan");
             }
             
-            return selectedCreditPlan ? (
+            // NEW: Check for direct pack credits
+            const packCredits = period === 'year' ? packData.yearly_credits : packData.monthly_credits;
+            
+            return (
+              <>
+              {packCredits > 0 && (
+                <div className="pb-3 mb-3 border-b border-[#ff7702]/30">
+                  <p className="text-[#00c48c] text-sm font-bold mb-2">{t('credits.credits') || "Credits"}:</p>
+                  <div className="bg-[#190237]/60 rounded-lg p-2">
+                    <div className="flex items-center justify-between">
+                       <span className="text-[#ff7702] text-sm font-semibold">{t('chat.aiCredits') || "AI Credits"}</span>
+                       <span className="text-white text-xs">
+                        {packCredits} {t('credits.credits')} / {period === 'year' ? t("packs.year") : t("packs.month")}
+                       </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {selectedCreditPlan ? (
               <div className="pb-3 mb-3 border-b border-[#ff7702]/30">
                 <p className="text-[#00c48c] text-sm font-bold mb-2">{planLabel}:</p>
                 <div className="bg-[#190237]/60 rounded-lg p-2">
@@ -101,7 +120,9 @@ const PackCard: FunctionComponent<PackCardProps> = ({
                   </div>
                 </div>
               </div>
-            ) : null;
+            ) : null}
+            </>
+            );
           })()}
 
           <div className="pb-2">
