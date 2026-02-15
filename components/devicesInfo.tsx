@@ -10,27 +10,27 @@ const DeviceInfo = () => {
                 </div>
                 <div>
                     <ul dir="rtl" className="text-white flex flex-col gap-2 list-disc  text-xl">
-                        <li  className="text-orange">باقة  <span className="text-[#00c48c] font-bold">{data?.find((p: any) => p.pack_name.trim() === "AI Plan" )?.monthly_price}AI Plan </span> دولار شهريًا
+                        <li  className="text-orange">باقة  <span className="text-[#00c48c] font-bold">{data?.find((p: any) => p.pack_name.trim() === "AI Plan" )?.monthly_price}AI Plan </span> IDQ شهريًا
                         </li>
                         <li>مناسبة للمستخدمين العاديين اللي يحتاجون أدوات تحليل أساسية</li>
-                        <li> تقدر تضيف جهاز إضافي على نفس الاشتراك مقابل <span className="text-[#00c48c] font-bold">{data?.find((p: any) => p.pack_name.trim() === "AI Plan" )?.additional_device_price}</span> دولار
+                        <li> تقدر تضيف جهاز إضافي على نفس الاشتراك مقابل <span className="text-[#00c48c] font-bold">{data?.find((p: any) => p.pack_name.trim() === "AI Plan" )?.additional_device_price}</span> IDQ
                         </li>
                         <li> مثالي لو تبغى تستخدم الباقة على جوال ولابتوب بنفس الوقت
                         </li>
                         {data?.map((p) => p.pack_name.trim() === "Designers plan"  ?<>
-                         <li className="text-orange">باقة  <span className="text-[#00c48c] font-bold">{p.monthly_price}Designers Plan</span> دولار شهريًا</li>
+                         <li className="text-orange">باقة  <span className="text-[#00c48c] font-bold">{p.monthly_price}Designers Plan</span> IDQ شهريًا</li>
                         <li>مصممة للمحللين النشطين واللي يحتاجون أدوات وميزات متقدمة</li>
-                        <li> تقدر تضيف جهاز إضافي بقيمة <span className="text-[#00c48c] font-bold">{p.additional_device_price}</span> دولار</li>
+                        <li> تقدر تضيف جهاز إضافي بقيمة <span className="text-[#00c48c] font-bold">{p.additional_device_price}</span> IDQ</li>
                         <li>مناسبة للي يشتغل من أكثر من بيئة عمل ويحتاج مرونة أكبر</li></> :"" )}
                         
                       
                       {data?.map((p) => p.pack_name.trim() === "All in One Plan"  ? <> 
 
-                        <li className="text-orange"> باقة  <span className="text-[#00c48c] font-bold">{p.monthly_price}All in One Plan</span> دولار شهريًا
+                        <li className="text-orange"> باقة  <span className="text-[#00c48c] font-bold">{p.monthly_price}All in One Plan</span> IDQ شهريًا
                         </li>
                         <li>مخصصة للشركات والمحترفين اللي يحتاجون أعلى أداء وتحكم
                         </li>
-                        <li>إضافة كل جهاز إضافي بقيمة <span className="text-[#00c48c] font-bold">{p.additional_device_price}</span> دولار
+                        <li>إضافة كل جهاز إضافي بقيمة <span className="text-[#00c48c] font-bold">{p.additional_device_price}</span> IDQ
                         </li>
                         <li>مثالية للفرق أو المكاتب اللي يستخدم فيها أكثر من شخص نفس الاشتراك
                         </li>

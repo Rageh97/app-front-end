@@ -2,11 +2,20 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "@/utils/api";
-import { Trash2, Edit, Upload, FolderPlus, Film, Image as ImageIcon, Plus, X, Eye, EyeOff, Pause, Play, AlertCircle, Download } from "lucide-react";
+import { Trash2, Edit, Upload, FolderPlus, Film, Image as ImageIcon, Plus, X, Eye, EyeOff, Pause, Play, AlertCircle, Download, Layers } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import useTusUpload, { formatBytes, calculateETA } from "@/hooks/useTusUpload";
 import { finalizeMainFile, finalizePreviewVideo, finalizeVariant, updateMainFile } from "@/utils/tusMediaUpload";
+
+interface HeroCategory {
+  hero_category_id: number;
+  name: string;
+  description: string;
+  type?: 'visual' | 'audio';
+  cover_image_url?: string;
+  subCategories?: Category[];
+}
 
 interface Category {
   category_id: number;
@@ -14,6 +23,7 @@ interface Category {
   description: string;
   cover_image_url?: string;
   filesCount?: number;
+  hero_category_id?: number | null;
 }
 
 interface Variant {
@@ -90,10 +100,19 @@ const ConfirmationModal = ({
 
 const MediaAdminPage = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"categories" | "uploads" | "banner" | "analytics">("categories");
+  const [activeTab, setActiveTab] = useState<"hero" | "categories" | "uploads" | "banner" | "analytics">("hero");
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+
+  // Hero Categories State
+  const [heroCategories, setHeroCategories] = useState<HeroCategory[]>([]);
+  const [loadingHero, setLoadingHero] = useState(false);
+  const [editingHeroId, setEditingHeroId] = useState<number | null>(null);
+  const [heroName, setHeroName] = useState("");
+  const [heroDesc, setHeroDesc] = useState("");
+  const [heroCover, setHeroCover] = useState<File | null>(null);
+  const [heroType, setHeroType] = useState<"visual" | "audio">("visual");
 
   // Analytics State
   const [analytics, setAnalytics] = useState<any>(null);
@@ -111,6 +130,7 @@ const MediaAdminPage = () => {
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
   const [catCover, setCatCover] = useState<File | null>(null);
+  const [selectedHeroId, setSelectedHeroId] = useState<number | null>(null);
 
   // Files Management
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
@@ -118,7 +138,7 @@ const MediaAdminPage = () => {
   const [loadingFiles, setLoadingFiles] = useState(false);
 
   // Deletion Modal State
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'category' | 'file' | 'variant' | null; id: number | null; }>({ isOpen: false, type: null, id: null });
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'hero' | 'category' | 'file' | 'variant' | null; id: number | null; }>({ isOpen: false, type: null, id: null });
 
   // Edit File Modal State
   const [editFileModal, setEditFileModal] = useState<{ isOpen: boolean; file: MediaFileData | null }>({ isOpen: false, file: null });
@@ -160,11 +180,25 @@ const MediaAdminPage = () => {
   const tusUpload = useTusUpload();
 
   useEffect(() => {
+    fetchHeroCategories();
     fetchCategories();
     fetchMediaHubSetting();
     fetchBanners();
     fetchAnalytics();
   }, []);
+
+  const fetchHeroCategories = async () => {
+    setLoadingHero(true);
+    try {
+      const res = await axios.get("/api/media/hero-categories");
+      setHeroCategories(res.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في تحميل المجموعات");
+    } finally {
+      setLoadingHero(false);
+    }
+  };
 
   const fetchMediaHubSetting = async () => {
     try {
@@ -290,6 +324,59 @@ const MediaAdminPage = () => {
     }
   };
 
+  // --- Hero Category Handlers ---
+  const handleCreateOrUpdateHero = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append("name", heroName);
+      formData.append("description", heroDesc);
+      formData.append("type", heroType);
+      if (heroCover) formData.append("coverImage", heroCover);
+
+      if (editingHeroId) {
+        await axios.put(`/api/media/hero-categories/${editingHeroId}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+        toast.success("تم تحديث المجموعة بنجاح");
+      } else {
+        await axios.post("/api/media/hero-categories", formData, { headers: { "Content-Type": "multipart/form-data" } });
+        toast.success("تم إنشاء المجموعة بنجاح");
+      }
+      setHeroName(""); setHeroDesc(""); setHeroCover(null); setHeroType("visual"); setEditingHeroId(null);
+      fetchHeroCategories();
+    } catch (err) {
+      console.error(err);
+      toast.error(t('mediaAdmin.failedOperation'));
+    }
+  };
+
+  const handleEditHero = (hero: HeroCategory) => {
+      setEditingHeroId(hero.hero_category_id);
+      setHeroName(hero.name);
+      setHeroDesc(hero.description);
+      setHeroType(hero.type || "visual");
+  };
+  
+  const handleCancelEditHero = () => {
+      setEditingHeroId(null);
+      setHeroName("");
+      setHeroDesc("");
+      setHeroCover(null);
+      setHeroType("visual");
+  };
+
+  const handleDeleteHero = async (id: number) => {
+    try {
+      await axios.delete(`/api/media/hero-categories/${id}`);
+      fetchHeroCategories();
+      toast.success(t('mediaAdmin.successDeleted'));
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل في حذف المجموعة");
+    }
+    setDeleteModal({ isOpen: false, type: null, id: null });
+  };
+
+
   // --- Category Handlers ---
   const handleCreateOrUpdateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -297,6 +384,7 @@ const MediaAdminPage = () => {
       const formData = new FormData();
       formData.append("name", catName);
       formData.append("description", catDesc);
+      if (selectedHeroId) formData.append("hero_category_id", selectedHeroId.toString());
       if (catCover) formData.append("coverImage", catCover);
 
       if (editingCatId) {
@@ -306,15 +394,20 @@ const MediaAdminPage = () => {
         await axios.post("/api/media/categories", formData, { headers: { "Content-Type": "multipart/form-data" } });
         toast.success(t('mediaAdmin.successCreated'));
       }
-      setCatName(""); setCatDesc(""); setCatCover(null); setEditingCatId(null);
+      setCatName(""); setCatDesc(""); setCatCover(null); setEditingCatId(null); setSelectedHeroId(null);
       fetchCategories();
     } catch (err) {
       toast.error(t('mediaAdmin.failedOperation'));
     }
   };
 
-  const handleEditCategory = (cat: Category) => { setEditingCatId(cat.category_id); setCatName(cat.name); setCatDesc(cat.description); };
-  const handleCancelEdit = () => { setEditingCatId(null); setCatName(""); setCatDesc(""); };
+  const handleEditCategory = (cat: Category) => { 
+      setEditingCatId(cat.category_id); 
+      setCatName(cat.name); 
+      setCatDesc(cat.description); 
+      setSelectedHeroId(cat.hero_category_id || null);
+  };
+  const handleCancelEdit = () => { setEditingCatId(null); setCatName(""); setCatDesc(""); setSelectedHeroId(null); };
 
   const handleDeleteCategory = async (id: number) => {
     try {
@@ -355,7 +448,7 @@ const MediaAdminPage = () => {
     setDeleteModal({ isOpen: false, type: null, id: null });
   };
 
-  const openDeleteModal = (type: 'category' | 'file' | 'variant', id: number) => { setDeleteModal({ isOpen: true, type, id }); };
+  const openDeleteModal = (type: 'hero' | 'category' | 'file' | 'variant', id: number) => { setDeleteModal({ isOpen: true, type, id }); };
 
   // --- Edit File Handlers ---
   const handleOpenEditFile = async (fileId: number) => {
@@ -675,12 +768,15 @@ const MediaAdminPage = () => {
         try {
           let result;
           if (item.type === "main") {
+            // Check if we have a temp mainFileType (for variants-only uploads)
+            const actualMainFileType = (window as any).tempMainFileType || mainFileType;
+            
             result = await finalizeMainFile({
               uploadId,
               categoryId: uploadCategory,
               title: uploadTitle,
               description: uploadDesc,
-              mainFileType,
+              mainFileType: actualMainFileType,
               filename: item.file?.name,
             });
           } else if (item.type === "preview" && fileId) { 
@@ -743,8 +839,23 @@ const MediaAdminPage = () => {
   // Main upload handler
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mainFile || !uploadCategory) {
-      toast.error("يرجى اختيار ملف رئيسي وتصنيف");
+    
+    // Validation: Need either main file OR at least one variant
+    const hasMainFile = !!mainFile;
+    const hasVariants = variants.some(v => v.file);
+    
+    if (!uploadCategory) {
+      toast.error("يرجى اختيار تصنيف");
+      return;
+    }
+    
+    if (!hasMainFile && !hasVariants) {
+      toast.error("يرجى اختيار ملف رئيسي أو إضافة صيغة واحدة على الأقل");
+      return;
+    }
+    
+    if (!uploadTitle) {
+      toast.error("يرجى إدخال عنوان للملف");
       return;
     }
 
@@ -764,6 +875,25 @@ const MediaAdminPage = () => {
     let fileId: number | null = null;
 
     try {
+      // If no main file, treat first variant as main
+      if (!hasMainFile && hasVariants) {
+        const firstVariantItem = queue.find(item => item.type === "variant");
+        if (firstVariantItem) {
+          // Change its type to "main" temporarily
+          firstVariantItem.type = "main";
+          
+          // Set mainFileType based on variant type
+          const variantType = firstVariantItem.variantType;
+          if (variantType === 'audio') {
+            (window as any).tempMainFileType = 'audio';
+          } else if (variantType === 'video' || variantType === 'prores') {
+            (window as any).tempMainFileType = 'video';
+          } else {
+            (window as any).tempMainFileType = 'image';
+          }
+        }
+      }
+      
       for (let i = 0; i < queue.length; i++) {
         if (isPaused) {
           // Wait for resume
@@ -795,6 +925,7 @@ const MediaAdminPage = () => {
       setPreviewVideo(null);
       setVariants([]);
       setUploadQueue([]);
+      (window as any).tempMainFileType = undefined;
       fetchCategories();
       
     } catch (err: any) {
@@ -953,20 +1084,95 @@ const MediaAdminPage = () => {
         </button>
       </div>
       
-      <div className="flex gap-4 mb-8">
-        <button onClick={() => setActiveTab("categories")} className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === "categories" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+      
+      <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
+        <button onClick={() => setActiveTab("hero")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "hero" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+          <Layers size={18} /> المجموعات (Colletions)
+        </button>
+        <button onClick={() => setActiveTab("categories")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "categories" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <FolderPlus size={18} /> {t('mediaAdmin.categoriesTab')}
         </button>
-        <button onClick={() => setActiveTab("uploads")} className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === "uploads" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+        <button onClick={() => setActiveTab("uploads")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "uploads" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <Upload size={18} /> {t('mediaAdmin.uploadsTab')}
         </button>
-        <button onClick={() => setActiveTab("banner")} className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === "banner" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+        <button onClick={() => setActiveTab("banner")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "banner" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <ImageIcon size={18} /> إدارة البانر
         </button>
-        <button onClick={() => setActiveTab("analytics")} className={`px-4 py-2 rounded-lg flex items-center gap-2 ${activeTab === "analytics" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+        <button onClick={() => setActiveTab("analytics")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "analytics" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <AlertCircle size={18} /> الإحصائيات
         </button>
       </div>
+
+      {activeTab === "hero" && (
+        <div className="grid md:grid-cols-1 gap-8">
+           <div className="bg-[#190237] p-6 rounded-xl shadow-lg h-fit">
+            <h2 className="text-xl font-semibold mb-4">{editingHeroId ? "تعديل المجموعة" : "إضافة مجموعة جديدة (Collection)"}</h2>
+            <form onSubmit={handleCreateOrUpdateHero} className="flex flex-col gap-4">
+              <input type="text" placeholder="اسم المجموعة (مثال: مؤثرات صوتية)" className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={heroName} onChange={(e) => setHeroName(e.target.value)} required />
+              <textarea placeholder="وصف المجموعة" className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={heroDesc} onChange={(e) => setHeroDesc(e.target.value)} />
+              <div>
+              <label className="block mb-2 font-medium">نوع المجموعة</label>
+              <div className="flex gap-4">
+                <label className={`cursor-pointer border p-3 rounded-lg flex items-center gap-2 transition-all ${heroType === 'visual' ? 'border-[#00c48c] bg-[#00c48c]/10 text-white' : 'border-gray-600 text-gray-400'}`}>
+                  <input type="radio" name="heroType" value="visual" className="hidden" checked={heroType === 'visual'} onChange={() => setHeroType('visual')} />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${heroType === 'visual' ? 'border-[#00c48c]' : 'border-gray-500'}`}>
+                    {heroType === 'visual' && <div className="w-2 h-2 rounded-full bg-[#00c48c]"></div>}
+                  </div>
+                  <span>Visual (Photos/Videos)</span>
+                </label>
+                <label className={`cursor-pointer border p-3 rounded-lg flex items-center gap-2 transition-all ${heroType === 'audio' ? 'border-orange bg-orange/10 text-white' : 'border-gray-600 text-gray-400'}`}>
+                  <input type="radio" name="heroType" value="audio" className="hidden" checked={heroType === 'audio'} onChange={() => setHeroType('audio')} />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${heroType === 'audio' ? 'border-orange' : 'border-gray-500'}`}>
+                    {heroType === 'audio' && <div className="w-2 h-2 rounded-full bg-orange"></div>}
+                  </div>
+                  <span>Audio (Music/SFX)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* <div>
+              <label className="block mb-2 font-medium">{t('mediaAdmin.coverImage')}</label>
+              <input type="file" onChange={(e) => setHeroCover(e.target.files?.[0] || null)} className="w-full text-sm" />
+            </div> */}
+              <div className="flex gap-2">
+                <button type="submit" className="flex-1 bg-orange hover:bg-orange/80 text-white font-bold py-2 rounded-lg transition">{editingHeroId ? t('mediaAdmin.update') : t('mediaAdmin.create')}</button>
+                {editingHeroId && <button type="button" onClick={handleCancelEditHero} className="bg-gray-500 text-white px-4 py-2 rounded-lg">{t('mediaAdmin.cancel')}</button>}
+              </div>
+            </form>
+           </div>
+
+           <div className="bg-[#190237] p-6 rounded-xl shadow-lg">
+             <h2 className="text-xl font-semibold mb-4">المجموعات الحالية (Hero Categories)</h2>
+             {loadingHero ? <p>{t('common.loading')}</p> : (
+               <div className="space-y-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {heroCategories.map(hero => (
+                    <div key={hero.hero_category_id} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <div className="w-16 h-16 rounded-lg bg-black/40 overflow-hidden flex-shrink-0">
+                           {hero.cover_image_url ? (
+                              <img src={hero.cover_image_url} alt="" className="w-full h-full object-cover" />
+                           ) : (
+                              <Layers className="w-full h-full p-4 text-white/20" />
+                           )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                           <h4 className="font-bold text-lg">{hero.name}</h4>
+                           <p className="text-xs text-white/50 truncate">{hero.description}</p>
+                           <p className="text-xs text-orange mt-1">
+                              {hero.subCategories?.length || 0} تصنيف فرعي
+                           </p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button onClick={() => handleEditHero(hero)} className="bg-blue-500/10 text-blue-400 p-2 rounded hover:bg-blue-500/20"><Edit size={16} /></button>
+                          <button onClick={() => openDeleteModal('hero', hero.hero_category_id)} className="bg-red-500/10 text-red-500 p-2 rounded hover:bg-red-500/20"><Trash2 size={16} /></button>
+                        </div>
+                    </div>
+                  ))}
+                  {heroCategories.length === 0 && <p className="opacity-50 text-white col-span-full">لا توجد مجموعات</p>}
+               </div>
+             )}
+           </div>
+        </div>
+      )}
 
       {activeTab === "categories" && (
         <div className="grid md:grid-cols-1 gap-8">
@@ -974,6 +1180,14 @@ const MediaAdminPage = () => {
             <h2 className="text-xl font-semibold mb-4">{editingCatId ? t('mediaAdmin.editCategory') : t('mediaAdmin.addCategory')}</h2>
             <form onSubmit={handleCreateOrUpdateCategory} className="flex flex-col gap-4">
               <input type="text" placeholder={t('mediaAdmin.categoryName')} className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={catName} onChange={(e) => setCatName(e.target.value)} required />
+              
+              <select className="p-3 rounded-lg border border-[#00c48c] bg-white text-black appearance-none" value={selectedHeroId || ""} onChange={(e) => setSelectedHeroId(Number(e.target.value) || null)}>
+                 <option value="">-- اختر المجموعة الأم (Collection) --</option>
+                 {heroCategories.map(h => (
+                    <option key={h.hero_category_id} value={h.hero_category_id}>{h.name}</option>
+                 ))}
+              </select>
+
               <textarea placeholder={t('mediaAdmin.description')} className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={catDesc} onChange={(e) => setCatDesc(e.target.value)} />
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold opacity-70 text-white">رفع صورة التصنيف</label>
@@ -994,6 +1208,11 @@ const MediaAdminPage = () => {
                   <div key={cat.category_id} className={`flex flex-col p-2.5 bg-white text-black rounded-xl shadow-sm cursor-pointer transition-all hover:shadow-md ${selectedCatId === cat.category_id ? 'ring-2 ring-orange scale-[1.02]' : ''}`} onClick={() => handleViewFiles(cat.category_id)}>
                     <div className="mb-2">
                       <h4 className="font-bold text-sm truncate">{cat.name}</h4>
+                      {cat.hero_category_id && (
+                          <span className="text-[9px] bg-black/10 px-1 rounded text-gray-600 block w-fit mb-1">
+                             {heroCategories.find(h => h.hero_category_id === cat.hero_category_id)?.name || "Unknown"}
+                          </span>
+                      )}
                       <p className="text-[10px] opacity-60 truncate">{cat.description || '-'}</p>
                     </div>
                     <div className="flex justify-between items-center mt-auto pt-2 border-t border-gray-100">
@@ -1063,12 +1282,23 @@ const MediaAdminPage = () => {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, type: null, id: null })}
         onConfirm={() => {
+          if (deleteModal.type === 'hero' && deleteModal.id) handleDeleteHero(deleteModal.id);
           if (deleteModal.type === 'category' && deleteModal.id) handleDeleteCategory(deleteModal.id);
           if (deleteModal.type === 'file' && deleteModal.id) handleDeleteFile(deleteModal.id);
           if (deleteModal.type === 'variant' && deleteModal.id) handleDeleteVariant(deleteModal.id);
         }}
-        title={deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : deleteModal.type === 'variant' ? "حذف الصيغة" : t('mediaAdmin.deleteFile')}
-        message={deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : deleteModal.type === 'variant' ? "هل أنت متأكد من حذف هذه الصيغة؟" : t('mediaAdmin.deleteFileConfirm')}
+        title={
+          deleteModal.type === 'hero' ? "حذف المجموعة" :
+          deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : 
+          deleteModal.type === 'variant' ? "حذف الصيغة" : 
+          t('mediaAdmin.deleteFile')
+        }
+        message={
+          deleteModal.type === 'hero' ? "هل أنت متأكد من حذف هذه المجموعة؟ التصنيفات التابعة لها ستصبح مستقلة." :
+          deleteModal.type === 'category' ? t('mediaAdmin.deleteConfirm') : 
+          deleteModal.type === 'variant' ? "هل أنت متأكد من حذف هذه الصيغة؟" : 
+          t('mediaAdmin.deleteFileConfirm')
+        }
         confirmText={t('admin.delete')}
         cancelText={t('mediaAdmin.cancel')}
       />
@@ -1552,7 +1782,10 @@ const MediaAdminPage = () => {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="border border-orange/30 bg-orange/5 p-4 rounded-lg">
-                <h3 className="font-bold mb-3 flex items-center gap-2 text-white"><ImageIcon size={18} /> {t('mediaAdmin.mainFile')}</h3>
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-white">
+                  <ImageIcon size={18} /> {t('mediaAdmin.mainFile')} 
+                  <span className="text-xs text-gray-400 font-normal">(اختياري)</span>
+                </h3>
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'image' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
                     <input type="radio" name="mainType" value="image" className="hidden" checked={mainFileType === 'image'} onChange={() => setMainFileType('image')} />
@@ -1575,14 +1808,16 @@ const MediaAdminPage = () => {
                     'image/*,.zip,.rar,.7z'
                   } 
                   onChange={handleMainFileChange} 
-                  required 
                   className="w-full text-sm text-white" 
                 />
                 {mainFile && <p className="text-xs text-orange mt-2">📁 {mainFile.name} ({formatBytes(mainFile.size)})</p>}
               </div>
 
               <div className="border border-[#00c48c]/30 bg-[#00c48c]/5 p-4 rounded-lg">
-                <h3 className="font-bold mb-3 flex items-center gap-2 text-white"><Film size={18} /> Hover Video Preview</h3>
+                <h3 className="font-bold mb-3 flex items-center gap-2 text-white">
+                  <Film size={18} /> Hover Video Preview
+                  <span className="text-xs text-gray-400 font-normal">(اختياري)</span>
+                </h3>
                 <input type="file" accept="video/*,.mov" onChange={(e) => setPreviewVideo(e.target.files?.[0] || null)} className="w-full text-sm text-white mt-10" />
                 {previewVideo && <p className="text-xs text-[#00c48c] mt-2">📁 {previewVideo.name} ({formatBytes(previewVideo.size)})</p>}
               </div>
@@ -1600,9 +1835,10 @@ const MediaAdminPage = () => {
                   <span className="text-xs text-white/60 font-medium">{t('mediaAdmin.quickAdd')}</span>
                   <button type="button" onClick={() => addVariant("4K PRORES", "prores")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
                   <button type="button" onClick={() => addVariant("MP4 (PREVIEW)", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
-                  <button type="button" onClick={() => addVariant("MP3", "audio")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ MP3</button>
-                  <button type="button" onClick={() => addVariant("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ PNG SEQ.</button>
-                  <button type="button" onClick={() => addVariant("MOV", "video")} className="text-[10px] bg-[#00c48c20] hover:bg-[#00c48c40] text-[#00c48c] px-2 py-1 rounded border border-[#00c48c20] transition font-bold">+ MOV</button>
+                  <button type="button" onClick={() => addVariant("MP3", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ MP3</button>
+                  <button type="button" onClick={() => addVariant("WAV", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ WAV</button>
+                  <button type="button" onClick={() => addVariant("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ PNG SEQ.</button>
+                  <button type="button" onClick={() => addVariant("MOV", "video")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ MOV</button>
                 </div>
               </div>
 
