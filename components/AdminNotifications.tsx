@@ -265,7 +265,7 @@ const AdminNotifications: React.FC = () => {
                 <div
                   key={notification.id}
                   className={`p-4 border-b border-[#00c48c]   cursor-pointer ${
-                    !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    !notification.is_read ? ' ' : ''
                   }`}
                   onClick={() => !notification.is_read && markAsRead([notification.id])}
                 >

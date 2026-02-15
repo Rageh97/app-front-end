@@ -229,7 +229,7 @@ export default function AdminChatPage() {
                 onClick={() => setSelectedUserId(u.user_id)}
                 className={
                   "w-full text-left px-4 py-3  " +
-                  (selectedUserId === u.user_id ? "bg-gray-50 dark:bg-meta-4" : "")
+                  (selectedUserId === u.user_id ? "gradient-border-analysis " : "")
                 }
               >
                 <div className="font-medium text-[#00c48c]">{u.first_name} {u.last_name}</div>
@@ -285,7 +285,7 @@ export default function AdminChatPage() {
                     "max-w-[75%] px-3 py-2 rounded-lg " +
                     (m.sender_role === "admin"
                       ? "bg-[#00c48c80] text-white rounded-br-none"
-                      : "bg-gray-100  rounded-bl-none")
+                      : "  rounded-bl-none")
                   }
                 >
                   {m.image_url && (
@@ -367,14 +367,14 @@ export default function AdminChatPage() {
             />
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="px-3 py-2 rounded text-gray-700 hover:bg-gray-300"
               disabled={!selectedUserId || isSending}
             >
               <Smile className="text-[#00c48c]" size={20} />
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="px-3 py-2 rounded  text-gray-700 hover:bg-gray-300"
               disabled={!selectedUserId || isSending}
             >
               <ImageIcon className="text-[#00c48c]" size={32} />
