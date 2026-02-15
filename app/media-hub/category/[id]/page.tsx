@@ -415,7 +415,7 @@ const CategoryPage = () => {
                               {/* <div className="w-11 h-11 bg-white text-black rounded-2xl flex items-center justify-center shadow-xl group-hover:rotate-[10deg] transition-all duration-500">
                                 <Sparkles size={24} fill="currentColor" />
                               </div> */}
-                                            <span className="text-2xl font-black tracking-tighter">NEXUS TOOLZ AI</span>
+                                            <span className="text-2xl font-black tracking-tighter">NEXUS TOOLZ </span>
                 
                              <div className="relative w-fit rounded-full overflow-hidden">
                                <Image
