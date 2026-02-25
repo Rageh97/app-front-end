@@ -57,7 +57,7 @@ const ToolModalDetails: React.FC<
             >
               <img src="/images/close.png" className="max-w-4" alt="close" />
             </div>
-            <p className="bg-[#00c48c] bg-opacity-50 w-50 rounded-xl inner-shadow text-white p-1 lg:p-2 text-xl lg:text-3xl font-extrabold">
+            <p className="bg-[#00c48c] bg-opacity-50 w-50 rounded-xl inner-shadow text-white p-1 lg:p-2 text-lg font-bold">
               {toolData?.tool_name}
             </p>
             <p className="text-white  font-extrabold w-full text-2xl py-2">
