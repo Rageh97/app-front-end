@@ -113,7 +113,9 @@ export default function NanoBananaPage() {
   useEffect(() => {
     if (promptRef.current) {
         promptRef.current.style.height = 'auto';
-        promptRef.current.style.height = promptRef.current.scrollHeight + 'px';
+        // تحديد الحد الأقصى بـ 250 بكسل
+        const newHeight = Math.min(promptRef.current.scrollHeight, 250);
+        promptRef.current.style.height = newHeight + 'px';
     }
   }, [prompt]);
   
@@ -356,7 +358,7 @@ export default function NanoBananaPage() {
                                 onChange={(e) => setPrompt(e.target.value)} 
                                 placeholder="اكتب ما تتخيله هنا..." 
                                 maxLength={20000} 
-                                className="w-full min-h-[100px] p-3 rounded-xl bg-white/5 border border-white/5 focus:border-yellow-500/40 outline-none resize-none transition-all text-xs leading-relaxed no-scrollbar" 
+                                className="w-full min-h-[100px] max-h-[250px] p-3 rounded-xl bg-white/5 border border-white/5 focus:border-yellow-500/40 outline-none resize-none transition-all text-xs leading-relaxed custom-scrollbar overflow-y-auto" 
                             />
                             <div className="absolute bottom-2 right-2 text-[8px] bg-black/50 px-1.5 py-0.5 rounded text-gray-400 border border-white/5">
                                 {prompt.length}/20000
@@ -365,7 +367,7 @@ export default function NanoBananaPage() {
                     </div>
 
                     {/* Reference Image Upload */}
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                             <Upload size={10} className="text-yellow-400" />
                             صورة مرجعية (اختياري)
@@ -405,7 +407,7 @@ export default function NanoBananaPage() {
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </div> */}
 
                     <div className="space-y-2">
                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">النمط</label>

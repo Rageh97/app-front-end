@@ -38,6 +38,19 @@ export interface VideoModel extends AIModel {
 // ═══════════════════════════════════════════════════════════════════
 
 export const IMAGE_MODELS: AIModel[] = [
+  // Google Imagen 4 Ultra
+  {
+    id: 'imagen-4.0-ultra-generate-001',
+    name: 'Imagen 4 Ultra',
+    provider: 'google',
+    description: 'أعلى جودة ممكنة',
+    quality: 'ultra',
+    speed: 'slow',
+    baseCostCredits: 16,
+    creditsBySize: { '1024x1024': 16, '1792x1024': 18, '1024x1792': 18 },
+    badge: 'Ultra',
+    isPremium: true,
+  },
   // Google Imagen 4
   {
     id: 'imagen-4.0-generate-001',
@@ -182,37 +195,31 @@ export const VIDEO_MODELS: VideoModel[] = [
 // ═══════════════════════════════════════════════════════════════════
 
 export const NANO_MODELS: AIModel[] = [
+  // 🍌👑 Nano Banana Pro (Gemini 3 Pro Image) - الافتراضي
   {
-    id: 'imagen-4.0-fast-generate-001',
-    name: 'Nano Ultra',
+    id: 'gemini-3-pro-image-preview',
+    name: 'Nano Banana Pro',
     provider: 'google',
-    description: 'أسرع توليد ممكن',
-    quality: 'standard',
-    speed: 'fast',
-    baseCostCredits: 12,
-    creditsBySize: { '1024x1024': 12, '1792x1024': 13, '1024x1792': 13 },
-    badge: '⚡',
-  },
-  {
-    id: 'imagen-3.0-fast-generate-001',
-    name: 'Nano Standard',
-    provider: 'google',
-    description: 'سريع وموثوق',
-    quality: 'standard',
-    speed: 'fast',
-    baseCostCredits: 12,
-    creditsBySize: { '1024x1024': 12, '1792x1024': 13, '1024x1792': 13 },
-  },
-  {
-    id: 'imagen-4.0-ultra-generate-001',
-    name: 'Nano Creative (Ultra)',
-    provider: 'google',
-    description: 'جودة فائقة مع إبداع',
+    description: 'جودة احترافية فائقة',
     quality: 'ultra',
     speed: 'medium',
-    baseCostCredits: 12, // Standardized to 12
-    creditsBySize: { '1024x1024': 12, '1792x1024': 13, '1024x1792': 13 },
-    badge: 'Ultra',
+    baseCostCredits: 30,
+    creditsBySize: { '1024x1024': 30, '1792x1024': 30, '1024x1792': 30 },
+    badge: 'Pro',
+    isPremium: true,
+    isNew: true,
+  },
+  // 🍌 Nano Banana Standard (Gemini 2.5 Flash Image)
+  {
+    id: 'gemini-2.5-flash-image',
+    name: 'Nano Banana Standard',
+    provider: 'google',
+    description: 'سريع واقتصادي',
+    quality: 'standard',
+    speed: 'fast',
+    baseCostCredits: 12,
+    creditsBySize: { '1024x1024': 12, '1792x1024': 12, '1024x1792': 12 },
+    badge: '⚡',
   },
 ];
 
@@ -410,13 +417,15 @@ export function syncModelsWithDynamicPricing(
     // Check for nano specifically first if it's a nano model
     // Map each Nano model to its specific pricing key
     if (updated.name.toLowerCase().includes('nano')) {
-      if (updated.name.toLowerCase().includes('creative') || updated.id.includes('ultra')) {
-        priceKey = 'nano-creative';
-      } else if (updated.name.toLowerCase().includes('ultra') || updated.id.includes('imagen-4')) {
-        priceKey = 'nano-ultra';
+      if (updated.id.includes('gemini-3') || updated.id.includes('pro-image-preview') || updated.name.toLowerCase().includes('pro')) {
+        priceKey = 'nano-pro';
+      } else if (updated.id.includes('gemini-2.5') || updated.id.includes('flash')) {
+        priceKey = 'nano-standard';
       } else {
         priceKey = 'nano-standard';
       }
+    } else if (updated.id.includes('imagen-4.0-ultra')) {
+      priceKey = 'imagen-4-ultra';
     } else if (updated.id.includes('imagen-4')) {
       priceKey = 'imagen-4';
     } else if (updated.id.includes('imagen-3')) {

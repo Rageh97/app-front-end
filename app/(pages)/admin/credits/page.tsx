@@ -42,7 +42,7 @@ const ALL_TOOLS = [
   { id: 'bg-remove', name: 'حذف الخلفية', category: 'image' },
   { id: 'restore', name: 'ترميم الصور', category: 'image' },
   { id: 'avatar', name: 'صانع الأفاتار', category: 'image' },
-  { id: 'nano', name: 'نانو بانانا برو', category: 'image' },
+  { id: 'nano', name: 'نانو بنانا (Pro / Standard)', category: 'image' },
   { id: 'product', name: 'نماذج لمنتجك', category: 'image' },
   { id: 'colorize', name: 'تلوين الصور', category: 'image' },
   { id: 'edit', name: 'المحرر الذكي', category: 'image' },
@@ -210,11 +210,14 @@ export default function AdminCreditsPage() {
   }, []);
 
   // Filter models for display in sections
+  // Image models used for pricing configuration
   const imageModelList = [
+    { id: 'imagen-4-ultra', name: 'Imagen 4 Ultra' },
     { id: 'imagen-4', name: 'Imagen 4' },
     { id: 'imagen-3', name: 'Imagen 3' },
     { id: 'dall-e-3', name: 'DALL-E 3' },
-    { id: 'nano-standard', name: 'Nano Standard (Imagen 3)' },
+    { id: 'nano-pro', name: 'Nano Banana Pro' },
+    { id: 'nano-standard', name: 'Nano Banana Standard' },
     { id: 'nano-ultra', name: 'Nano Ultra (Imagen 4)' },
     { id: 'nano-creative', name: 'Nano Creative (Ultra)' },
   ];

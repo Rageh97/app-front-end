@@ -95,85 +95,81 @@ const {
         accessorKey: "payment_method",
         header: () => t("orders.paymentMethod"),
         cell: (info) => {
-          const paymentMethod = info.getValue();
-          if (paymentMethod === "Zain") {
-            return <img className="bg-[#35214f] rounded-xl p-2 inner-shadow" src="https://www2.0zz0.com/2025/07/02/21/357173052.png" alt="Zain" style={{width:"60px"}} />;
-          } else if (paymentMethod === "FastPay") {
-            return <img className="bg-[#35214f] rounded-xl p-2 inner-shadow" src="https://stock-pik.com/tools/unnamed%20(3).png" alt="FastPay" style={{width:"60px"}} />;
-          } else if (paymentMethod === "AsiaSel") {
-            return <img className="bg-[#35214f] rounded-xl p-2 inner-shadow" src="https://www2.0zz0.com/2025/07/02/22/684653137.png" alt="AsiaSel" style={{width:"60px"}} />;
-          }
-          else if (paymentMethod === "Alrafedeen") {
-            return <img className="bg-[#35214f] rounded-xl p-2 inner-shadow" src="https://stock-pik.com/tools/unnamed%20(2).webp" alt="AsiaSel" style={{width:"60px"}} />;
-          }else if (paymentMethod === "IraqBank") {
-            return <img className="bg-[#35214f] rounded-xl p-2 inner-shadow" src="https://www2.0zz0.com/2025/07/02/22/627573215.jpg" alt="IraqBank" style={{width:"60px"}} />;
-          }else if (paymentMethod === "AsiaPay") {
-            return <img className="bg-[#35214f] rounded-xl p-2 inner-shadow" src="https://www2.0zz0.com/2025/07/02/21/255630149.png" alt="AsiaPay" style={{width:"60px"}} />;
+          const paymentMethod = info.getValue()?.toLowerCase();
+          const methodLogos: Record<string, string> = {
+            'zain': "https://www2.0zz0.com/2025/07/02/21/357173052.png",
+            'fastpay': "https://stock-pik.com/tools/unnamed%20(3).png",
+            'asiasel': "https://www2.0zz0.com/2025/07/02/22/684653137.png",
+            'alrafedeen': "https://stock-pik.com/tools/unnamed%20(2).webp",
+            'iraqbank': "https://www2.0zz0.com/2025/07/02/22/627573215.jpg",
+            'asiapay': "https://www2.0zz0.com/2025/07/02/21/255630149.png",
+            'paytabs': "/images/visa-master.png"
+          };
+          
+          if (methodLogos[paymentMethod]) {
+            return <img className="bg-white/5 rounded-lg p-1 border border-white/5" src={methodLogos[paymentMethod]} alt={paymentMethod} style={{width:"45px"}} />;
           }
            else {
-            return <span className="text-gray-500">None</span>;
+            return <span className="text-gray-500 font-mono text-xs uppercase">{paymentMethod || 'None'}</span>;
           }
         },
       },
       {
         accessorKey: "product_name",
         header: () => t("orders.productName"),
-        cell: (info) => info.getValue() || "none",
+        cell: (info) => <div className="font-bold text-sm">{info.getValue() || "none"}</div>,
       },
       {
         accessorKey: "buyer_name",
         header: () => t("orders.buyer"),
-        cell: (info) => info.getValue() || "none",
+        cell: (info) => <div className="text-xs font-medium">{info.getValue() || "none"}</div>,
       },
       {
         accessorKey: "buyer_email",
         header: () => t("orders.buyerEmail"),
-        cell: (info) => info.getValue() || "none",
+        cell: (info) => <div className="text-[10px] opacity-60 font-mono">{info.getValue() || "none"}</div>,
       },
       {
         accessorKey: "period",
         header: () => t("orders.period"),
-        cell: (info) => info.getValue() || "none",
+        cell: (info) => <div className="text-xs uppercase font-black text-white/40">{info.getValue() || "none"}</div>,
       },
       {
         accessorKey: "amount",
         header: () => t("orders.amount"),
-        cell: (info) => "$" + info.getValue() || "none",
+        cell: (info) => <div className="font-mono text-[#00c48c] font-black">{info.getValue()} IQD</div>,
       },
       {
         accessorKey: "createdAt",
         header: () => t("orders.orderedAt"),
-        cell: (info) => fullDateTimeFormat(info.getValue()) || "none",
+        cell: (info) => <div className="text-[10px] opacity-40">{fullDateTimeFormat(info.getValue())}</div>,
       },
       {
         accessorKey: "status",
         header: () => t("orders.status"),
-        cell: (info) => (
-          <div
-            style={{
-              backgroundColor:
-                info.getValue() === "accepted" || info.getValue() === "completed"
-                  ? "green"
-                  : info.getValue() === "denied"
-                    ? "red"
-                    : "orange",
-            }}
-            className=" p-2 rounded-lg text-white text-sm text-center"
-          >
-            {(() => {
-              const status = info.getValue();
-              const statusMap = {
-                'On Hold': 'onHold',
-                'on hold': 'onHold',
-                'accepted': 'accepted',
-                'denied': 'denied',
-                'completed': 'completed'
-              };
-              const translationKey = `orders.${statusMap[status] || status.toLowerCase()}`;
-              return t(translationKey);
-            })()}
-          </div>
-        ),
+        cell: (info) => {
+          const status = info.getValue()?.toLowerCase();
+          const isActive = status === "accepted" || status === "completed";
+          const isDenied = status === "denied" || status === "declined" || status === "failed";
+
+          return (
+            <div className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+              isActive 
+                ? 'bg-[#00c48c]/10 text-[#00c48c] border border-[#00c48c]/20' 
+                : isDenied 
+                  ? 'bg-red/10 text-red border border-red/20' 
+                  : 'bg-orange/10 text-orange border border-orange/20 animate-pulse'
+            }`}>
+              {isActive 
+                ? 'نشط' 
+                : (status === 'failed' || status === 'declined') 
+                  ? 'فشل الدفع' 
+                  : isDenied 
+                    ? t('orders.denied') 
+                    : t('orders.onHold')}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "payment_proof_url",
@@ -316,10 +312,15 @@ const {
       )}
       {data && data?.orders?.length !== 0 && (
         <Table
-          // onRowClick={(row) => {
-          //   window.alert("Product Type : " + row.product_type);
-          // }}
-          data={data.orders}
+          data={data.orders.filter((order: any) => {
+            const status = order.status?.toLowerCase();
+            const method = order.payment_method?.toLowerCase();
+            // Hide paytabs orders that are still 'On Hold' (zombie sessions)
+            if (method === 'paytabs' && (status === 'on hold' || status === 'onhold' || status === 'pending')) {
+              return false;
+            }
+            return true;
+          })}
           columns={columnDef}
         />
       )}

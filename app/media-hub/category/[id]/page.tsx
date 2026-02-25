@@ -657,25 +657,36 @@ const AudioListItem = ({ file, activeId, onPlay, onDownload }: any) => {
         {formatTime(currentTime > 0 ? currentTime : duration)}
       </div>
 
-      <div className="flex-1 flex items-center gap-[2px] h-6 w-full overflow-hidden">
-        {bars.map((height, i) => (
-          <div 
-            key={i} 
-            className={`w-0.5 rounded-full transition-all duration-300 ${isPlaying ? 'bg-[#00c48c] opacity-100' : 'bg-gray-500 opacity-30'}`} 
-            style={{ 
-              height: isPlaying ? `${Math.max(20, Math.random() * 100)}%` : `${height * 100}%`,
-              animation: isPlaying ? `music-bar 0.5s ease-in-out infinite alternate` : 'none',
-              animationDelay: `${i * 0.05}s`
-            }}
-          ></div>
-        ))}
-        {/* Style for animation */}
-        <style jsx>{`
-          @keyframes music-bar {
-            0% { height: 20%; }
-            100% { height: 100%; }
-          }
-        `}</style>
+      <div className="flex-1 flex items-center gap-[2px] h-10 w-full overflow-hidden px-2 relative">
+        {/* Background Base Line */}
+        <div className="absolute left-0 right-0 h-[1px] bg-white/5 top-1/2 -translate-y-1/2"></div>
+        
+        {bars.map((height, i) => {
+          const barProgress = i / bars.length;
+          const currentProgress = duration > 0 ? currentTime / duration : 0;
+          const isPlayed = barProgress <= currentProgress;
+          const isCurrent = Math.abs(barProgress - currentProgress) < 0.01;
+
+          return (
+            <div 
+              key={i} 
+              className={`w-[2px] rounded-full transition-all duration-300 ${
+                isPlayed 
+                  ? 'bg-gradient-to-t from-[#00c48c] to-[#E1FE26] shadow-[0_0_8px_rgba(0,196,140,0.4)]' 
+                  : 'bg-white/10'
+              }`} 
+              style={{ 
+                height: isCurrent && isPlaying 
+                  ? `${Math.max(40, Math.random() * 100)}%` 
+                  : isPlayed 
+                    ? `${20 + (height * 40)}%`
+                    : `${15 + (height * 20)}%`,
+                opacity: isPlayed ? 1 : 0.3,
+                transform: isCurrent && isPlaying ? 'scaleY(1.2)' : 'scaleY(1)',
+              }}
+            ></div>
+          );
+        })}
       </div>
     </div>
   );

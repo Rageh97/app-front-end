@@ -1,7 +1,7 @@
 import { FunctionComponent } from "react";
 
 interface ProductDetailProps {
-    currency: "MAD" | "IQD"
+    currency: "MAD" | "IQD" | "USD"
     productType: "tool" | "pack" | "device" | "credits"
     productData: any;
     period: "month" | "year" | "day" | "same";
@@ -20,7 +20,7 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
         return price;
     };
 
-    const displayPrice = (currency: "MAD" | "IQD", productType: "tool" | "pack" | "device" | "credits") => {
+    const displayPrice = (currency: "MAD" | "IQD" | "USD", productType: "tool" | "pack" | "device" | "credits") => {
 
 
         if (productType === "tool") {
@@ -38,6 +38,16 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
 
             if (currency === "IQD") {
 
+                switch (period) {
+                    case "day":
+                        return getDiscountedPrice(productData?.tool_day_price)?.toLocaleString('en-US') + ` ${currency}`
+                    case "month":
+                        return getDiscountedPrice(productData?.tool_month_price)?.toLocaleString('en-US') + ` ${currency}`
+                    case "year":
+                        return getDiscountedPrice(productData?.tool_year_price)?.toLocaleString('en-US') + ` ${currency}`
+                }
+            }
+            if (currency === "USD") {
                 switch (period) {
                     case "day":
                         return getDiscountedPrice(productData?.tool_day_price)?.toLocaleString('en-US') + ` ${currency}`
@@ -71,6 +81,16 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
                         return getDiscountedPrice(productData?.yearly_price)?.toLocaleString('en-US') + ` ${currency}`
                 }
             }
+            if (currency === "USD") {
+                switch (period) {
+                    case "day":
+                        return getDiscountedPrice(productData?.monthly_price)?.toLocaleString('en-US') + ` ${currency}`
+                    case "month":
+                        return getDiscountedPrice(productData?.monthly_price)?.toLocaleString('en-US') + ` ${currency}`
+                    case "year":
+                        return getDiscountedPrice(productData?.yearly_price)?.toLocaleString('en-US') + ` ${currency}`
+                }
+            }
         }
         
         // Handle device type
@@ -84,6 +104,9 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
                 // Use base price, multiplied by quantity
                 return getDiscountedPrice(productData?.total_price || (productData?.monthly_price * (productData?.quantity || 1)))?.toLocaleString('en-US') + ` ${currency}`
             }
+            if (currency === "USD") {
+                return getDiscountedPrice(productData?.total_price || (productData?.monthly_price * (productData?.quantity || 1)))?.toLocaleString('en-US') + ` ${currency}`
+            }
         }
         
         // Handle credits type
@@ -93,6 +116,9 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
             }
 
             if (currency === "IQD") {
+                return getDiscountedPrice(productData?.amount)?.toLocaleString('en-US') + ` ${currency}`
+            }
+            if (currency === "USD") {
                 return getDiscountedPrice(productData?.amount)?.toLocaleString('en-US') + ` ${currency}`
             }
         }

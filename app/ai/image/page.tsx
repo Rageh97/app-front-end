@@ -585,7 +585,7 @@ export default function ImageGenerationPage() {
                     </div>
 
                     {/* Reference Image Upload Section */}
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                         <label className="text-[10px] font-bold text-gray-400 flex items-center gap-2 uppercase tracking-wide">
                             <Upload size={12} className="text-emerald-400" />
                             صورة مرجعية
@@ -625,7 +625,7 @@ export default function ImageGenerationPage() {
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </div> */}
 
                     {/* Presets Section */}
                     <div className="space-y-2">

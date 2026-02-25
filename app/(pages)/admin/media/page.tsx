@@ -30,6 +30,8 @@ interface Variant {
   file: File | null;
   type: "image" | "video" | "audio" | "prores" | "png_sequence" | "archive";
   label: string;
+  title?: string;
+  isIndependent?: boolean;
 }
 
 interface ExistingVariant {
@@ -64,6 +66,8 @@ interface UploadQueueItem {
   cloudProgress?: number;
   uploadId?: string;
   error?: string;
+  title?: string; // Added for bulk uploads
+  description?: string; // Added for bulk uploads
 }
 
 const ConfirmationModal = ({ 
@@ -160,11 +164,11 @@ const MediaAdminPage = () => {
   const [isUpdatingFiles, setIsUpdatingFiles] = useState(false);
 
   // Upload Form - TUS Based
-  const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadCategory, setUploadCategory] = useState("");
   const [mainFileType, setMainFileType] = useState<"video" | "image" | "audio">("image");
-  const [mainFile, setMainFile] = useState<File | null>(null);
+  const [mainFiles, setMainFiles] = useState<File[]>([]); // Changed to support bulk
+  const [bulkMetadata, setBulkMetadata] = useState<{title: string, description: string}[]>([]);
   const [previewVideo, setPreviewVideo] = useState<File | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
   
@@ -176,6 +180,13 @@ const MediaAdminPage = () => {
   const [uploadStartTime, setUploadStartTime] = useState<number>(0);
   const [createdFileId, setCreatedFileId] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Filtering states
+  const [filterHeroId, setFilterHeroId] = useState<number | null>(null);
+  const [uploadHeroId, setUploadHeroId] = useState<number | null>(null);
+  
+  const bulkVariantInputRef = useRef<HTMLInputElement>(null);
+  const editBulkVariantInputRef = useRef<HTMLInputElement>(null);
   
   const tusUpload = useTusUpload();
 
@@ -589,7 +600,21 @@ const MediaAdminPage = () => {
 
   const updateNewVariantRow = (index: number, field: keyof Variant, value: any) => {
     const updated = [...newVariantsToUpload];
-    (updated[index] as any)[field] = value;
+    const item = { ...updated[index] };
+    (item as any)[field] = value;
+
+    // Auto-set title and label if it's a file change
+    if (field === 'file' && value instanceof File) {
+      if (!item.title) {
+        item.title = value.name.split('.').slice(0, -1).join('.') || value.name;
+      }
+      if (!item.label) {
+        const ext = value.name.split('.').pop() || "";
+        item.label = ext.toUpperCase();
+      }
+    }
+
+    updated[index] = item;
     setNewVariantsToUpload(updated);
   };
 
@@ -655,9 +680,68 @@ const MediaAdminPage = () => {
     }
   };
 
+  const handleBulkAddVariants = (e: React.ChangeEvent<HTMLInputElement>, isEditModal = false) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    
+    const newItems: Variant[] = files.map(file => {
+      const extension = file.name.split('.').pop()?.toLowerCase() || "";
+      let type: Variant['type'] = "audio";
+      
+      if (['mp3', 'wav', 'ogg', 'm4a'].includes(extension)) type = "audio";
+      else if (['mp4', 'mov', 'mkv', 'webm', 'prores', 'mxf'].includes(extension)) type = "video";
+      else if (['zip', 'rar', '7z'].includes(extension)) type = "archive";
+      else if (['png', 'jpg', 'jpeg'].includes(extension)) type = "image";
+      
+      const isMulti = mainFiles.length === 0;
+      return {
+        file,
+        type,
+        label: extension.toUpperCase(),
+        title: isMulti ? (file.name.split('.').slice(0, -1).join('.') || file.name) : undefined,
+        isIndependent: isMulti
+      };
+    });
+    
+    if (isEditModal) {
+      setNewVariantsToUpload([...newVariantsToUpload, ...newItems]);
+    } else {
+      setVariants([...variants, ...newItems]);
+    }
+    
+    // Reset
+    e.target.value = "";
+  };
+
   // --- TUS Upload Handlers ---
   const handleMainFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) setMainFile(e.target.files[0]);
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setMainFiles(files);
+      
+      // If single file, initialize metadata
+      if (files.length === 1) {
+        // We can still use uploadDesc as a base
+      }
+      
+      // Initialize metadata for each file using filename as default title
+      const newMetadata = files.map(file => ({
+        title: file.name.split('.').slice(0, -1).join('.') || file.name,
+        description: uploadDesc // Carry over existing desc if any
+      }));
+      setBulkMetadata(newMetadata);
+    }
+  };
+
+  const updateBulkMetadata = (index: number, field: 'title' | 'description', value: string) => {
+    const updated = [...bulkMetadata];
+    updated[index] = { ...updated[index], [field]: value };
+    setBulkMetadata(updated);
+    
+    // If it's the first file, also update the main uploadDesc for UI consistency
+    if (index === 0) {
+      if (field === 'description') setUploadDesc(value);
+    }
   };
 
   const addVariant = (label = "", type: Variant['type'] = "image") => {
@@ -673,7 +757,21 @@ const MediaAdminPage = () => {
 
   const updateVariant = (index: number, field: keyof Variant, value: any) => {
     const newVars = [...variants];
-    (newVars[index] as any)[field] = value;
+    const item = { ...newVars[index] };
+    (item as any)[field] = value;
+
+    // Auto-set title and label if it's a file change
+    if (field === 'file' && value instanceof File) {
+      if (!item.title) {
+        item.title = value.name.split('.').slice(0, -1).join('.') || value.name;
+      }
+      if (!item.label) {
+        const ext = value.name.split('.').pop() || "";
+        item.label = ext.toUpperCase();
+      }
+    }
+
+    newVars[index] = item;
     setVariants(newVars);
   };
 
@@ -681,18 +779,26 @@ const MediaAdminPage = () => {
   const buildUploadQueue = (): UploadQueueItem[] => {
     const queue: UploadQueueItem[] = [];
     
-    if (mainFile) {
-      queue.push({ 
-        id: `main-${Date.now()}`, 
-        file: mainFile, 
+    // 1. Identify the Master Main File (Priority 1)
+    let mainFileItem: any = null;
+    
+    if (mainFiles.length > 0) {
+      const file = mainFiles[0];
+      mainFileItem = { 
+        id: `main-0-${Date.now()}`, 
+        file: file, 
         type: "main", 
         status: "pending", 
         progress: 0,
-        filetype: mainFile.type || "application/octet-stream",
-        fileextension: mainFile.name.split('.').pop()?.toLowerCase() || ""
-      } as any);
+        filetype: file.type || "application/octet-stream",
+        fileextension: file.name.split('.').pop()?.toLowerCase() || "",
+        title: bulkMetadata[0]?.title || file.name.split('.').slice(0, -1).join('.') || file.name,
+        description: uploadDesc
+      };
+      queue.push(mainFileItem);
     }
     
+    // 2. Add Preview Video (associated with the first main file)
     if (previewVideo) {
       queue.push({ 
         id: `preview-${Date.now()}`, 
@@ -705,20 +811,50 @@ const MediaAdminPage = () => {
       } as any);
     }
     
+    // 3. Process Variants Section
     variants.forEach((v, idx) => {
-      if (v.file) {
-        queue.push({
-          id: `variant-${idx}-${Date.now()}`,
-          file: v.file,
-          type: "variant",
-          variantType: v.type,
-          variantLabel: v.label || v.type.toUpperCase(),
-          status: "pending",
-          progress: 0,
-          filetype: v.file.type || "application/octet-stream",
-          fileextension: v.file.name.split('.').pop()?.toLowerCase() || ""
-        } as any);
+      if (!v.file) return;
+
+      // Logic: If NO main file yet, the very first variant becomes the Main (Parent)
+      // Logic: If v.isIndependent is true, it MUST be a "main" (Separate Card)
+      const shouldBeMain = !mainFileItem || v.isIndependent;
+      
+      const item: any = {
+        id: `variant-${idx}-${Date.now()}`,
+        file: v.file,
+        status: "pending",
+        progress: 0,
+        filetype: v.file.type || "application/octet-stream",
+        fileextension: v.file.name.split('.').pop()?.toLowerCase() || "",
+        variantType: v.type,
+        variantLabel: v.label || v.type.toUpperCase()
+      };
+
+      if (shouldBeMain) {
+        item.type = "main";
+        item.title = v.title || v.file.name.split('.').slice(0, -1).join('.') || v.file.name;
+        item.description = uploadDesc;
+        if (!mainFileItem) mainFileItem = item; // First one becomes the parent for subsequent non-independent variants
+      } else {
+        item.type = "variant";
       }
+
+      queue.push(item);
+    });
+
+    // 4. Handle extra mainFiles as variants of the first one
+    mainFiles.forEach((file, idx) => {
+      if (idx === 0) return;
+      queue.push({
+        id: `main-extra-${idx}-${Date.now()}`,
+        file: file,
+        type: "variant",
+        variantLabel: file.name.split('.').pop()?.toUpperCase() || "FILE",
+        status: "pending",
+        progress: 0,
+        filetype: file.type || "application/octet-stream",
+        fileextension: file.name.split('.').pop()?.toLowerCase() || ""
+      } as any);
     });
     
     return queue;
@@ -768,14 +904,14 @@ const MediaAdminPage = () => {
         try {
           let result;
           if (item.type === "main") {
-            // Check if we have a temp mainFileType (for variants-only uploads)
-            const actualMainFileType = (window as any).tempMainFileType || mainFileType;
+            // Priority: item.variantType (for variants-turned-main) > tempMainFileType > mainFileType
+            const actualMainFileType = (item as any).variantType || (window as any).tempMainFileType || mainFileType;
             
             result = await finalizeMainFile({
               uploadId,
               categoryId: uploadCategory,
-              title: uploadTitle,
-              description: uploadDesc,
+              title: item.title,
+              description: item.description || uploadDesc,
               mainFileType: actualMainFileType,
               filename: item.file?.name,
             });
@@ -841,7 +977,7 @@ const MediaAdminPage = () => {
     e.preventDefault();
     
     // Validation: Need either main file OR at least one variant
-    const hasMainFile = !!mainFile;
+    const hasMainFile = mainFiles.length > 0;
     const hasVariants = variants.some(v => v.file);
     
     if (!uploadCategory) {
@@ -854,9 +990,20 @@ const MediaAdminPage = () => {
       return;
     }
     
-    if (!uploadTitle) {
-      toast.error("يرجى إدخال عنوان للملف");
-      return;
+    // Title validation for bulk
+    if (mainFiles.length > 0) {
+      const missingTitle = bulkMetadata.some(m => !m.title.trim());
+      if (missingTitle) {
+        toast.error("يرجى إدخال عنوان لكل ملف");
+        return;
+      }
+    } else if (variants.some(v => v.file && !v.title?.trim())) {
+      // Check variants if they are the primary files
+      const variantMissingTitle = variants.some(v => v.file && !v.title?.trim());
+      if (variantMissingTitle) {
+        toast.error("يرجى إدخال عنوان لكل ملف");
+        return;
+      }
     }
 
     const queue = buildUploadQueue();
@@ -875,25 +1022,7 @@ const MediaAdminPage = () => {
     let fileId: number | null = null;
 
     try {
-      // If no main file, treat first variant as main
-      if (!hasMainFile && hasVariants) {
-        const firstVariantItem = queue.find(item => item.type === "variant");
-        if (firstVariantItem) {
-          // Change its type to "main" temporarily
-          firstVariantItem.type = "main";
-          
-          // Set mainFileType based on variant type
-          const variantType = firstVariantItem.variantType;
-          if (variantType === 'audio') {
-            (window as any).tempMainFileType = 'audio';
-          } else if (variantType === 'video' || variantType === 'prores') {
-            (window as any).tempMainFileType = 'video';
-          } else {
-            (window as any).tempMainFileType = 'image';
-          }
-        }
-      }
-      
+      // Build queue is already handling the single-main-card logic
       for (let i = 0; i < queue.length; i++) {
         if (isPaused) {
           // Wait for resume
@@ -919,9 +1048,9 @@ const MediaAdminPage = () => {
       toast.success(t('mediaAdmin.successUpload'));
       
       // Reset form
-      setUploadTitle("");
       setUploadDesc("");
-      setMainFile(null);
+      setMainFiles([]);
+      setBulkMetadata([]);
       setPreviewVideo(null);
       setVariants([]);
       setUploadQueue([]);
@@ -969,7 +1098,7 @@ const MediaAdminPage = () => {
   // Calculate total size
   const getTotalSize = () => {
     let total = 0;
-    if (mainFile) total += mainFile.size;
+    mainFiles.forEach(f => total += f.size);
     if (previewVideo) total += previewVideo.size;
     variants.forEach(v => { if (v.file) total += v.file.size; });
     return total;
@@ -993,7 +1122,7 @@ const MediaAdminPage = () => {
               <h3 className="text-2xl font-black mb-2 tracking-tight">
                 {isPaused ? "⏸️ متوقف مؤقتاً" : (uploadQueue[currentUploadIndex]?.status === "processing" ? "جاري المزامنة  " : "جاري الرفع...")}
               </h3>
-              <p className="text-white/40 text-sm mb-4 font-medium">{uploadTitle || "ملف ميديا"}</p>
+              <p className="text-white/40 text-sm mb-4 font-medium">{uploadQueue[currentUploadIndex]?.title || "ملف ميديا"}</p>
               
               {/* Current file info */}
               <div className="w-full bg-black/30 rounded-xl p-4 mb-6 border border-white/10">
@@ -1092,8 +1221,9 @@ const MediaAdminPage = () => {
         <button onClick={() => setActiveTab("categories")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "categories" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <FolderPlus size={18} /> {t('mediaAdmin.categoriesTab')}
         </button>
-        <button onClick={() => setActiveTab("uploads")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "uploads" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
+        <button onClick={() => setActiveTab("uploads")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap relative ${activeTab === "uploads" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <Upload size={18} /> {t('mediaAdmin.uploadsTab')}
+          {/* <span className="absolute -top-2 -right-1 bg-green-500 text-[8px] px-1.2 py-0.5 rounded-full font-bold animate-pulse">NEW</span> */}
         </button>
         <button onClick={() => setActiveTab("banner")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "banner" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
           <ImageIcon size={18} /> إدارة البانر
@@ -1201,10 +1331,34 @@ const MediaAdminPage = () => {
           </div>
 
           <div className="bg-[#190237] p-6 rounded-xl shadow-lg">
-            <h2 className="text-xl font-semibold mb-4">{t('mediaAdmin.existingCategories')}</h2>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+              <h2 className="text-xl font-semibold">{t('mediaAdmin.existingCategories')}</h2>
+              
+              {/* Filter Row */}
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => setFilterHeroId(null)} 
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${filterHeroId === null ? 'bg-orange text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+                >
+                  الكل
+                </button>
+                {heroCategories.map(hero => (
+                  <button 
+                    key={hero.hero_category_id}
+                    onClick={() => setFilterHeroId(hero.hero_category_id)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${filterHeroId === hero.hero_category_id ? 'bg-orange text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+                  >
+                    {hero.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {loading ? <p>{t('common.loading')}</p> : (
               <div className="space-y-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {categories.map(cat => (
+                {categories
+                  .filter(cat => filterHeroId === null || cat.hero_category_id === filterHeroId)
+                  .map(cat => (
                   <div key={cat.category_id} className={`flex flex-col p-2.5 bg-white text-black rounded-xl shadow-sm cursor-pointer transition-all hover:shadow-md ${selectedCatId === cat.category_id ? 'ring-2 ring-orange scale-[1.02]' : ''}`} onClick={() => handleViewFiles(cat.category_id)}>
                     <div className="mb-2">
                       <h4 className="font-bold text-sm truncate">{cat.name}</h4>
@@ -1335,16 +1489,7 @@ const MediaAdminPage = () => {
                 </div>
               </div>
 
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-white">العنوان</label>
-                <input 
-                  type="text" 
-                  value={editTitle} 
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black"
-                />
-              </div>
+              {/* Title removed as requested */}
 
               {/* Description */}
               {/* <div>
@@ -1457,31 +1602,62 @@ const MediaAdminPage = () => {
                   <div className="flex flex-col gap-3">
                     <label className="text-sm font-medium text-[#00c48c] flex items-center gap-2">
                       <Plus size={16} />
-                      إضافة صيغ جديدة
+                      إضافة ملفات أو صيغ جديدة
                     </label>
 
                     {/* Quick Add Buttons */}
                     <div className="flex flex-wrap gap-2 items-center bg-black/30 p-3 rounded-lg border border-white/10">
-                      <span className="text-xs text-white/60 font-medium">إضافة سريعة:</span>
+                      <span className="text-xs text-white/60 font-medium">{t('mediaAdmin.quickAdd')}</span>
                       <button type="button" onClick={() => addNewVariantRow("4K PRORES", "prores")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
                       <button type="button" onClick={() => addNewVariantRow("MP4", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
                       <button type="button" onClick={() => addNewVariantRow("MP3", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ MP3</button>
                       <button type="button" onClick={() => addNewVariantRow("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ PNG SEQ.</button>
                       <button type="button" onClick={() => addNewVariantRow("MOV", "video")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ MOV</button>
+
+                      <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+                      
+                      <input 
+                        type="file" 
+                        id="edit-bulk-variants" 
+                        multiple 
+                        className="hidden" 
+                        onChange={(e) => handleBulkAddVariants(e, true)}
+                        ref={editBulkVariantInputRef}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => editBulkVariantInputRef.current?.click()} 
+                        className="text-[10px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 px-3 py-1 rounded border border-blue-500/30 transition font-bold flex items-center gap-1"
+                      >
+                        <Plus size={10} /> رفع أكثر من ملف
+                      </button>
                     </div>
                   </div>
 
                   {/* New Variants Rows */}
                   {newVariantsToUpload.map((v, idx) => (
-                    <div key={idx} className="flex gap-3 items-end bg-[#00c48c]/5 p-3 rounded-lg border border-[#00c48c]/20">
-                      <div className="flex-1">
-                        <label className="text-xs block mb-1 opacity-70 text-white">الاسم</label>
+                    <div key={idx} className="flex gap-3 items-end bg-[#00c48c]/5 p-3 rounded-lg border border-[#00c48c]/20 flex-wrap">
+                      {v.isIndependent && (
+                        <div className="flex-[2] min-w-[150px]">
+                          <label className="text-xs block mb-1 opacity-70 text-white">العنوان الرئيسي</label>
+                          <input 
+                            type="text" 
+                            className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-[#00c48c]" 
+                            value={v.title || ""} 
+                            onChange={(e) => updateNewVariantRow(idx, 'title', e.target.value)} 
+                            placeholder="عنوان الميديا"
+                            disabled={uploadingNewVariant}
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-[100px]">
+                        <label className="text-xs block mb-1 opacity-70 text-white">الاسم (مثل 4K)</label>
                         <input 
                           type="text" 
                           className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-[#00c48c]" 
                           value={v.label} 
                           onChange={(e) => updateNewVariantRow(idx, 'label', e.target.value)} 
-                          placeholder="مثال: 4K"
+                          placeholder="مثال: MP3"
                           disabled={uploadingNewVariant}
                         />
                       </div>
@@ -1762,21 +1938,45 @@ const MediaAdminPage = () => {
             </div>
           </div> */}
 
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white"><Upload /> {t('mediaAdmin.uploadNewMedia')}</h2>
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
+            <div className="w-10 h-10 bg-orange/20 rounded-full flex items-center justify-center">
+              <Upload className="text-orange" />
+            </div>
+            <span>{t('mediaAdmin.uploadNewMedia')} <span className="text-orange whitespace-nowrap text-sm">(يدعم الرفع المتعدد الآن في الصوتيات)</span></span>
+          </h2>
           <form onSubmit={handleUpload} className="space-y-6">
             
             {/* Metadata */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block mb-2 font-medium text-white">{t('mediaAdmin.selectCategory')}</label>
-                <select className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} required>
-                  <option value="">{t('mediaAdmin.chooseCategory')}</option>
-                  {categories.map(cat => <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>)}
+                <label className="block mb-2 font-medium text-white">المجموعة  (Collection)</label>
+                <select 
+                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black font-bold" 
+                  value={uploadHeroId || ""} 
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : null;
+                    setUploadHeroId(val);
+                    setUploadCategory(""); // Reset category when hero changes
+                  }}
+                >
+                  <option value="">كل المجموعات</option>
+                  {heroCategories.map(h => <option key={h.hero_category_id} value={h.hero_category_id}>{h.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block mb-2 font-medium text-white">{t('mediaAdmin.title')}</label>
-                <input type="text" className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={uploadTitle} onChange={(e) => setUploadTitle(e.target.value)} required />
+                <label className="block mb-2 font-medium text-white">{t('mediaAdmin.selectCategory')}</label>
+                <select 
+                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black font-bold" 
+                  value={uploadCategory} 
+                  onChange={(e) => setUploadCategory(e.target.value)} 
+                  required
+                >
+                  <option value="">{t('mediaAdmin.chooseCategory')}</option>
+                  {categories
+                    .filter(cat => !uploadHeroId || cat.hero_category_id === uploadHeroId)
+                    .map(cat => <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>)
+                  }
+                </select>
               </div>
             </div>
 
@@ -1797,7 +1997,7 @@ const MediaAdminPage = () => {
                   </label>
                   {/* <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'audio' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
                     <input type="radio" name="mainType" value="audio" className="hidden" checked={mainFileType === 'audio'} onChange={() => setMainFileType('audio')} />
-                    <span className="text-sm text-white">Audio</span>
+                    <span className="text-sm text-white">{t('mediaAdmin.audio')}</span>
                   </label> */}
                 </div>
                 <input 
@@ -1810,7 +2010,7 @@ const MediaAdminPage = () => {
                   onChange={handleMainFileChange} 
                   className="w-full text-sm text-white" 
                 />
-                {mainFile && <p className="text-xs text-orange mt-2">📁 {mainFile.name} ({formatBytes(mainFile.size)})</p>}
+                {mainFiles.length > 0 && <p className="text-xs text-orange mt-2">📁 {mainFiles[0].name} ({formatBytes(mainFiles[0].size)})</p>}
               </div>
 
               <div className="border border-[#00c48c]/30 bg-[#00c48c]/5 p-4 rounded-lg">
@@ -1823,7 +2023,22 @@ const MediaAdminPage = () => {
               </div>
             </div>
 
-            {/* Variants */}
+            {/* Main File Title */}
+            {mainFiles.length > 0 && (
+              <div className="bg-black/20 p-4 rounded-lg border border-orange/30 animate-in fade-in slide-in-from-top-2">
+                <label className="block mb-2 font-medium text-white">العنوان الرئيسي للميديا</label>
+                <input 
+                  type="text" 
+                  placeholder="عنوان الكار ميديا" 
+                  value={bulkMetadata[0]?.title || ""} 
+                  onChange={(e) => updateBulkMetadata(0, 'title', e.target.value)}
+                  className="w-full p-3 rounded-lg border border-orange/50 bg-white text-black font-bold focus:ring-2 focus:ring-orange/20 transition-all"
+                  required
+                />
+              </div>
+            )}
+
+            {/* Variants Section */}
             <div className="space-y-3">
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
@@ -1839,6 +2054,24 @@ const MediaAdminPage = () => {
                   <button type="button" onClick={() => addVariant("WAV", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ WAV</button>
                   <button type="button" onClick={() => addVariant("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ PNG SEQ.</button>
                   <button type="button" onClick={() => addVariant("MOV", "video")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ MOV</button>
+                  
+                  <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
+                  
+                  <input 
+                    type="file" 
+                    id="bulk-variants" 
+                    multiple 
+                    className="hidden" 
+                    onChange={(e) => handleBulkAddVariants(e)}
+                    ref={bulkVariantInputRef}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => bulkVariantInputRef.current?.click()} 
+                    className="text-[10px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 px-3 py-1 rounded border border-blue-500/30 transition font-bold flex items-center gap-1"
+                  >
+                    <Plus size={10} /> رفع أكثر من ملف
+                  </button>
                 </div>
               </div>
 
@@ -1847,10 +2080,22 @@ const MediaAdminPage = () => {
               )}
               
               {variants.map((v, idx) => (
-                <div key={idx} className="flex gap-3 items-end bg-black/20 p-3 rounded-lg border border-gray-700">
-                  <div className="flex-1">
+                <div key={idx} className="flex gap-3 items-end bg-black/20 p-3 rounded-lg border border-gray-700 flex-wrap">
+                  {v.isIndependent && (
+                    <div className="flex-[2] min-w-[200px]">
+                      <label className="text-xs block mb-1 opacity-70 text-white">العنوان الرئيسي</label>
+                      <input 
+                        type="text" 
+                        className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange font-bold" 
+                        value={v.title || ""} 
+                        onChange={(e) => updateVariant(idx, 'title', e.target.value)} 
+                        placeholder="عنوان الميديا" 
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-[100px]">
                     <label className="text-xs block mb-1 opacity-70 text-white">{t('mediaAdmin.label')}</label>
-                    <input type="text" className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange" value={v.label} onChange={(e) => updateVariant(idx, 'label', e.target.value)} placeholder="e.g. 4K" />
+                    <input type="text" className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange" value={v.label} onChange={(e) => updateVariant(idx, 'label', e.target.value)} placeholder="مثال: MP3" />
                   </div>
                   <div className="w-24">
                     <label className="text-xs block mb-1 opacity-70 text-white">{t('mediaAdmin.type')}</label>

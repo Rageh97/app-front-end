@@ -1,6 +1,8 @@
-import { Dialog } from "@headlessui/react";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
 import AlertIcon from "../svg/AlertIcon";
 import ModalActionButton from "../buttons/ModalActionButton";
+import { X, AlertTriangle } from "lucide-react";
 
 interface ToolErrorModalProps {
   title?: string;
@@ -9,50 +11,69 @@ interface ToolErrorModalProps {
   message: string;
 }
 
-const ToolErrorModal: React.FC<
-  ToolErrorModalProps & { setModalOpen: Function }
-> = ({ modalOpen, setModalOpen, message, title }) => {
+const ToolErrorModal: React.FC<ToolErrorModalProps> = ({ modalOpen, setModalOpen, message, title }) => {
   return (
-    <Dialog
-      open={modalOpen}
-      onClose={() => {
-        setModalOpen(false);
-      }}
-      className="fixed top-0 left-0 z-99999 flex h-full min-h-screen w-full items-center justify-center bg-black/90 px-4 py-5"
-    >
-      <Dialog.Panel className="w-full max-w-[600px] h-[315px] text-center">
-        <div className="relative p-8 flex flex-col items-center overflow-hidden w-full h-full rounded-lg bg-white">
-          <div
-            className="absolute top-4 right-4 cursor-pointer"
-            onClick={() => {
-              setModalOpen(false);
-            }}
-          >
-            <img src="/images/close.png" className="max-w-4" alt="close" />
-          </div>
-          <span className="mx-auto inline-block">
-            <AlertIcon />
-          </span>
-          <Dialog.Title className="mt-5.5 pb-2 text-lg font-bold text-black dark:text-white">
-            {title ? title : "UNABLE TO LAUNCH THIS APP"}
-          </Dialog.Title>
-          <div className="mb-10">
-            <p>{message}</p>
-          </div>
-          <div className="w-full px-3 2xsm:w-1/2">
-            <ModalActionButton
-              onClick={() => {
-                setModalOpen(false);
-              }}
-              actionType="ACKNOWLEDGE"
-              className="w-full border-1 border-[#374be4]"
+    <Transition.Root show={modalOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-[110000]" onClose={() => setModalOpen(false)}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              enterTo="opacity-100 translate-y-0 sm:scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              I understand
-            </ModalActionButton>
+              <Dialog.Panel className="relative transform overflow-hidden rounded-2xl bg-[#1a1129] border border-white/10 px-8 py-10 text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all w-full max-w-sm">
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="absolute right-4 top-4 text-white/20 hover:text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 mb-6">
+                  <AlertTriangle size={32} className="text-red-500" />
+                </div>
+
+                <Dialog.Title as="h3" className="text-xl font-black text-white mb-2 leading-tight">
+                  {title || "تنبيه هام"}
+                </Dialog.Title>
+                
+                <div className="mb-8">
+                  <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">
+                    {message}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-bold text-sm transition-all active:scale-95"
+                >
+                  حسناً، فهمت
+                </button>
+              </Dialog.Panel>
+            </Transition.Child>
           </div>
         </div>
-      </Dialog.Panel>
-    </Dialog>
+      </Dialog>
+    </Transition.Root>
   );
 };
 

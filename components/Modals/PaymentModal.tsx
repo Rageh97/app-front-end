@@ -1,299 +1,154 @@
-import { Dialog } from "@headlessui/react";
-import { NewToolsDto } from "@/types/tools/new-tools-dto";
-import LoadingButton from "../LoadingButton";
-import { Tab } from "@headlessui/react";
-import { Fragment } from "react";
-import ToolLocalBankPayment from "../Payments/ToolLocalBankPayment";
-import OnlinePayment from "../Payments/OnlinePayment";
-import OfflinePayment from "../Payments/OfflinePayment";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CreditCard, ShieldCheck, Zap, CheckCircle2, X, Phone, ArrowLeft } from "lucide-react";
+import PayTabsPayment from "../Payments/PayTabsPayment";
+import { BorderBeam } from "../ui/border-beam";
+import Image from "next/image";
 
 type Period = "month" | "year" | "day";
 
 interface PaymentModalProps {
   productId: number;
   productData: any;
-  productType: "tool" | "pack" | "device" | "credits"
+  productType: "tool" | "pack" | "device" | "credits";
   modalOpen: boolean;
   period: Period;
-  setModalOpen: Function;
-  onBuySuccess: Function;
+  setModalOpen: (open: boolean) => void;
+  onBuySuccess: (method: string) => void;
 }
 
-const PaymentModal: React.FC<
-  PaymentModalProps & { setModalOpen: Function; onBuySuccess: Function }
-> = ({ modalOpen, setModalOpen, period, productId, productData, productType, onBuySuccess }) => {
+const PaymentModal: React.FC<PaymentModalProps> = ({
+  modalOpen,
+  setModalOpen,
+  period,
+  productId,
+  productData,
+  productType,
+  onBuySuccess,
+}) => {
   const { t } = useTranslation();
+
   return (
-    <Dialog
-      open={modalOpen}
-      onClose={() => {
-        setModalOpen(false);
-      }}
-      className="fixed top-0 left-0 z-99999 flex h-full min-h-screen w-full items-center justify-center bg-black/90 px-4 py-5"
-    >
-      <Dialog.Panel className="w-full max-w-[700px] max-h-[90vh] overflow-y-auto text-center">
-        <div className="relative bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] overflow-hidden w-full rounded-2xl shadow-2xl">
-          <Tab.Group>
-            {/* Close Button */}
-            <div
-              className="absolute z-999999 top-4 right-4 cursor-pointer bg-white/20 backdrop-blur-sm rounded-full p-2 hover:bg-white/30 transition-colors"
-              onClick={() => {
-                setModalOpen(false);
-              }}
+    <Transition.Root show={modalOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-99999" onClose={() => setModalOpen(false)}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-500"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-300"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-[#0a0118]/90 backdrop-blur-xl transition-opacity" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-500"
+              enterFrom="opacity-0 translate-y-20 scale-95"
+              enterTo="opacity-100 translate-y-0 scale-100"
+              leave="ease-in duration-300"
+              leaveFrom="opacity-100 translate-y-0 scale-100"
+              leaveTo="opacity-0 translate-y-20 scale-95"
             >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
+              <Dialog.Panel className="relative transform overflow-hidden rounded-3xl bg-[#1a1129] border border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.8)] text-left transition-all w-full max-w-4xl scrollbar-hide">
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="absolute right-6 top-6 z-20 p-2 rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all duration-300"
+                >
+                  <X size={20} />
+                </button>
 
-            {/* Header */}
-            <div className="px-6 py-4 text-white relative">
-              <h3 className="text-xl font-bold">{t('offlinePayment.choosePaymentGate')}</h3>
-            </div>
+                <div className="flex flex-col lg:flex-row h-full">
+                  {/* Left Side: Product Info & Benefits */}
+                  <div className="relative lg:w-[40%] bg-gradient-to-br from-[#4f008c] to-[#190237] p-8 md:p-12 text-white overflow-hidden">
+                    {/* Animated Glow Background */}
+                    <div className="absolute -top-24 -left-24 w-64 h-64 bg-[#00c48c] rounded-full blur-[100px] opacity-20 animate-pulse" />
+                    <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-[#ff7702] rounded-full blur-[100px] opacity-10" />
 
-            <div className="px-4 pb-4">
-              {/* Payment Methods Tab List */}
-              <Tab.List className="grid grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
-                <Tab className="flex flex-col gap-2 justify-center items-center outline-none focus:outline-none">
-                  {({ selected }) => (
-                    <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
-                      selected 
-                        ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
-                    }`}>
-                      <div className={`w-16 h-16 rounded-lg flex items-center justify-center transition-all ${
-                        selected ? 'bg-white shadow-md' : 'bg-white'
-                      }`}>
-                        <img
-                          src="https://www2.0zz0.com/2025/07/02/21/357173052.png"
-                          className="w-10 h-10 object-contain"
-                          alt="zain"
-                        />
+                    <div className="relative z-10 flex flex-col h-full">
+                      <div className="flex items-center gap-3 mb-8">
+                          <div className="relative w-fit rounded-full overflow-hidden">
+                                       <Image
+                                        src="/images/icon.png.png"
+                                        alt="Logo"
+                                        width={50}
+                                        height={50}
+                                        className="rounded-full"
+                                      />
+                                      <BorderBeam size={50} duration={1} className="rounded-full" />
+                                     </div>
+                        <span className="text-sm font-black uppercase tracking-[0.3em] text-white/50">Nexus Toolz</span>
                       </div>
-                      <p className={`text-xs font-semibold text-center ${
-                        selected ? 'text-white' : 'text-white'
-                      }`}>
-                        زين كاش
-                      </p>
-                    </div>
-                  )}
-                </Tab>
-                <Tab className="flex flex-col gap-2 justify-center items-center outline-none focus:outline-none">
-                  {({ selected }) => (
-                    <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
-                      selected 
-                        ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
-                    }`}>
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
-                        selected ? 'bg-white shadow-md' : 'bg-white'
-                      }`}>
-                        <img
-                          src="/images/iraq.png"
-                          className="w-10 h-10 object-contain"
-                          alt="Alrafedeen"
-                        />
-                      </div>
-                      <p className={`text-xs font-semibold text-center ${
-                        selected ? 'text-white' : 'text-white'
-                      }`}>
-                        الرافدين
-                      </p>
-                    </div>
-                  )}
-                </Tab>
-                <Tab className="flex flex-col gap-2 justify-center items-center outline-none focus:outline-none">
-                  {({ selected }) => (
-                    <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
-                      selected 
-                        ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
-                    }`}>
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
-                        selected ? 'bg-white shadow-md' : 'bg-white'
-                      }`}>
-                        <img
-                          src="https://www2.0zz0.com/2025/07/02/21/255630149.png"
-                          className="w-10 h-10 object-contain"
-                          alt="AsiaPay"
-                        />
-                      </div>
-                      <p className={`text-xs font-semibold text-center ${
-                        selected ? 'text-white' : 'text-white'
-                      }`}>
-                        آسيا بي
-                      </p>
-                    </div>
-                  )}
-                </Tab>
-                <Tab className="flex flex-col gap-2 justify-center items-center outline-none focus:outline-none">
-                  {({ selected }) => (
-                    <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
-                      selected 
-                        ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
-                    }`}>
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
-                        selected ? 'bg-white shadow-md' : 'bg-white'
-                      }`}>
-                        <img
-                          src="https://www2.0zz0.com/2025/07/02/22/627573215.jpg"
-                          className="w-10 h-10 object-contain"
-                          alt="IraqBank"
-                        />
-                      </div>
-                      <p className={`text-xs font-semibold text-center ${
-                        selected ? 'text-white' : 'text-white'
-                      }`}>
-                        بنك العراق
-                      </p>
-                    </div>
-                  )}
-                </Tab>
-                <Tab className="flex flex-col gap-2 justify-center items-center outline-none focus:outline-none">
-                  {({ selected }) => (
-                    <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
-                      selected 
-                        ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
-                    }`}>
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
-                        selected ? 'bg-white shadow-md' : 'bg-white'
-                      }`}>
-                        <img
-                          src="/images/fast.png"
-                          className="w-20 h-20 object-contain"
-                          alt="FastPay"
-                        />
-                      </div>
-                      <p className={`text-xs font-semibold text-center ${
-                        selected ? 'text-white' : 'text-white'
-                      }`}>
-                        فاست بي
-                      </p>
-                    </div>
-                  )}
-                </Tab>
-                <Tab className="flex flex-col gap-2 justify-center items-center outline-none focus:outline-none">
-                  {({ selected }) => (
-                    <div className={`w-full flex flex-col items-center gap-2 p-3 rounded-xl transition-all duration-300 ${
-                      selected 
-                        ? 'bg-gradient-to-br from-orange to-orange-600 shadow-lg scale-105 border-2 border-orange' 
-                        : 'bg-[#190237] inner-shadow border-2 border-transparent'
-                    }`}>
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${
-                        selected ? 'bg-white shadow-md' : 'bg-white'
-                      }`}>
-                        <img
-                          src="https://www2.0zz0.com/2025/07/02/22/684653137.png"
-                          className="w-10 h-10 object-contain"
-                          alt="AsiaSel"
-                        />
-                      </div>
-                      <p className={`text-xs font-semibold text-center ${
-                        selected ? 'text-white' : 'text-white'
-                      }`}>
-                        اسياسيل
-                      </p>
-                    </div>
-                  )}
-                </Tab>
-              </Tab.List>
 
-              {/* Tab Panels */}
-              <Tab.Panels className="w-full">
-                <Tab.Panel className="w-full">
-                  <div className="bg-[#19023780] rounded-xl p-4 border-2 border-orange">
-                    <OfflinePayment
-                      paymentMethod="Zain"
-                      period={period}
-                      productType={productType}
-                      productData={productData}
-                      productId={productId}
-                      setDetailsModalOpen={() => {
-                        onBuySuccess("Zain");
-                      }}
-                    />
-                  </div>
-                </Tab.Panel>
-                <Tab.Panel className="w-full">
-                  <div className="bg-[#19023780] rounded-xl p-4 border-2 border-orange">
-                    <OfflinePayment
-                      paymentMethod="Alrafedeen"
-                      period={period}
-                      productType={productType}
-                      productData={productData}
-                      productId={productId}
-                      setDetailsModalOpen={() => {
-                        onBuySuccess("Alrafedeen");
-                      }}
-                    />
-                  </div>
-                </Tab.Panel>
-                <Tab.Panel className="w-full">
-                  <div className="bg-[#19023780] rounded-xl p-4 border-2 border-orange">
-                    <OfflinePayment
-                      paymentMethod="AsiaPay"
-                      period={period}
-                      productType={productType}
-                      productData={productData}
-                      productId={productId}
-                      setDetailsModalOpen={() => {
-                        onBuySuccess("AsiaPay");
-                      }}
-                    />
-                  </div>
-                </Tab.Panel>
-                <Tab.Panel className="w-full">
-                  <div className="bg-[#19023780] rounded-xl p-4 border-2 border-orange">
-                    <OfflinePayment
-                      paymentMethod="IraqBank"
-                      period={period}
-                      productType={productType}
-                      productData={productData}
-                      productId={productId}
-                      setDetailsModalOpen={() => {
-                        onBuySuccess("IraqBank");
-                      }}
-                    />
-                  </div>
-                </Tab.Panel>
-                <Tab.Panel className="w-full">
-                  <div className="bg-[#19023780] rounded-xl p-4 border-2 border-orange">
-                    <OfflinePayment
-                      paymentMethod="FastPay"
-                      period={period}
-                      productType={productType}
-                      productData={productData}
-                      productId={productId}
-                      setDetailsModalOpen={() => {
-                        onBuySuccess("FastPay");
-                      }}
-                    />
-                  </div>
-                </Tab.Panel>
-                <Tab.Panel className="w-full">
-                  <div className="bg-[#19023780] rounded-xl p-4 border-2 border-orange">
-                    <OfflinePayment
-                      paymentMethod="AsiaSel"
-                      period={period}
-                      productType={productType}
-                      productData={productData}
-                      productId={productId}
-                      setDetailsModalOpen={() => {
-                        onBuySuccess("AsiaSel");
-                      }}
-                    />
-                  </div>
-                </Tab.Panel>
+                      <div className="mt-4">
+                        <span className="inline-block px-3 py-1 rounded-full bg-white/10 text-[#00c48c] text-[10px] font-black uppercase tracking-widest mb-4 border border-[#00c48c]/20">
+                          اشتراك {period === 'year' ? 'سنوي' : period === 'month' ? 'شهري' : 'يومي'}
+                        </span>
+                        <h2 className="text-3xl font-black mb-4 leading-tight">
+                          {productData?.tool_name || productData?.pack_name || productData?.plan_name || 'باقة متميزة'}
+                        </h2>
+                        <p className="text-white/60 text-sm leading-relaxed mb-8">
+                          انضم الآن وتحكم في أدواتك بذكاء. أنت على بعد خطوة واحدة من تفعيل كامل الصلاحيات.
+                        </p>
+                      </div>
 
-              </Tab.Panels>
-            </div>
-          </Tab.Group>
+                      <div className="space-y-4 mt-auto pt-8 border-t border-white/10">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 size={18} className="text-[#00c48c]" />
+                          <span className="text-xs font-medium text-white/80">تفعيل فوري للاشتراك</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 size={18} className="text-[#00c48c]" />
+                          <span className="text-xs font-medium text-white/80">دعم فني مخصص 24/7</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 size={18} className="text-[#00c48c]" />
+                          <span className="text-xs font-medium text-white/80">تحديثات دورية مجانية</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Checkout Form */}
+                  <div className="lg:w-[60%] p-8 md:p-12 flex flex-col justify-center">
+                    <div className="max-w-md mx-auto w-full">
+                      <div className="mb-8">
+                        <h3 className="text-2xl font-black text-white mb-2">الدفع الإلكتروني الآمن</h3>
+                        <p className="text-white/40 text-sm">أدخل بياناتك لإتمام عملية الدفع</p>
+                      </div>
+
+                      {/* PayTabs Component */}
+                      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-2">
+                        <PayTabsPayment
+                          period={period}
+                          productType={productType as "tool" | "pack" | "credits"}
+                          productData={productData}
+                          productId={productId}
+                        />
+                      </div>
+
+                      <div className="mt-8 flex items-center justify-center gap-4 py-4 px-6 bg-[#00c48c]/5 rounded-xl border border-[#00c48c]/10">
+                        <ShieldCheck size={20} className="text-[#00c48c]" />
+                        <p className="text-[11px] text-[#00c48c] font-black uppercase tracking-widest leading-none">
+                          Secured & Encrypted Transaction
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
         </div>
-      </Dialog.Panel>
-    </Dialog>
+      </Dialog>
+    </Transition.Root>
   );
 };
 
