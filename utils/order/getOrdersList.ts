@@ -11,7 +11,7 @@ const fetchOrdersList = (page: number, filter: string) => async () => {
 
 export const useOrdersList = (page: number, filter: string) => {
   const query = useQuery({
-    queryKey: ["ordersList"],
+    queryKey: ["ordersList", page, filter],
     queryFn: fetchOrdersList(page, filter),
     keepPreviousData: true,
   });
