@@ -148,25 +148,35 @@ const {
         accessorKey: "status",
         header: () => t("orders.status"),
         cell: (info) => {
-          const status = info.getValue()?.toLowerCase();
+          const rawStatus = info.getValue();
+          const status = rawStatus?.toLowerCase();
+
+          // ✅ ناجح: accepted أو completed
           const isActive = status === "accepted" || status === "completed";
-          const isDenied = status === "denied" || status === "declined" || status === "failed";
+          // ❌ فشل الدفع: declined (PayTabs) أو failed
+          const isDeclined = status === "declined" || status === "failed";
+          // 🚫 مرفوض يدوياً من الأدمن
+          const isDenied = status === "denied";
+
+          const bgClass = isActive
+            ? 'bg-[#00c48c]/10 text-[#00c48c] border border-[#00c48c]/20'
+            : isDeclined
+              ? 'bg-red/10 text-red border border-red/20'
+              : isDenied
+                ? 'bg-red/10 text-red border border-red/20'
+                : 'bg-orange/10 text-orange border border-orange/20 animate-pulse';
+
+          const label = isActive
+            ? 'نشط'
+            : isDeclined
+              ? 'فشل الدفع'
+              : isDenied
+                ? t('orders.denied')
+                : t('orders.onHold');
 
           return (
-            <div className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-              isActive 
-                ? 'bg-[#00c48c]/10 text-[#00c48c] border border-[#00c48c]/20' 
-                : isDenied 
-                  ? 'bg-red/10 text-red border border-red/20' 
-                  : 'bg-orange/10 text-orange border border-orange/20 animate-pulse'
-            }`}>
-              {isActive 
-                ? 'نشط' 
-                : (status === 'failed' || status === 'declined') 
-                  ? 'فشل الدفع' 
-                  : isDenied 
-                    ? t('orders.denied') 
-                    : t('orders.onHold')}
+            <div className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${bgClass}`}>
+              {label}
             </div>
           );
         },
