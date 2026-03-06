@@ -5,24 +5,28 @@ import axios from 'axios';
 import './test-tool.css';
 
 /**
- * TestToolPage Component - Optimized for Developer Testing
+ * TestToolPage Component
  * 
- * Target Tool ID: 44 (ChatGPT)
+ * This page displays premium tools access. It requires specific browser extensions
+ * to be installed and detected via message passing.
  */
 export default function TestToolPage() {
   const [detectedExtensions, setDetectedExtensions] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [lastMessageSent, setLastMessageSent] = useState<any>(null);
   
-  // Extension check list (Optional for testing actual detection)
+  // Logic: List of required extensions to unlock the tools
   const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
 
+  // UI state: Show tools only if all required extensions are detected
+  const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
+
   useEffect(() => {
+    /**
+     * Listener for messages from the browser extensions.
+     * Extensions send a 'EXTENSION_CHECK' message with their name.
+     */
     const handleMessage = (event: MessageEvent) => {
-      // Listen for the new extension format
       if (
         event.data?.type === 'EXTENSION_CHECK' && 
         requiredExtensions.has(event.data.extensionName)
@@ -36,30 +40,37 @@ export default function TestToolPage() {
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+
+    // Mimic the original script's fallback or delay logic if necessary
+    const timeout = setTimeout(() => {
+      // The state-driven UI will re-render automatically, 
+      // but we keep this here to match the original logic execution flow.
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearTimeout(timeout);
+    };
   }, []);
 
   /**
-   * Launch Tool ID 44
+   * Launch tool by fetching session from API and sending to extension via postMessage.
    */
-  const handleToolClick = async (serverId: string, toolId: number) => {
+  const handleToolClick = async (serverId: string) => {
     setActiveServer(serverId);
     setIsLoading(true);
-    setError(null);
-    setSuccess(null);
 
     const token = localStorage.getItem("a");
 
     if (!token) {
-      setError("Please login to your account first.");
-      setIsLoading(false);
+      window.location.href = "/signin";
       return;
     }
 
     let data = {
       appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
       token: token,
-      toolId: toolId,
+      toolId: 44,
     };
 
     try {
@@ -71,92 +82,85 @@ export default function TestToolPage() {
       });
 
       if (res?.status === 200) {
-        // The Payload for the Extension
-        const payload = { type: 'FROM_NT_APP', text: JSON.stringify(res.data) };
-        
-        // Broadcast to Extension
-        window.postMessage(payload, "*");
-        
-        setLastMessageSent(payload);
-        setSuccess(`Success! Sent session for Tool ID ${toolId} to your extension.`);
+        window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
         setIsLoading(false);
       }
-    } catch (err: any) {
-      setError(err.response?.data || "Something went wrong. Make sure you have an active subscription for Tool #44.");
+    } catch (err) {
       setIsLoading(false);
     }
   };
 
   return (
     <div className="test-tool-body">
+      {/* Structural placeholder from original code */}
+      <div className="am-content-page"></div>
+
       <div className="container">
-        {/* Header Section */}
+        {/* Logo and Tag */}
         <div className="logo-container">
           <img src="https://app.nexustoolz.com/theme/img/chatgpt.png" alt="Branding" />
-          <span className="tag" style={{ background: '#22c55e' }}>TEST MODE</span>
+          <span className="tag">Extension</span>
         </div>
 
-        <div className="header">
-          <h2 style={{ color: '#16a34a' }}>🛠️ Developer Test Environment</h2>
-          <p>Restriction Bypass: <span style={{ color: '#16a34a', fontWeight: 'bold' }}>ACTIVE</span></p>
-        </div>
-
-        {/* Tools Section - Always Visible */}
-        <div className="tools-section">
-          <div className="premium-tools-section" style={{ border: '2px solid #16a34a' }}>
-            <h3>🚀 Test ChatGPT Launch (Tool ID: 44)</h3>
-            <p>Clicking these buttons will fetch a real session and send it via postMessage.</p>
-
-            <div className="button-container">
-              <button 
-                className="tool-btn" 
-                style={{ background: '#16a34a' }}
-                disabled={isLoading}
-                onClick={() => handleToolClick('Server 1', 44)}
-              >
-                {isLoading && activeServer === 'Server 1' ? '⏳ Fetching...' : 'Launch ChatGPT'}
-              </button>
-              
-              <button 
-                className="tool-btn" 
-                style={{ background: '#64748b' }}
-                disabled={true}
-              >
-                Other Server (TBD)
-              </button>
+        {allExtensionsDetected ? (
+          /* Premium Tools Section - Visible when extensions are detected */
+          <div className="tools-section" id="toolsSection">
+            <div className="header">
+              <h2>🛠️ Available Premium Tools</h2>
+              <p>Switch servers if any not working or face any limit error</p>
             </div>
 
-            {/* Logs/Feedback */}
-            {error && (
-              <div style={{ marginTop: '20px', padding: '15px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', textAlign: 'left' }}>
-                <strong>Error:</strong> {error}
-              </div>
-            )}
-            
-            {success && (
-              <div style={{ marginTop: '20px', padding: '15px', background: '#f0fdf4', color: '#166534', borderRadius: '8px', border: '1px solid #bbfcbd', fontSize: '13px', textAlign: 'left' }}>
-                <strong>Success:</strong> {success}
-                {lastMessageSent && (
-                  <pre style={{ marginTop: '10px', padding: '10px', background: '#fff', borderRadius: '4px', overflow: 'auto', fontSize: '11px', border: '1px solid #dcfce7' }}>
-                    Sent postMessage: {JSON.stringify(lastMessageSent, null, 2)}
-                  </pre>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+            <div className="premium-tools-section">
+              <h3>🚀 Premium Tools Access</h3>
+              <p>Access all premium tools with unlimited usage</p>
 
-        {/* Info for Developer */}
-        <div className="update-info" style={{ background: '#334155' }}>
-          💡 Tip: Open Console (F12) to monitor window.postMessage activity.
-        </div>
-        
-        {/* Detection Test (Optional) */}
-        <div className="download-section" style={{ opacity: 0.7 }}>
-          <p style={{ fontSize: '12px' }}>
-            Status: {detectedExtensions.size > 0 ? '✅ New Extension Detected' : '⏳ Waiting for EXTENSION_CHECK message...'}
-          </p>
-        </div>
+              <div className="button-container">
+                <button 
+                  className="tool-btn" 
+                  id="ChatgptCookies1"
+                  disabled={isLoading}
+                  onClick={() => handleToolClick('ChatgptCookies1')}
+                >
+                  {isLoading && activeServer === 'ChatgptCookies1' ? '⏳ Loading...' : 'Chatgpt Server 1'}
+                </button>
+                <button 
+                  className="tool-btn" 
+                  id="ChatgptCookies2"
+                  disabled={isLoading}
+                  onClick={() => handleToolClick('ChatgptCookies2')}
+                >
+                  {isLoading && activeServer === 'ChatgptCookies2' ? '⏳ Loading...' : 'Chatgpt Server 2'}
+                </button>
+              </div>
+            </div>
+
+            <div className="update-info">
+              ⏰ Next update in 3 hours - Stay tuned!
+            </div>
+          </div>
+        ) : (
+          /* Extension Notice Section - Visible when extensions are missing */
+          <div className="extension-message" id="extensionMessage">
+            <div className="warning-header">
+              <h2>⚠️ Extensions Required</h2>
+              <p>Please install both extensions to unlock premium tools</p>
+            </div>
+
+            <div className="download-section">
+              <h3>📥 Download Extensions</h3>
+              <p>Get instant access to all premium features</p>
+
+              <div className="download-buttons">
+                <a className="download-btn" href="https://app.nexustoolz.com/content/f/id/5" target="_blank" rel="noopener noreferrer">
+                  ⬇️ Extension 1
+                </a>
+                <a className="download-btn" href="https://app.nexustoolz.com/content/f/id/6" target="_blank" rel="noopener noreferrer">
+                  ⬇️ Extension 2
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
