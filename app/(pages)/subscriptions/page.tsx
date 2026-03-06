@@ -180,77 +180,101 @@ const Dashboard: FunctionComponent = () => {
 
       {/* <DataStatsThree /> */}
 
-      {data?.userToolsData?.length !== 0 &&
-        <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-          {data?.userToolsData?.map(
-            (index: any) =>
-              data?.toolsData?.find(
-                (item: any) => item.tool_id == index.tool_id
-              ) && (
-                <LaunchCard
-                  onClick={() => {
-                    if (!global.isLoading) {
-                      launchApp(
-                        data?.toolsData?.find(
-                          (item: any) => item.tool_id == index.tool_id
-                        )?.tool_id
-                      );
-                    } else {
-                      setErrorMessage(t('subscriptions.waitForLoading'));
-                      setIsOpenErrorModal(true);
-                    }
-                  }}
-                  activeApp={activeApp}
-                  isLoaded={isLoaded}
-                  key={index?.users_tools_id}
-                  toolData={data?.toolsData?.find(
-                    (item: any) => item.tool_id == index.tool_id
-                  )}
-                  endedAt={index.endedAt}
-                />
-              )
-          )}
-        </div>
-      }
+      {/* Individual Tools Section - Deduplicated */}
+      {(() => {
+        const uniqueTools = new Map();
+        data?.userToolsData?.forEach((tool: any) => {
+          const existing = uniqueTools.get(tool.tool_id);
+          if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
+            uniqueTools.set(tool.tool_id, tool);
+          }
+        });
+        const deduplicatedTools = Array.from(uniqueTools.values());
+
+        return deduplicatedTools.length !== 0 && (
+          <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
+            {deduplicatedTools.map(
+              (index: any) =>
+                data?.toolsData?.find(
+                  (item: any) => item.tool_id == index.tool_id
+                ) && (
+                  <LaunchCard
+                    onClick={() => {
+                      if (!global.isLoading) {
+                        launchApp(
+                          data?.toolsData?.find(
+                            (item: any) => item.tool_id == index.tool_id
+                          )?.tool_id
+                        );
+                      } else {
+                        setErrorMessage(t('subscriptions.waitForLoading'));
+                        setIsOpenErrorModal(true);
+                      }
+                    }}
+                    activeApp={activeApp}
+                    isLoaded={isLoaded}
+                    key={index?.users_tools_id}
+                    toolData={data?.toolsData?.find(
+                      (item: any) => item.tool_id == index.tool_id
+                    )}
+                    endedAt={index.endedAt}
+                  />
+                )
+            )}
+          </div>
+        );
+      })()}
 
 
-      {data?.userPacksData?.map((a: any, index: number) =>
-        data?.packsData.find((f: any) => f.pack_id === a.pack_id) &&
-        <div key={index} className="mb-[36px]">
-          <Panel
-            title={data?.packsData.find((f: any) => f.pack_id === a.pack_id).pack_name}
-            sideActions={
-              <>
-               <span className="text-white text-xs md:text-lg">{t('subscriptions.packExpiredAt')}</span>{" "}
-               <span className="text-[#ff7720] text-xs md:text-lg">{fullDateTimeFormat(a.endedAt)}</span>
-              </>
-            }
-            containerClassName="py-9 inner-shadow rounded-xl"
-          >
-            <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-              {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((c) =>
-                data?.toolsData.find((d: any) => d.tool_id === c) &&
-                <LaunchCard
-                  content={data?.toolsData.find((d: any) => d.tool_id === c).tool_content}
-                  onClick={() => {
-                    if (!global.isLoading) {
-                      launchApp(data?.toolsData.find((d: any) => d.tool_id === c).tool_id);
-                    } else {
-                      setErrorMessage(t('subscriptions.waitForLoading'));
-                      setIsOpenErrorModal(true);
-                    }
-                  }}
-                  activeApp={activeApp}
-                  isLoaded={isLoaded}
-                  key={data?.toolsData.find((d: any) => d.tool_id === c).tool_id}
-                  toolData={data?.toolsData.find((d: any) => d.tool_id === c)}
-                  endedAt={data?.toolsData.find((d: any) => d.tool_id === c).endedAt}
-                />
-              )}
-            </div>
-          </Panel>
-        </div>
-      )}
+      {/* Packs Section - Deduplicated */}
+      {(() => {
+        const uniquePacks = new Map();
+        data?.userPacksData?.forEach((pack: any) => {
+          const existing = uniquePacks.get(pack.pack_id);
+          if (!existing || new Date(pack.endedAt) > new Date(existing.endedAt)) {
+            uniquePacks.set(pack.pack_id, pack);
+          }
+        });
+        const deduplicatedPacks = Array.from(uniquePacks.values());
+
+        return deduplicatedPacks.map((a: any, index: number) =>
+          data?.packsData.find((f: any) => f.pack_id === a.pack_id) &&
+          <div key={index} className="mb-[36px]">
+            <Panel
+              title={data?.packsData.find((f: any) => f.pack_id === a.pack_id).pack_name}
+              sideActions={
+                <>
+                <span className="text-white text-xs md:text-lg">{t('subscriptions.packExpiredAt')}</span>{" "}
+                <span className="text-[#ff7720] text-xs md:text-lg">{fullDateTimeFormat(a.endedAt)}</span>
+                </>
+              }
+              containerClassName="py-9 inner-shadow rounded-xl"
+            >
+              <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
+                {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((c) =>
+                  data?.toolsData.find((d: any) => d.tool_id === c) &&
+                  <LaunchCard
+                    content={data?.toolsData.find((d: any) => d.tool_id === c).tool_content}
+                    onClick={() => {
+                      if (!global.isLoading) {
+                        launchApp(data?.toolsData.find((d: any) => d.tool_id === c).tool_id);
+                      } else {
+                        setErrorMessage(t('subscriptions.waitForLoading'));
+                        setIsOpenErrorModal(true);
+                      }
+                    }}
+                    activeApp={activeApp}
+                    isLoaded={isLoaded}
+                    key={data?.toolsData.find((d: any) => d.tool_id === c).tool_id}
+                    toolData={data?.toolsData.find((d: any) => d.tool_id === c)}
+                    endedAt={data?.toolsData.find((d: any) => d.tool_id === c).endedAt}
+                  />
+                )}
+              </div>
+            </Panel>
+          </div>
+        );
+      })()}
 
       {/* AI Credit Plans Section */}
       {data?.userCreditsData?.filter((c: any) => c.remaining_credits > 0).map((credit: any, index: number) => {
