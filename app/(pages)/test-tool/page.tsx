@@ -2,29 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import './test-tool.css';
 
 /**
- * TestToolPage Component
+ * TestToolPage Component - Dynamic Version
  * 
- * This page displays premium tools access. It requires specific browser extensions
- * to be installed and detected via message passing.
+ * Displays all tools activated for the current account.
+ * When an extension is detected, it renders buttons for each available tool.
  */
 export default function TestToolPage() {
+  const { data } = useMyInfo();
   const [detectedExtensions, setDetectedExtensions] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [activeServer, setActiveServer] = useState<string | null>(null);
+  const [activeServer, setActiveServer] = useState<number | null>(null);
   
-  // Logic: List of required extensions to unlock the tools
+  // Required extensions info for detection
   const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
 
-  // UI state: Show tools only if all required extensions are detected
+  // Check if all required extensions are detected
   const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
 
   useEffect(() => {
     /**
      * Listener for messages from the browser extensions.
-     * Extensions send a 'EXTENSION_CHECK' message with their name.
      */
     const handleMessage = (event: MessageEvent) => {
       if (
@@ -41,23 +42,16 @@ export default function TestToolPage() {
 
     window.addEventListener('message', handleMessage);
 
-    // Mimic the original script's fallback or delay logic if necessary
-    const timeout = setTimeout(() => {
-      // The state-driven UI will re-render automatically, 
-      // but we keep this here to match the original logic execution flow.
-    }, 3000);
-
     return () => {
       window.removeEventListener('message', handleMessage);
-      clearTimeout(timeout);
     };
   }, []);
 
   /**
-   * Launch tool by fetching session from API and sending to extension via postMessage.
+   * Handle dynamic tool launch
    */
-  const handleToolClick = async (serverId: string) => {
-    setActiveServer(serverId);
+  const handleToolClick = async (toolId: number) => {
+    setActiveServer(toolId);
     setIsLoading(true);
 
     const token = localStorage.getItem("a");
@@ -67,14 +61,14 @@ export default function TestToolPage() {
       return;
     }
 
-    let data = {
+    let requestData = {
       appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
       token: token,
-      toolId: 44,
+      toolId: toolId,
     };
 
     try {
-      const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", data, {
+      const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", requestData, {
         headers: {
           "Content-Type": "application/json",
           "User-Client": (globalThis as any).clientId1328 || "",
@@ -82,17 +76,23 @@ export default function TestToolPage() {
       });
 
       if (res?.status === 200) {
+        // Broadcast the session to the new extension
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
-        setIsLoading(false);
       }
     } catch (err) {
+      console.error("Launch Error:", err);
+    } finally {
       setIsLoading(false);
     }
   };
 
+  // Helper to get tool info from IDs
+  const getToolInfo = (toolId: number) => {
+    return data?.toolsData?.find((t: any) => t.tool_id == toolId);
+  };
+
   return (
     <div className="test-tool-body">
-      {/* Structural placeholder from original code */}
       <div className="am-content-page"></div>
 
       <div className="container">
@@ -103,34 +103,64 @@ export default function TestToolPage() {
         </div>
 
         {allExtensionsDetected ? (
-          /* Premium Tools Section - Visible when extensions are detected */
           <div className="tools-section" id="toolsSection">
             <div className="header">
-              <h2>🛠️ Available Premium Tools</h2>
-              <p>Switch servers if any not working or face any limit error</p>
+              <h2>🛠️ Available Premium Tools (Test Mode)</h2>
+              <p>These tools are dynamically loaded from your active subscriptions</p>
             </div>
 
             <div className="premium-tools-section">
               <h3>🚀 Premium Tools Access</h3>
-              <p>Access all premium tools with unlimited usage</p>
+              <p>Select any tool to test the extension launch</p>
 
               <div className="button-container">
-                <button 
-                  className="tool-btn" 
-                  id="ChatgptCookies1"
-                  disabled={isLoading}
-                  onClick={() => handleToolClick('ChatgptCookies1')}
-                >
-                  {isLoading && activeServer === 'ChatgptCookies1' ? '⏳ Loading...' : 'Chatgpt Server 1'}
-                </button>
-                <button 
-                  className="tool-btn" 
-                  id="ChatgptCookies2"
-                  disabled={isLoading}
-                  onClick={() => handleToolClick('ChatgptCookies2')}
-                >
-                  {isLoading && activeServer === 'ChatgptCookies2' ? '⏳ Loading...' : 'Chatgpt Server 2'}
-                </button>
+                {/* 1. Direct Tools */}
+                {data?.userToolsData?.map((userTool: any) => {
+                  const toolInfo = getToolInfo(userTool.tool_id);
+                  if (!toolInfo) return null;
+
+                  return (
+                    <button 
+                      key={toolInfo.tool_id}
+                      className="tool-btn" 
+                      disabled={isLoading}
+                      onClick={() => handleToolClick(toolInfo.tool_id)}
+                    >
+                      {isLoading && activeServer === toolInfo.tool_id ? '⏳ Loading...' : toolInfo.tool_name}
+                    </button>
+                  );
+                })}
+
+                {/* 2. Tools from Packs (Flat list) */}
+                {data?.userPacksData?.map((up: any) => {
+                  const pack = data?.packsData?.find((p: any) => p.pack_id === up.pack_id);
+                  if (!pack) return null;
+                  
+                  try {
+                    const toolIds = JSON.parse(pack.pack_tools || "[]");
+                    return toolIds.map((tid: number) => {
+                      const toolInfo = getToolInfo(tid);
+                      if (!toolInfo) return null;
+                      return (
+                        <button 
+                          key={`pack-${tid}`}
+                          className="tool-btn" 
+                          disabled={isLoading}
+                          onClick={() => handleToolClick(toolInfo.tool_id)}
+                        >
+                          {isLoading && activeServer === toolInfo.tool_id ? '⏳ Loading...' : toolInfo.tool_name}
+                        </button>
+                      );
+                    });
+                  } catch (e) { return null; }
+                })}
+                
+                {/* Fallback */}
+                {(!data?.userToolsData?.length && !data?.userPacksData?.length) && (
+                   <p style={{ gridColumn: '1 / -1', color: '#64748b', padding: '20px' }}>
+                     No active tools found for this account. Please activate tools in the admin panel.
+                   </p>
+                )}
               </div>
             </div>
 
@@ -139,7 +169,6 @@ export default function TestToolPage() {
             </div>
           </div>
         ) : (
-          /* Extension Notice Section - Visible when extensions are missing */
           <div className="extension-message" id="extensionMessage">
             <div className="warning-header">
               <h2>⚠️ Extensions Required</h2>
