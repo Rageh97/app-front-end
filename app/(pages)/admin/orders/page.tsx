@@ -322,15 +322,7 @@ const {
       )}
       {data && data?.orders?.length !== 0 && (
         <Table
-          data={data.orders.filter((order: any) => {
-            const status = order.status?.toLowerCase();
-            const method = order.payment_method?.toLowerCase();
-            // Hide paytabs orders that are still 'On Hold' (zombie sessions)
-            if (method === 'paytabs' && (status === 'on hold' || status === 'onhold' || status === 'pending')) {
-              return false;
-            }
-            return true;
-          })}
+          data={data.orders}
           columns={columnDef}
         />
       )}
