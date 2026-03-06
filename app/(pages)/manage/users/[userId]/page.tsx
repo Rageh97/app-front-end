@@ -274,142 +274,154 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
             containerClassName="px-7 py-4 bg-[linear-gradient(270deg,_#4f008c,_#190237,_#190237)]"
           >
             <div className="grid gap-4">
-              {purchasedPacksData?.userPackData.length === 0 && (
-                <p className="text-center">{t('userDetails.noData')}</p>
-              )}
-              {purchasedPacksData?.userPackData?.map((item: any) => (
-                <div className="border rounded-md grid grid-cols-2 p-4 gap-3">
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.purchasedAt')}
-                    value={fullDateTimeFormat(item.createdAt) || "none"}
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.endedAt')}
-                    value={
-                      <div className="flex items-center gap-2">
-                        <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
-                        <button
-                          onClick={() => {
-                            openEditExpiryModal({
-                              title: "تعديل المدة",
-                              currentDate: item.endedAt,
-                              onConfirm: (newDate: string) => {
-                                updateUserPackExpiry({
-                                  userPackId: item.users_packs_id,
-                                  endedAt: newDate
-                                });
-                              },
-                              isLoading: isUpdatingUserPackExpiry
-                            });
-                          }}
-                          className="text-primary hover:text-primary/80 cursor-pointer"
-                        >
-                          <PencilSquare className="w-6 h-6" />
-                        </button>
-                      </div>
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.packName')}
-                    value={item.pack_name || "none"}
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.isActive')}
-                    value={
-                      (
-                        <div
-                          style={{
-                            backgroundColor:
-                              item.isActive === true
-                                ? "green"
-                                : item.isActive === false && "#A020F0",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {item.isActive === true ? t('userDetails.active') : t('userDetails.inactive')}
-                        </div>
-                      )
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.expired')}
-                    value={
-                      (new Date() > new Date(item.endedAt) ? (
-                        <div
-                          style={{
-                            backgroundColor: "red",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {t('userDetails.yes')}
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            backgroundColor: "green",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {t('userDetails.no')}
-                        </div>
-                      ))
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.action')}
-                    value={
-                      <>
-                        {item?.isActive === false && (
+              {(() => {
+                const uniquePacks = new Map();
+                purchasedPacksData?.userPackData?.forEach((item: any) => {
+                  const existing = uniquePacks.get(item.pack_id);
+                  if (!existing || new Date(item.endedAt) > new Date(existing.endedAt)) {
+                    uniquePacks.set(item.pack_id, item);
+                  }
+                });
+                const deduplicatedPacks = Array.from(uniquePacks.values());
+
+                if (deduplicatedPacks.length === 0) {
+                  return <p className="text-center">{t('userDetails.noData')}</p>;
+                }
+
+                return deduplicatedPacks.map((item: any) => (
+                  <div key={item.users_packs_id} className="border rounded-md grid grid-cols-2 p-4 gap-3">
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.purchasedAt')}
+                      value={fullDateTimeFormat(item.createdAt) || "none"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.endedAt')}
+                      value={
+                        <div className="flex items-center gap-2">
+                          <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
                           <button
-                            style={{
-                              backgroundColor: "green",
-                            }}
-                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
                             onClick={() => {
-                              enableUserPackModal({
-                                onConfirm: () => {
-                                  enableUserPack(
-                                    parseInt(item?.users_packs_id)
-                                  );
+                              openEditExpiryModal({
+                                title: "تعديل المدة",
+                                currentDate: item.endedAt,
+                                onConfirm: (newDate: string) => {
+                                  updateUserPackExpiry({
+                                    userPackId: item.users_packs_id,
+                                    endedAt: newDate
+                                  });
                                 },
+                                isLoading: isUpdatingUserPackExpiry
                               });
                             }}
-                            disabled={isDisablingUserPack || isEnablingUserPack}
+                            className="text-primary hover:text-primary/80 cursor-pointer"
                           >
-                            {t('userDetails.enable')}
+                            <PencilSquare className="w-6 h-6" />
                           </button>
-                        )}
-                        {item?.isActive && (
-                          <button
+                        </div>
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.packName')}
+                      value={item.pack_name || "none"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.isActive')}
+                      value={
+                        (
+                          <div
+                            style={{
+                              backgroundColor:
+                                item.isActive === true
+                                  ? "green"
+                                  : item.isActive === false && "#A020F0",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {item.isActive === true ? t('userDetails.active') : t('userDetails.inactive')}
+                          </div>
+                        )
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.expired')}
+                      value={
+                        (new Date() > new Date(item.endedAt) ? (
+                          <div
                             style={{
                               backgroundColor: "red",
                             }}
                             className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                            onClick={() => {
-                              disableUserPackModal({
-                                onConfirm: () => {
-                                  disableUserPack(
-                                    parseInt(item?.users_packs_id)
-                                  );
-                                },
-                              });
-                            }}
-                            disabled={isDisablingUserPack || isEnablingUserPack}
                           >
-                            {t('userDetails.disable')}
-                          </button>
-                        )}
-                      </>
-                    }
-                  />
-                </div>
-              ))}
+                            {t('userDetails.yes')}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              backgroundColor: "green",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {t('userDetails.no')}
+                          </div>
+                        ))
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.action')}
+                      value={
+                        <>
+                          {item?.isActive === false && (
+                            <button
+                              style={{
+                                backgroundColor: "green",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                enableUserPackModal({
+                                  onConfirm: () => {
+                                    enableUserPack(
+                                      parseInt(item?.users_packs_id)
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserPack || isEnablingUserPack}
+                            >
+                              {t('userDetails.enable')}
+                            </button>
+                          )}
+                          {item?.isActive && (
+                            <button
+                              style={{
+                                backgroundColor: "red",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                disableUserPackModal({
+                                  onConfirm: () => {
+                                    disableUserPack(
+                                      parseInt(item?.users_packs_id)
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserPack || isEnablingUserPack}
+                            >
+                              {t('userDetails.disable')}
+                            </button>
+                          )}
+                        </>
+                      }
+                    />
+                  </div>
+                ));
+              })()}
             </div>
           </Panel>
           <Panel
@@ -425,142 +437,154 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
             containerClassName="px-7 py-4 bg-[linear-gradient(270deg,_#4f008c,_#190237,_#190237)]"
           >
             <div className="grid gap-4">
-              {purchasedPlansData?.userPlanData.length === 0 && (
-                <p className="text-center">{t('userDetails.noData')}</p>
-              )}
-              {purchasedPlansData?.userPlanData?.map((item: any) => (
-                <div className="border rounded-md grid grid-cols-2 p-4 gap-3">
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.purchasedAt')}
-                    value={fullDateTimeFormat(item.createdAt) || "none"}
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.endedAt')}
-                    value={
-                      <div className="flex items-center gap-2">
-                        <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
-                        <button
-                          onClick={() => {
-                            openEditExpiryModal({
-                              title: "تعديل المدة",
-                              currentDate: item.endedAt,
-                              onConfirm: (newDate: string) => {
-                                updateUserPlanExpiry({
-                                  userPlanId: item.users_plans_id,
-                                  endedAt: newDate
-                                });
-                              },
-                              isLoading: isUpdatingUserPlanExpiry
-                            });
-                          }}
-                          className="text-primary hover:text-primary/80 cursor-pointer"
-                        >
-                          <PencilSquare className="w-6 h-6" />
-                        </button>
-                      </div>
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.planName')}
-                    value={item.plan_name || "none"}
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.isActive')}
-                    value={
-                      (
-                        <div
-                          style={{
-                            backgroundColor:
-                              item.isActive === true
-                                ? "green"
-                                : item.isActive === false && "#A020F0",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {item.isActive === true ? t('userDetails.active') : t('userDetails.inactive')}
-                        </div>
-                      )
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.expired')}
-                    value={
-                      (new Date() > new Date(item.endedAt) ? (
-                        <div
-                          style={{
-                            backgroundColor: "red",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {t('userDetails.yes')}
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            backgroundColor: "green",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {t('userDetails.no')}
-                        </div>
-                      ))
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.action')}
-                    value={
-                      <>
-                        {item?.isActive === false && (
+              {(() => {
+                const uniquePlans = new Map();
+                purchasedPlansData?.userPlanData?.forEach((item: any) => {
+                  const existing = uniquePlans.get(item.plan_id || item.plan_name);
+                  if (!existing || new Date(item.endedAt) > new Date(existing.endedAt)) {
+                    uniquePlans.set(item.plan_id || item.plan_name, item);
+                  }
+                });
+                const deduplicatedPlans = Array.from(uniquePlans.values());
+
+                if (deduplicatedPlans.length === 0) {
+                  return <p className="text-center">{t('userDetails.noData')}</p>;
+                }
+
+                return deduplicatedPlans.map((item: any) => (
+                  <div key={item.users_plans_id} className="border rounded-md grid grid-cols-2 p-4 gap-3">
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.purchasedAt')}
+                      value={fullDateTimeFormat(item.createdAt) || "none"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.endedAt')}
+                      value={
+                        <div className="flex items-center gap-2">
+                          <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
                           <button
-                            style={{
-                              backgroundColor: "green",
-                            }}
-                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
                             onClick={() => {
-                              enableUserPlanModal({
-                                onConfirm: () => {
-                                  enableUserPlan(
-                                    parseInt(item?.users_plans_id)
-                                  );
+                              openEditExpiryModal({
+                                title: "تعديل المدة",
+                                currentDate: item.endedAt,
+                                onConfirm: (newDate: string) => {
+                                  updateUserPlanExpiry({
+                                    userPlanId: item.users_plans_id,
+                                    endedAt: newDate
+                                  });
                                 },
+                                isLoading: isUpdatingUserPlanExpiry
                               });
                             }}
-                            disabled={isDisablingUserPlan || isEnablingUserPlan}
+                            className="text-primary hover:text-primary/80 cursor-pointer"
                           >
-                            {t('userDetails.enable')}
+                            <PencilSquare className="w-6 h-6" />
                           </button>
-                        )}
-                        {item?.isActive && (
-                          <button
+                        </div>
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.planName')}
+                      value={item.plan_name || "none"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.isActive')}
+                      value={
+                        (
+                          <div
+                            style={{
+                              backgroundColor:
+                                item.isActive === true
+                                  ? "green"
+                                  : item.isActive === false && "#A020F0",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {item.isActive === true ? t('userDetails.active') : t('userDetails.inactive')}
+                          </div>
+                        )
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.expired')}
+                      value={
+                        (new Date() > new Date(item.endedAt) ? (
+                          <div
                             style={{
                               backgroundColor: "red",
                             }}
                             className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                            onClick={() => {
-                              disableUserPlanModal({
-                                onConfirm: () => {
-                                  disableUserPlan(
-                                    parseInt(item?.users_plans_id)
-                                  );
-                                },
-                              });
-                            }}
-                            disabled={isDisablingUserPlan || isEnablingUserPlan}
                           >
-                            {t('userDetails.disable')}
-                          </button>
-                        )}
-                      </>
-                    }
-                  />
-                </div>
-              ))}
+                            {t('userDetails.yes')}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              backgroundColor: "green",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {t('userDetails.no')}
+                          </div>
+                        ))
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.action')}
+                      value={
+                        <>
+                          {item?.isActive === false && (
+                            <button
+                              style={{
+                                backgroundColor: "green",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                enableUserPlanModal({
+                                  onConfirm: () => {
+                                    enableUserPlan(
+                                      parseInt(item?.users_plans_id)
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserPlan || isEnablingUserPlan}
+                            >
+                              {t('userDetails.enable')}
+                            </button>
+                          )}
+                          {item?.isActive && (
+                            <button
+                              style={{
+                                backgroundColor: "red",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                disableUserPlanModal({
+                                  onConfirm: () => {
+                                    disableUserPlan(
+                                      parseInt(item?.users_plans_id)
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserPlan || isEnablingUserPlan}
+                            >
+                              {t('userDetails.disable')}
+                            </button>
+                          )}
+                        </>
+                      }
+                    />
+                  </div>
+                ));
+              })()}
             </div>
           </Panel>
         </div>
@@ -578,142 +602,154 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
             containerClassName="px-7 py-4 bg-[linear-gradient(270deg,_#4f008c,_#190237,_#190237)]"
           >
             <div className="grid gap-4">
-              {purchasedToolsData?.userToolData.length === 0 && (
-                <p className="text-center">{t('userDetails.noData')}</p>
-              )}
-              {purchasedToolsData?.userToolData?.map((item: any) => (
-                <div className="border rounded-md grid grid-cols-2 p-4 gap-3">
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.purchasedAt')}
-                    value={fullDateTimeFormat(item.createdAt) || "none"}
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.endedAt')}
-                    value={
-                      <div className="flex items-center gap-2">
-                        <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
-                        <button
-                          onClick={() => {
-                            openEditExpiryModal({
-                              title: "تعديل المدة",
-                              currentDate: item.endedAt,
-                              onConfirm: (newDate: string) => {
-                                updateUserToolExpiry({
-                                  userToolId: item.users_tools_id,
-                                  endedAt: newDate
-                                });
-                              },
-                              isLoading: isUpdatingUserToolExpiry
-                            });
-                          }}
-                          className="text-primary hover:text-primary/80 cursor-pointer"
-                        >
-                          <PencilSquare className="w-6 h-6" />
-                        </button>
-                      </div>
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.toolName')}
-                    value={item.tool_name || "none"}
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.isActive')}
-                    value={
-                      (
-                        <div
-                          style={{
-                            backgroundColor:
-                              item.isActive === true
-                                ? "green"
-                                : item.isActive === false && "#A020F0",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {item.isActive === true ? t('userDetails.active') : t('userDetails.inactive')}
-                        </div>
-                      )
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.expired')}
-                    value={
-                      (new Date() > new Date(item.endedAt) ? (
-                        <div
-                          style={{
-                            backgroundColor: "red",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {t('userDetails.yes')}
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            backgroundColor: "green",
-                          }}
-                          className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                        >
-                          {t('userDetails.no')}
-                        </div>
-                      ))
-                    }
-                  />
-                  <DetailCell
-                    ignoreIfEmpty={true}
-                    label={t('userDetails.action')}
-                    value={
-                      <>
-                        {item?.isActive === false && (
+              {(() => {
+                const uniqueTools = new Map();
+                purchasedToolsData?.userToolData?.forEach((item: any) => {
+                  const existing = uniqueTools.get(item.tool_id);
+                  if (!existing || new Date(item.endedAt) > new Date(existing.endedAt)) {
+                    uniqueTools.set(item.tool_id, item);
+                  }
+                });
+                const deduplicatedTools = Array.from(uniqueTools.values());
+
+                if (deduplicatedTools.length === 0) {
+                  return <p className="text-center">{t('userDetails.noData')}</p>;
+                }
+
+                return deduplicatedTools.map((item: any) => (
+                  <div key={item.users_tools_id} className="border rounded-md grid grid-cols-2 p-4 gap-3">
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.purchasedAt')}
+                      value={fullDateTimeFormat(item.createdAt) || "none"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.endedAt')}
+                      value={
+                        <div className="flex items-center gap-2">
+                          <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
                           <button
-                            style={{
-                              backgroundColor: "green",
-                            }}
-                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
                             onClick={() => {
-                              enableUserToolModal({
-                                onConfirm: () => {
-                                  enableUserTool(
-                                    parseInt(item?.users_tools_id)
-                                  );
+                              openEditExpiryModal({
+                                title: "تعديل المدة",
+                                currentDate: item.endedAt,
+                                onConfirm: (newDate: string) => {
+                                  updateUserToolExpiry({
+                                    userToolId: item.users_tools_id,
+                                    endedAt: newDate
+                                  });
                                 },
+                                isLoading: isUpdatingUserToolExpiry
                               });
                             }}
-                            disabled={isDisablingUserTool || isEnablingUserTool}
+                            className="text-primary hover:text-primary/80 cursor-pointer"
                           >
-                            {t('userDetails.enable')}
+                            <PencilSquare className="w-6 h-6" />
                           </button>
-                        )}
-                        {item?.isActive && (
-                          <button
+                        </div>
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.toolName')}
+                      value={item.tool_name || "none"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.isActive')}
+                      value={
+                        (
+                          <div
+                            style={{
+                              backgroundColor:
+                                item.isActive === true
+                                  ? "green"
+                                  : item.isActive === false && "#A020F0",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {item.isActive === true ? t('userDetails.active') : t('userDetails.inactive')}
+                          </div>
+                        )
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.expired')}
+                      value={
+                        (new Date() > new Date(item.endedAt) ? (
+                          <div
                             style={{
                               backgroundColor: "red",
                             }}
                             className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
-                            onClick={() => {
-                              disableUserToolModal({
-                                onConfirm: () => {
-                                  disableUserTool(
-                                    parseInt(item?.users_tools_id)
-                                  );
-                                },
-                              });
-                            }}
-                            disabled={isDisablingUserTool || isEnablingUserTool}
                           >
-                            {t('userDetails.disable')}
-                          </button>
-                        )}
-                      </>
-                    }
-                  />
-                </div>
-              ))}
+                            {t('userDetails.yes')}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              backgroundColor: "green",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {t('userDetails.no')}
+                          </div>
+                        ))
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.action')}
+                      value={
+                        <>
+                          {item?.isActive === false && (
+                            <button
+                              style={{
+                                backgroundColor: "green",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                enableUserToolModal({
+                                  onConfirm: () => {
+                                    enableUserTool(
+                                      parseInt(item?.users_tools_id)
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserTool || isEnablingUserTool}
+                            >
+                              {t('userDetails.enable')}
+                            </button>
+                          )}
+                          {item?.isActive && (
+                            <button
+                              style={{
+                                backgroundColor: "red",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                disableUserToolModal({
+                                  onConfirm: () => {
+                                    disableUserTool(
+                                      parseInt(item?.users_tools_id)
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserTool || isEnablingUserTool}
+                            >
+                              {t('userDetails.disable')}
+                            </button>
+                          )}
+                        </>
+                      }
+                    />
+                  </div>
+                ));
+              })()}
             </div>
           </Panel>
         </div>
