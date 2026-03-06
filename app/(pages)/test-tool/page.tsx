@@ -5,24 +5,30 @@ import axios from 'axios';
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import './test-tool.css';
 
-/**
- * TestToolPage Component - Updated with Developer's HTML structure and Dynamic logic
- */
 export default function TestToolPage() {
   const { data } = useMyInfo();
   const [detectedExtensions, setDetectedExtensions] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
+  const [bypass, setBypass] = useState(false);
+  const [allMessages, setAllMessages] = useState<any[]>([]);
   
-  const requiredExtensions = useMemo(() => new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']), []);
+  const requiredExtensions = useMemo(() => ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'], []);
 
-  const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const allExtensionsDetected = bypass || isLocalhost || detectedExtensions.size === requiredExtensions.length;
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // 1. Log for visible debugger
+      if (event.data?.type) {
+        setAllMessages(prev => [event.data, ...prev].slice(0, 5));
+      }
+
+      // 2. Main detection logic
       if (
         event.data?.type === 'EXTENSION_CHECK' && 
-        requiredExtensions.has(event.data.extensionName)
+        requiredExtensions.includes(event.data.extensionName)
       ) {
         setDetectedExtensions((prev) => {
           const nextSet = new Set(prev);
@@ -69,17 +75,12 @@ export default function TestToolPage() {
     }
   };
 
-  /**
-   * Deduplicate Tools from all sources (Individual + Packs)
-   */
   const deduplicatedTools = useMemo(() => {
     const toolsMap = new Map();
-
     data?.userToolsData?.forEach((ut: any) => {
       const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == ut.tool_id);
       if (toolInfo) toolsMap.set(toolInfo.tool_id, toolInfo);
     });
-
     data?.userPacksData?.forEach((up: any) => {
       const pack = data?.packsData?.find((p: any) => p.pack_id === up.pack_id);
       if (pack) {
@@ -92,106 +93,78 @@ export default function TestToolPage() {
         } catch (e) {}
       }
     });
-
     return Array.from(toolsMap.values()).sort((a: any, b: any) => a.tool_name.localeCompare(b.tool_name));
   }, [data]);
 
   return (
     <div className="test-tool-body">
-      <div className="am-content-page"></div>
-
       <div className="container">
+        {/* Debug Panel - Fixed at the bottom */}
+        <div style={{ position: 'fixed', bottom: 10, right: 10, background: '#1e293b', color: '#fff', padding: '15px', borderRadius: '10px', fontSize: '11px', zIndex: 9999, border: '1px solid #790003', maxWidth: '300px' }}>
+          <h4 style={{ color: '#ef4444', marginBottom: '5px' }}>🚨 Developer Debugger</h4>
+          <p>Localhost: {isLocalhost ? '✅' : '❌'}</p>
+          <p>Extension 1: {detectedExtensions.has(requiredExtensions[0]) ? '✅' : '⏳ Missing'}</p>
+          <p>Extension 2: {detectedExtensions.has(requiredExtensions[1]) ? '✅' : '⏳ Missing'}</p>
+          <hr style={{ margin: '5px 0', opacity: 0.2 }} />
+          <p>Last Message: {allMessages[0] ? JSON.stringify(allMessages[0]).slice(0, 50) + "..." : 'None'}</p>
+          <button 
+            onClick={() => setBypass(true)}
+            style={{ marginTop: '10px', width: '100%', padding: '5px', background: '#790003', color: '#white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            🔓 Bypass Detection & Show Tools
+          </button>
+        </div>
+
         {/* Logo Section */}
         <div className="logo-container">
           <img alt="NexusToolz Logo" src="https://app.nexustoolz.com/theme/img/chatgpt.png" /> 
           <span className="tag">Extension</span>
         </div>
 
-        {/* Conditional Rendering Based on Detection */}
         {allExtensionsDetected ? (
-          /* Tools Section */
-          <div className="tools-section" id="toolsSection">
+          <div className="tools-section">
             <div className="header">
-              <h2>🛠️ Available Premium Tools</h2>
-              <p>Switch servers if any not working or face any limit error</p>
+              <h2>🛠️ Premium Tools (Detected Mode)</h2>
+              <p>Testing connection with the session API...</p>
             </div>
-
             <div className="premium-tools-section">
-              <h3>🚀 Premium Tools Access</h3>
-              <p>Access all premium tools of NexusToolz</p>
-
               <div className="button-container">
                 {deduplicatedTools.map((tool: any) => (
                   <button 
                     key={tool.tool_id}
                     className="tool-btn" 
-                    id={`tool-${tool.tool_id}`}
-                    disabled={isLoading}
                     onClick={() => handleToolClick(tool.tool_id)}
                   >
-                    {isLoading && activeServer === tool.tool_id ? '⏳ Loading...' : tool.tool_name}
+                    {isLoading && activeServer === tool.tool_id ? '⏳ Processing...' : tool.tool_name}
                   </button>
                 ))}
-
-                {deduplicatedTools.length === 0 && (
-                   <p style={{ gridColumn: '1 / -1', color: '#64748b', padding: '10px' }}>
-                     No active tools found.
-                   </p>
-                )}
               </div>
             </div>
-
-            <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
+            <div className="update-info">⏰ Dynamic Sync Active</div>
           </div>
         ) : (
-          /* Extension Message Section with Instructions */
-          <div className="extension-message" id="extensionMessage">
+          <div className="extension-message">
             <div className="warning-header">
-              <h2>⚠️ Extensions Required</h2>
-              <p>Please install both extensions to unlock premium tools</p>
+              <h2>⚠️ Extension Detection Failed</h2>
+              <p>We couldn't detect your extensions on this domain.</p>
             </div>
 
             <div className="download-section">
-              <h3>📥 Download Extensions</h3>
-              <p>Get instant access to all premium features</p>
+              <h3>📥 Download & Re-install</h3>
               <div className="download-buttons">
                 <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">
-                  ⬇️ Download Latest NexusToolz Extension
+                  ⬇️ Download NexusToolz.com.zip
                 </a>
               </div>
             </div>
 
-            <div className="important-notice">
-              🔔 <strong>Important:</strong> Remove other extensions or create a new Chrome profile for best performance.
-            </div>
-
-            {/* Installation Grid */}
             <div className="installation-grid">
-              {/* PC Column */}
-              <div className="notes-section">
-                <div className="notes-header">
-                  <h3>💻 PC Installation</h3>
-                </div>
+               <div className="notes-section">
+                <div className="notes-header"><h3>⚙️ Troubleshooting</h3></div>
                 <div className="notes-content">
-                  <div className="note-item"><span className="note-number">1</span> <span className="note-text">📁 Download and Extract both extensions</span></div>
-                  <div className="note-item"><span className="note-number">2</span> <span className="note-text">🌐 Open <strong>chrome://extensions/</strong></span></div>
-                  <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable <strong>Developer Mode</strong></span></div>
-                  <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Click <strong>Load Unpacked</strong> for each folder</span></div>
-                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">✅ Boom You are Done! <a href="https://www.youtube.com/watch?v=WIaR5qzcr4Q" target="_blank" rel="noopener noreferrer" style={{color: '#1e40af', fontWeight: 'bold'}}>Watch Tutorial</a></span></div>
-                </div>
-              </div>
-
-              {/* Mobile Column */}
-              <div className="notes-section">
-                <div className="notes-header">
-                  <h3>📱 Mobile Installation</h3>
-                </div>
-                <div className="notes-content">
-                  <div className="note-item"><span className="note-number">1</span> <span className="note-text">� Download <strong>Mises Browser</strong></span></div>
-                  <div className="note-item"><span className="note-number">2</span> <span className="note-text">🔗 <a href="https://play.google.com/store/apps/details?id=site.mises.browser" target="_blank" rel="noopener noreferrer" style={{color: '#1e40af', fontWeight: 'bold'}}>Get Mises Browser</a></span></div>
-                  <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable Developer Mode in browser</span></div>
-                  <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Load both extensions</span></div>
-                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">🎉 Enjoy! <a href="#" target="_blank" rel="noopener noreferrer" style={{color: '#1e40af', fontWeight: 'bold'}}>Watch Mobile Guide</a></span></div>
+                  <div className="note-item"><span className="note-number">!</span> <span className="note-text">Make sure you are using Chrome or Brave.</span></div>
+                  <div className="note-item"><span className="note-number">!</span> <span className="note-text">Ensure 'Developer Mode' is ON.</span></div>
+                  <div className="note-item"><span className="note-number">!</span> <span className="note-text">Refresh the page after installing.</span></div>
                 </div>
               </div>
             </div>
