@@ -6,10 +6,7 @@ import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import './test-tool.css';
 
 /**
- * TestToolPage Component - Dynamic Version
- * 
- * Displays all tools activated for the current account.
- * When an extension is detected, it renders buttons for each available tool.
+ * TestToolPage Component - Dynamic & Deduplicated Tools
  */
 export default function TestToolPage() {
   const { data } = useMyInfo();
@@ -17,16 +14,9 @@ export default function TestToolPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
   
-  // Required extensions info for detection
   const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
 
-  // Check if all required extensions are detected
-  const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
-
   useEffect(() => {
-    /**
-     * Listener for messages from the browser extensions.
-     */
     const handleMessage = (event: MessageEvent) => {
       if (
         event.data?.type === 'EXTENSION_CHECK' && 
@@ -39,23 +29,15 @@ export default function TestToolPage() {
         });
       }
     };
-
     window.addEventListener('message', handleMessage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  /**
-   * Handle dynamic tool launch
-   */
   const handleToolClick = async (toolId: number) => {
     setActiveServer(toolId);
     setIsLoading(true);
 
     const token = localStorage.getItem("a");
-
     if (!token) {
       window.location.href = "/signin";
       return;
@@ -76,7 +58,6 @@ export default function TestToolPage() {
       });
 
       if (res?.status === 200) {
-        // Broadcast the session to the new extension
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
       }
     } catch (err) {
@@ -86,110 +67,87 @@ export default function TestToolPage() {
     }
   };
 
-  // Helper to get tool info from IDs
-  const getToolInfo = (toolId: number) => {
-    return data?.toolsData?.find((t: any) => t.tool_id == toolId);
+  /**
+   * Deduplicate Tools from all sources (Individual + Packs)
+   */
+  const getDeduplicatedTools = () => {
+    const toolsMap = new Map();
+
+    // 1. Add tools from individual subscriptions
+    data?.userToolsData?.forEach((ut: any) => {
+      const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == ut.tool_id);
+      if (toolInfo) {
+        toolsMap.set(toolInfo.tool_id, toolInfo);
+      }
+    });
+
+    // 2. Add tools from packs
+    data?.userPacksData?.forEach((up: any) => {
+      const pack = data?.packsData?.find((p: any) => p.pack_id === up.pack_id);
+      if (pack) {
+        try {
+          const packToolIds = JSON.parse(pack.pack_tools || "[]");
+          packToolIds.forEach((tid: number) => {
+            const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == tid);
+            if (toolInfo) {
+              toolsMap.set(toolInfo.tool_id, toolInfo);
+            }
+          });
+        } catch (e) {}
+      }
+    });
+
+    return Array.from(toolsMap.values()).sort((a: any, b: any) => a.tool_name.localeCompare(b.tool_name));
   };
+
+  const deduplicatedTools = getDeduplicatedTools();
 
   return (
     <div className="test-tool-body">
       <div className="am-content-page"></div>
 
       <div className="container">
-        {/* Logo and Tag */}
         <div className="logo-container">
           <img src="https://app.nexustoolz.com/theme/img/chatgpt.png" alt="Branding" />
-          <span className="tag">Extension</span>
+          <span className="tag" style={{ background: '#22c55e' }}>BYPASS MODE</span>
         </div>
 
-        {allExtensionsDetected ? (
-          <div className="tools-section" id="toolsSection">
-            <div className="header">
-              <h2>🛠️ Available Premium Tools (Test Mode)</h2>
-              <p>These tools are dynamically loaded from your active subscriptions</p>
-            </div>
+        <div className="tools-section" id="toolsSection">
+          <div className="header">
+            <h2>🛠️ Developer Test Environment</h2>
+            <p>Select any tool to test the extension launch logic.</p>
+            <p style={{ fontSize: '12px', color: '#64748b', marginTop: '5px' }}>
+              Status: {detectedExtensions.size > 0 ? '✅ Extension Detected' : '⏳ Waiting for Extension...'}
+            </p>
+          </div>
 
-            <div className="premium-tools-section">
-              <h3>🚀 Premium Tools Access</h3>
-              <p>Select any tool to test the extension launch</p>
+          <div className="premium-tools-section">
+            <h3>🚀 Your Active Tools</h3>
 
-              <div className="button-container">
-                {/* 1. Direct Tools */}
-                {data?.userToolsData?.map((userTool: any) => {
-                  const toolInfo = getToolInfo(userTool.tool_id);
-                  if (!toolInfo) return null;
+            <div className="button-container">
+              {deduplicatedTools.map((tool: any) => (
+                <button 
+                  key={tool.tool_id}
+                  className="tool-btn" 
+                  disabled={isLoading}
+                  onClick={() => handleToolClick(tool.tool_id)}
+                >
+                  {isLoading && activeServer === tool.tool_id ? '⏳ Loading...' : tool.tool_name}
+                </button>
+              ))}
 
-                  return (
-                    <button 
-                      key={toolInfo.tool_id}
-                      className="tool-btn" 
-                      disabled={isLoading}
-                      onClick={() => handleToolClick(toolInfo.tool_id)}
-                    >
-                      {isLoading && activeServer === toolInfo.tool_id ? '⏳ Loading...' : toolInfo.tool_name}
-                    </button>
-                  );
-                })}
-
-                {/* 2. Tools from Packs (Flat list) */}
-                {data?.userPacksData?.map((up: any) => {
-                  const pack = data?.packsData?.find((p: any) => p.pack_id === up.pack_id);
-                  if (!pack) return null;
-                  
-                  try {
-                    const toolIds = JSON.parse(pack.pack_tools || "[]");
-                    return toolIds.map((tid: number) => {
-                      const toolInfo = getToolInfo(tid);
-                      if (!toolInfo) return null;
-                      return (
-                        <button 
-                          key={`pack-${tid}`}
-                          className="tool-btn" 
-                          disabled={isLoading}
-                          onClick={() => handleToolClick(toolInfo.tool_id)}
-                        >
-                          {isLoading && activeServer === toolInfo.tool_id ? '⏳ Loading...' : toolInfo.tool_name}
-                        </button>
-                      );
-                    });
-                  } catch (e) { return null; }
-                })}
-                
-                {/* Fallback */}
-                {(!data?.userToolsData?.length && !data?.userPacksData?.length) && (
-                   <p style={{ gridColumn: '1 / -1', color: '#64748b', padding: '20px' }}>
-                     No active tools found for this account. Please activate tools in the admin panel.
-                   </p>
-                )}
-              </div>
-            </div>
-
-            <div className="update-info">
-              ⏰ Next update in 3 hours - Stay tuned!
+              {deduplicatedTools.length === 0 && (
+                 <p style={{ gridColumn: '1 / -1', color: '#ef4444', padding: '20px', fontWeight: 'bold' }}>
+                   ❌ No active tools found for this account.
+                 </p>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="extension-message" id="extensionMessage">
-            <div className="warning-header">
-              <h2>⚠️ Extensions Required</h2>
-              <p>Please install both extensions to unlock premium tools</p>
-            </div>
 
-            <div className="download-section">
-              <h3>📥 Download Extensions</h3>
-              <p>Get instant access to all premium features</p>
-
-              <div className="download-buttons">
-                <a className="download-btn" href="https://app.nexustoolz.com/content/f/id/5" target="_blank" rel="noopener noreferrer">
-                  ⬇️ Extension 1
-                </a>
-                <a className="download-btn" href="https://app.nexustoolz.com/content/f/id/6" target="_blank" rel="noopener noreferrer">
-                  ⬇️ Extension 2
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
+          {/* <div className="update-info" style={{ background: '#334155' }}>
+            💡 Next update in 3 hours - Stay tuned!
+          </div> */}
+        </div>
       </div>
     </div>
   );
