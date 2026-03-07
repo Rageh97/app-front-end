@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Script from 'next/script';
 import axios from 'axios';
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import './test-tool.css';
@@ -115,6 +116,24 @@ export default function TestToolPage() {
   return (
     <div className="test-tool-body">
       <div className="am-content-page"></div>
+
+      {/* 
+        IMPORTANT: This script tag is injected DIRECTLY into the HTML source.
+        The extension's content script looks for this in the DOM, just like on aMember pages.
+        DO NOT remove this script tag.
+      */}
+      <Script id="extension-detection" strategy="afterInteractive">{`
+        (function() {
+          const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+          const detectedExtensions = new Set();
+
+          window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
+              detectedExtensions.add(event.data.extensionName);
+            }
+          });
+        })();
+      `}</Script>
 
       <div className="container">
         {/* Logo Section */}
