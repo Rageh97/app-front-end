@@ -11,12 +11,11 @@ export default function TestToolPage() {
   const [detectedExtensions, setDetectedExtensions] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
+  const [messageLog, setMessageLog] = useState<string[]>([]);
+  const [debugMode, setDebugMode] = useState(false);
   
   const requiredExtensions = useMemo(() => new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']), []);
   const allExtensionsDetected = (detectedExtensions.size === requiredExtensions.size) || debugMode;
-
-  const [messageLog, setMessageLog] = useState<string[]>([]);
-  const [debugMode, setDebugMode] = useState(false);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
