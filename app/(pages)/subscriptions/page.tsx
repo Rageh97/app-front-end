@@ -29,30 +29,13 @@ const Dashboard: FunctionComponent = () => {
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // 1. Old Extension Logic
-      if (event.data.type === 'FROM_EXTENSION' && event.data.data?.m === "Hello from the extension!") {
-        setCanLaunch(true);
+  window.addEventListener('message', function (event) {
+    if (event.data.type === 'FROM_EXTENSION' && event.data.data.m === "Hello from the extension!") {
+      if (!canLaunch) {
+        setCanLaunch(true)
       }
-      // 2. New Extension Logic (Matching test-tool page)
-      if (event.data.type === 'EXTENSION_CHECK') {
-        setCanLaunch(true);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    
-    // ACTIVE PING: Ask for the new extension
-    const pingInterval = setInterval(() => {
-      window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    }, 2000);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      clearInterval(pingInterval);
-    };
-  }, []);
+    }
+  });
 
   const launchApp = async (tool_id: number) => {
     setActiveApp(tool_id);
