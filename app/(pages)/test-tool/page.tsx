@@ -156,7 +156,10 @@ export default function TestToolPage() {
               <p>Get instant access to all premium features</p>
               <div className="download-buttons">
                 <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">
-                  ⬇️ Download Latest NexusToolz Extension
+                  ⬇️ Extension 1
+                </a>
+                <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">
+                  ⬇️ Extension 2
                 </a>
               </div>
             </div>

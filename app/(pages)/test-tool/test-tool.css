@@ -1,4 +1,4 @@
-/* test-tool.css - Updated with Developer's design */
+/* test-tool.css - Updated with Developer's new design */
 
 .test-tool-body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -118,6 +118,7 @@
     padding: 15px 20px;
     border: none;
     border-radius: 10px;
+    overflow: hidden; /* ensure corners are respected */
     font-weight: 700;
     font-size: 14px;
     cursor: pointer;
@@ -127,9 +128,15 @@
     box-shadow: 0 4px 15px rgba(121, 0, 3, 0.3);
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
+}
+
+.tool-btn:hover {
+    border-radius: 10px;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(121, 0, 3, 0.4);
+    background: linear-gradient(135deg, #660002 0%, #550001 100%);
 }
 
 .tool-btn::before {
@@ -145,12 +152,6 @@
 
 .tool-btn:hover::before {
     left: 100%;
-}
-
-.tool-btn:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 6px 20px rgba(121, 0, 3, 0.4);
-    background: linear-gradient(135deg, #660002 0%, #550001 100%);
 }
 
 .tool-btn:disabled {
@@ -191,19 +192,33 @@
     box-shadow: 0 4px 15px rgba(121, 0, 3, 0.12);
 }
 
+.download-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
 .download-btn {
     background: linear-gradient(135deg, #790003 0%, #660002 100%);
     color: white;
     text-decoration: none;
     padding: 12px 20px;
-    border-radius: 8px;
+    border-radius: 30px;
     font-weight: 700;
     transition: all 0.3s ease;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     box-shadow: 0 3px 12px rgba(121, 0, 3, 0.3);
     font-size: 13px;
-    display: inline-block;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.download-btn:hover {
+    background: linear-gradient(135deg, #660002 0%, #550001 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(121, 0, 3, 0.4);
 }
 
 .important-notice {
@@ -279,7 +294,7 @@
 }
 
 @media (max-width: 768px) {
-    .button-container, .installation-grid {
+    .button-container, .installation-grid, .download-buttons {
         grid-template-columns: 1fr;
     }
 }
