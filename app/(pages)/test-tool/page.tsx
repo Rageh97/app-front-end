@@ -22,6 +22,7 @@ export default function TestToolPage() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Check for the extension's identification message
       if (
         event.data?.type === 'EXTENSION_CHECK' && 
         requiredExtensions.has(event.data.extensionName)
@@ -36,14 +37,14 @@ export default function TestToolPage() {
 
     window.addEventListener('message', handleMessage);
     
-    // Initial UI check (mirrors developer's updateUI and timeout)
-    const timeout = setTimeout(() => {
-      // Logic for force-recheck if needed
-    }, 3000);
+    // ACTIVE PING: Continuously ask if extension is there (fixes timing issues in Next.js)
+    const pingInterval = setInterval(() => {
+      window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+    }, 1000);
 
     return () => {
       window.removeEventListener('message', handleMessage);
-      clearTimeout(timeout);
+      clearInterval(pingInterval);
     };
   }, [requiredExtensions]);
 
