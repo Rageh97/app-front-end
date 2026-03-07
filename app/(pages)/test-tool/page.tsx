@@ -6,24 +6,19 @@ import axios from 'axios';
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import './test-tool.css';
 
-/**
- * TestToolPage Component - Updated with Developer's Latest HTML and Logic
- */
+
 export default function TestToolPage() {
   const { data } = useMyInfo();
   const [detectedExtensions, setDetectedExtensions] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
   
-  // Extension check list from developer
   const requiredExtensions = useMemo(() => new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']), []);
 
-  // UI state: Show tools only if all required extensions are detected
   const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Check for the extension's identification message
       if (
         event.data?.type === 'EXTENSION_CHECK' && 
         requiredExtensions.has(event.data.extensionName)
@@ -38,7 +33,6 @@ export default function TestToolPage() {
 
     window.addEventListener('message', handleMessage);
     
-    // ACTIVE PING: Continuously ask if extension is there (fixes timing issues in Next.js)
     const pingInterval = setInterval(() => {
       window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
     }, 1000);
@@ -49,9 +43,6 @@ export default function TestToolPage() {
     };
   }, [requiredExtensions]);
 
-  /**
-   * Launch tool logic
-   */
   const handleToolClick = async (toolId: number) => {
     setActiveServer(toolId);
     setIsLoading(true);
@@ -86,9 +77,7 @@ export default function TestToolPage() {
     }
   };
 
-  /**
-   * Deduplicate tools from all sources
-   */
+ 
   const deduplicatedTools = useMemo(() => {
     const toolsMap = new Map();
 
@@ -117,14 +106,12 @@ export default function TestToolPage() {
     <div className="test-tool-body">
       <div className="am-content-page"></div>
 
-      {/* 
-        CRITICAL: This script is injected directly into the raw HTML to ensure 
-        the extension can detect it even before Next.js hydration.
-      */}
+     
       <div dangerouslySetInnerHTML={{ __html: `
         <script id="nt-detection-script">
           (function() {
-            console.log('NT Detection Script Loaded');
+            window.NT_SITE_IDENTITY = "NEXUS_NEXTJS_APP";
+            console.log('NT Detection Script Loaded - Mimicking PHP Environment');
             window.NT_REQUIRED_EXTENSIONS = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
             window.NT_DETECTED_EXTENSIONS = [];
             
@@ -133,24 +120,23 @@ export default function TestToolPage() {
                 if (window.NT_REQUIRED_EXTENSIONS.includes(event.data.extensionName)) {
                   if (!window.NT_DETECTED_EXTENSIONS.includes(event.data.extensionName)) {
                     window.NT_DETECTED_EXTENSIONS.push(event.data.extensionName);
-                    console.log('Extension Detected via Static Script:', event.data.extensionName);
+                    console.log('Extension Detected:', event.data.extensionName);
                   }
                 }
               }
             });
           })();
         </script>
+        <script type="text/am-vars">{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}</script>
       `}} />
 
       <div className="container">
-        {/* Logo Section */}
         <div className="logo-container">
           <img alt="Nexus Tools Logo" src="https://app.nexustoolz.com/theme/img/chatgpt.png" />
           <span className="tag">Extension</span>
         </div>
 
         {allExtensionsDetected ? (
-          /* Tools Section - Visible when extensions are detected */
           <div className="tools-section" id="toolsSection">
             <div className="header">
               <h2>🛠️ Available Premium Tools</h2>
@@ -185,7 +171,6 @@ export default function TestToolPage() {
             <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
           </div>
         ) : (
-          /* Extension Message Section - Visible when extensions are missing */
           <div className="extension-message" id="extensionMessage">
             <div className="warning-header">
               <h2>⚠️ Extensions Required</h2>
@@ -210,7 +195,7 @@ export default function TestToolPage() {
               🔔 <strong>Important:</strong> Remove other extensions or create a new Chrome profile for best performance.
             </div>
 
-            {/* Installation Instructions */}
+          
             <div className="installation-grid">
               <div className="notes-section">
                 <div className="notes-header">
