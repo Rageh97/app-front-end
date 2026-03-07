@@ -6,7 +6,7 @@ import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import './test-tool.css';
 
 /**
- * TestToolPage Component - Updated with Developer's HTML structure and Dynamic logic
+ * TestToolPage Component - Updated with Developer's Latest HTML and Logic
  */
 export default function TestToolPage() {
   const { data } = useMyInfo();
@@ -14,8 +14,10 @@ export default function TestToolPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
   
+  // Extension check list from developer
   const requiredExtensions = useMemo(() => new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']), []);
 
+  // UI state: Show tools only if all required extensions are detected
   const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
 
   useEffect(() => {
@@ -31,10 +33,23 @@ export default function TestToolPage() {
         });
       }
     };
+
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    
+    // Initial UI check (mirrors developer's updateUI and timeout)
+    const timeout = setTimeout(() => {
+      // Logic for force-recheck if needed
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearTimeout(timeout);
+    };
   }, [requiredExtensions]);
 
+  /**
+   * Launch tool logic
+   */
   const handleToolClick = async (toolId: number) => {
     setActiveServer(toolId);
     setIsLoading(true);
@@ -70,7 +85,7 @@ export default function TestToolPage() {
   };
 
   /**
-   * Deduplicate Tools from all sources (Individual + Packs)
+   * Deduplicate tools from all sources
    */
   const deduplicatedTools = useMemo(() => {
     const toolsMap = new Map();
@@ -103,13 +118,12 @@ export default function TestToolPage() {
       <div className="container">
         {/* Logo Section */}
         <div className="logo-container">
-          <img alt="NexusToolz Logo" src="https://app.nexustoolz.com/theme/img/chatgpt.png" /> 
+          <img alt="Nexus Tools Logo" src="https://app.nexustoolz.com/theme/img/chatgpt.png" />
           <span className="tag">Extension</span>
         </div>
 
-        {/* Conditional Rendering Based on Detection */}
         {allExtensionsDetected ? (
-          /* Tools Section */
+          /* Tools Section - Visible when extensions are detected */
           <div className="tools-section" id="toolsSection">
             <div className="header">
               <h2>🛠️ Available Premium Tools</h2>
@@ -118,7 +132,7 @@ export default function TestToolPage() {
 
             <div className="premium-tools-section">
               <h3>🚀 Premium Tools Access</h3>
-              <p>Access all premium tools of NexusToolz</p>
+              <p>Access all premium tools with unlimited usage</p>
 
               <div className="button-container">
                 {deduplicatedTools.map((tool: any) => (
@@ -135,7 +149,7 @@ export default function TestToolPage() {
 
                 {deduplicatedTools.length === 0 && (
                    <p style={{ gridColumn: '1 / -1', color: '#64748b', padding: '10px' }}>
-                     No active tools found.
+                     No active tools found for this account.
                    </p>
                 )}
               </div>
@@ -144,7 +158,7 @@ export default function TestToolPage() {
             <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
           </div>
         ) : (
-          /* Extension Message Section with Instructions */
+          /* Extension Message Section - Visible when extensions are missing */
           <div className="extension-message" id="extensionMessage">
             <div className="warning-header">
               <h2>⚠️ Extensions Required</h2>
@@ -154,6 +168,7 @@ export default function TestToolPage() {
             <div className="download-section">
               <h3>📥 Download Extensions</h3>
               <p>Get instant access to all premium features</p>
+
               <div className="download-buttons">
                 <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">
                   ⬇️ Extension 1
@@ -168,9 +183,8 @@ export default function TestToolPage() {
               🔔 <strong>Important:</strong> Remove other extensions or create a new Chrome profile for best performance.
             </div>
 
-            {/* Installation Grid */}
+            {/* Installation Instructions */}
             <div className="installation-grid">
-              {/* PC Column */}
               <div className="notes-section">
                 <div className="notes-header">
                   <h3>💻 PC Installation</h3>
@@ -180,21 +194,20 @@ export default function TestToolPage() {
                   <div className="note-item"><span className="note-number">2</span> <span className="note-text">🌐 Open <strong>chrome://extensions/</strong></span></div>
                   <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable <strong>Developer Mode</strong></span></div>
                   <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Click <strong>Load Unpacked</strong> for each folder</span></div>
-                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">✅ Boom You are Done! <a href="https://www.youtube.com/watch?v=WIaR5qzcr4Q" target="_blank" rel="noopener noreferrer" style={{color: '#1e40af', fontWeight: 'bold'}}>Watch Tutorial</a></span></div>
+                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">✅ Boom You are Done! <a href="#" target="_blank" rel="noopener noreferrer">Watch Tutorial</a></span></div>
                 </div>
               </div>
 
-              {/* Mobile Column */}
               <div className="notes-section">
                 <div className="notes-header">
                   <h3>📱 Mobile Installation</h3>
                 </div>
                 <div className="notes-content">
-                  <div className="note-item"><span className="note-number">1</span> <span className="note-text">� Download <strong>Mises Browser</strong></span></div>
-                  <div className="note-item"><span className="note-number">2</span> <span className="note-text">🔗 <a href="https://play.google.com/store/apps/details?id=site.mises.browser" target="_blank" rel="noopener noreferrer" style={{color: '#1e40af', fontWeight: 'bold'}}>Get Mises Browser</a></span></div>
+                  <div className="note-item"><span className="note-number">1</span> <span className="note-text">📲 Download <strong>Mises Browser</strong></span></div>
+                  <div className="note-item"><span className="note-number">2</span> <span className="note-text">🔗 <a href="https://play.google.com/store/apps/details?id=site.mises.browser" target="_blank" rel="noopener noreferrer">Get Mises Browser</a></span></div>
                   <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable Developer Mode in browser</span></div>
                   <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Load both extensions</span></div>
-                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">🎉 Enjoy! <a href="#" target="_blank" rel="noopener noreferrer" style={{color: '#1e40af', fontWeight: 'bold'}}>Watch Mobile Guide</a></span></div>
+                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">🎉 Enjoy! <a href="#" target="_blank" rel="noopener noreferrer">Watch Mobile Guide</a></span></div>
                 </div>
               </div>
             </div>
