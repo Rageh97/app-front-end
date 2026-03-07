@@ -17,10 +17,8 @@ export default function TestToolPage() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (
-        event.data?.type === 'EXTENSION_CHECK' && 
-        requiredExtensions.has(event.data.extensionName)
-      ) {
+      // Detection logic
+      if (event.data?.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
         setDetectedExtensions((prev) => {
           const nextSet = new Set(prev);
           nextSet.add(event.data.extensionName);
@@ -28,92 +26,34 @@ export default function TestToolPage() {
         });
       }
     };
-
     window.addEventListener('message', handleMessage);
-    
-    // Ping to wake up extension
-    const pingInterval = setInterval(() => {
-      window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    }, 1000);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      clearInterval(pingInterval);
-    };
+    const ping = setInterval(() => window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*"), 1000);
+    return () => { window.removeEventListener('message', handleMessage); clearInterval(ping); };
   }, [requiredExtensions]);
 
   const handleToolClick = async (toolId: number) => {
     setActiveServer(toolId);
     setIsLoading(true);
-
     const token = localStorage.getItem("a");
-    if (!token) {
-      window.location.href = "/signin";
-      return;
-    }
-
-    let requestData = {
-      appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
-      token: token,
-      toolId: toolId,
-    };
-
+    if (!token) { window.location.href = "/signin"; return; }
     try {
-      const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", requestData, {
-        headers: {
-          "Content-Type": "application/json",
-          "User-Client": (globalThis as any).clientId1328 || "",
-        },
-      });
-
+      const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", 
+        { appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL", token, toolId },
+        { headers: { "Content-Type": "application/json", "User-Client": (globalThis as any).clientId1328 || "" } }
+      );
       if (res?.status === 200) {
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
       }
-    } catch (err) {
-      console.error("Launch Error:", err);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err) { console.error("Launch Error:", err);
+    } finally { setIsLoading(false); }
   };
-
-  const deduplicatedTools = useMemo(() => {
-    const toolsMap = new Map();
-    data?.userToolsData?.forEach((ut: any) => {
-      const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == ut.tool_id);
-      if (toolInfo) toolsMap.set(toolInfo.tool_id, toolInfo);
-    });
-    data?.userPacksData?.forEach((up: any) => {
-      const pack = data?.packsData?.find((p: any) => p.pack_id === up.pack_id);
-      if (pack) {
-        try {
-          const packToolIds = JSON.parse(pack.pack_tools || "[]");
-          packToolIds.forEach((tid: number) => {
-            const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == tid);
-            if (toolInfo) toolsMap.set(toolInfo.tool_id, toolInfo);
-          });
-        } catch (e) {}
-      }
-    });
-    return Array.from(toolsMap.values()).sort((a: any, b: any) => a.tool_name.localeCompare(b.tool_name));
-  }, [data]);
 
   return (
     <div className="test-tool-body">
-      <div className="am-content-page"></div>
-
+      {/* MIMIC PHP ENVIRONMENT FOR THE EXTENSION */}
       <div dangerouslySetInnerHTML={{ __html: `
-        <script id="nt-detection-script">
-          (function() {
-            window.NT_SITE_IDENTITY = "NEXUS_NEXTJS_APP";
-            window.NT_REQUIRED_EXTENSIONS = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
-            window.addEventListener('message', function(event) {
-              if (event.data && event.data.type === 'EXTENSION_CHECK') {
-                console.log('Detection Message Received in DOM:', event.data.extensionName);
-              }
-            });
-          })();
-        </script>
-        <script type="text/am-vars">{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}</script>
+        <script id="am-vars-script" type="text/am-vars">{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}</script>
+        <script>window.NT_PANEL_VERSION = "6.0.2";</script>
       `}} />
 
       <div className="container">
@@ -123,86 +63,46 @@ export default function TestToolPage() {
         </div>
 
         {/* 
-            TOOLS SECTION - Always in DOM so extension can detect it
+            ALWAYS RENDER TOOLS IN HIDDEN DIV TO TRIGGER EXTENSION CONTENT SCRIPT 
+            Some extensions wait for specific IDs like "ChatgptCookies" to exist.
         */}
-        <div className="tools-section" id="toolsSection" style={{ display: allExtensionsDetected ? 'block' : 'none' }}>
-          <div className="header">
-            <h2>🛠️ Available Premium Tools</h2>
-            <p>Switch servers if any not working or face any limit error</p>
-          </div>
-
-          <div className="premium-tools-section">
-            <h3>🚀 Premium Tools Access</h3>
-            <p>Access all premium tools with unlimited usage</p>
-
-            <div className="button-container">
-              {/* Force rendering these two specific names/IDs if the extension is looking for them specifically */}
-              <button className="tool-btn" id="ChatgptCookies" onClick={() => handleToolClick(44)}>Chatgpt Server 1</button>
-              <button className="tool-btn" id="Chatgpt2Cookies" onClick={() => handleToolClick(44)}>Chatgpt Server 2</button>
-              
-              {/* Real Dynamic Tools */}
-              {deduplicatedTools.filter(t => t.tool_id !== 44).map((tool: any) => (
-                <button 
-                  key={tool.tool_id}
-                  className="tool-btn" 
-                  id={`tool-${tool.tool_id}`}
-                  disabled={isLoading}
-                  onClick={() => handleToolClick(tool.tool_id)}
-                >
-                  {isLoading && activeServer === tool.tool_id ? '⏳ Loading...' : tool.tool_name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
+        <div id="detection-trigger" style={{ height: '1px', overflow: 'hidden', opacity: 0 }}>
+             <button id="ChatgptCookies">Trigger 1</button>
+             <button id="Chatgpt2Cookies">Trigger 2</button>
+             <button id="chatgptCookies">Trigger 3</button>
         </div>
 
-        {/* 
-            EXTENSION MESSAGE - Shown only if NOT detected
-        */}
-        <div className="extension-message" id="extensionMessage" style={{ display: allExtensionsDetected ? 'none' : 'block' }}>
-          <div className="warning-header">
-            <h2>⚠️ Extensions Required</h2>
-            <p>Please install both extensions to unlock premium tools</p>
-          </div>
-
-          <div className="download-section">
-            <h3>📥 Download Extensions</h3>
-            <p>Get instant access to all premium features</p>
-            <div className="download-buttons">
-              <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">⬇️ Extension 1</a>
-              <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">⬇️ Extension 2</a>
+        {allExtensionsDetected ? (
+          <div className="tools-section">
+            <div className="header">
+              <h2>🛠️ Available Premium Tools</h2>
+              <p>Extension Detected Successfully!</p>
             </div>
-          </div>
-
-          <div className="important-notice">
-            🔔 <strong>Important:</strong> Remove other extensions or create a new Chrome profile for best performance.
-          </div>
-
-          <div className="installation-grid">
-            <div className="notes-section">
-              <div className="notes-header"><h3>💻 PC Installation</h3></div>
-              <div className="notes-content">
-                <div className="note-item"><span className="note-number">1</span> <span className="note-text">📁 Download and Extract both extensions</span></div>
-                <div className="note-item"><span className="note-number">2</span> <span className="note-text">🌐 Open <strong>chrome://extensions/</strong></span></div>
-                <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable <strong>Developer Mode</strong></span></div>
-                <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Click <strong>Load Unpacked</strong> for each folder</span></div>
-                <div className="note-item"><span className="note-number">5</span> <span className="note-text">✅ Boom You are Done! <a href="#" target="_blank">Watch Tutorial</a></span></div>
-              </div>
-            </div>
-
-            <div className="notes-section">
-              <div className="notes-header"><h3>📱 Mobile Installation</h3></div>
-              <div className="notes-content">
-                <div className="note-item"><span className="note-number">1</span> <span className="note-text">📲 Download <strong>Mises Browser</strong></span></div>
-                <div className="note-item"><span className="note-number">2</span> <span className="note-text">🔗 <a href="https://play.google.com/store/apps/details?id=site.mises.browser" target="_blank">Get Mises Browser</a></span></div>
-                <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable Developer Mode in browser</span></div>
-                <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Load both extensions</span></div>
-                <div className="note-item"><span className="note-number">5</span> <span className="note-text">🎉 Enjoy! <a href="#" target="_blank">Watch Mobile Guide</a></span></div>
+            <div className="premium-tools-section">
+              <div className="button-container">
+                <button className="tool-btn" onClick={() => handleToolClick(44)}>Chatgpt Server 1</button>
+                <button className="tool-btn" onClick={() => handleToolClick(44)}>Chatgpt Server 2</button>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="extension-message">
+            <div className="warning-header">
+              <h2>⚠️ Extensions Required</h2>
+              <p>Please install both extensions to unlock tools</p>
+            </div>
+            <div className="download-section">
+              <div className="download-buttons">
+                <a className="download-btn" href="/Nexustoolz.com.zip" download>⬇️ Extension 1</a>
+                <a className="download-btn" href="/Nexustoolz.com.zip" download>⬇️ Extension 2</a>
+              </div>
+            </div>
+            {/* INVISIBLE TRIGGER BUTTONS FOR EXTENSION SCANNING */}
+            <div style={{ opacity: 0.01, pointerEvents: 'none' }}>
+               <button id="chatgpt1Cookies">Scan</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
