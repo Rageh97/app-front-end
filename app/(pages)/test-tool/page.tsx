@@ -118,22 +118,29 @@ export default function TestToolPage() {
       <div className="am-content-page"></div>
 
       {/* 
-        IMPORTANT: This script tag is injected DIRECTLY into the HTML source.
-        The extension's content script looks for this in the DOM, just like on aMember pages.
-        DO NOT remove this script tag.
+        CRITICAL: This script is injected directly into the raw HTML to ensure 
+        the extension can detect it even before Next.js hydration.
       */}
-      <Script id="extension-detection" strategy="afterInteractive">{`
-        (function() {
-          const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
-          const detectedExtensions = new Set();
-
-          window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
-              detectedExtensions.add(event.data.extensionName);
-            }
-          });
-        })();
-      `}</Script>
+      <div dangerouslySetInnerHTML={{ __html: `
+        <script id="nt-detection-script">
+          (function() {
+            console.log('NT Detection Script Loaded');
+            window.NT_REQUIRED_EXTENSIONS = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
+            window.NT_DETECTED_EXTENSIONS = [];
+            
+            window.addEventListener('message', function(event) {
+              if (event.data && event.data.type === 'EXTENSION_CHECK') {
+                if (window.NT_REQUIRED_EXTENSIONS.includes(event.data.extensionName)) {
+                  if (!window.NT_DETECTED_EXTENSIONS.includes(event.data.extensionName)) {
+                    window.NT_DETECTED_EXTENSIONS.push(event.data.extensionName);
+                    console.log('Extension Detected via Static Script:', event.data.extensionName);
+                  }
+                }
+              }
+            });
+          })();
+        </script>
+      `}} />
 
       <div className="container">
         {/* Logo Section */}
