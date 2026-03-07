@@ -13,11 +13,18 @@ export default function TestToolPage() {
   const [activeServer, setActiveServer] = useState<number | null>(null);
   
   const requiredExtensions = useMemo(() => new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']), []);
-  const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
+  const allExtensionsDetected = (detectedExtensions.size === requiredExtensions.size) || debugMode;
+
+  const [messageLog, setMessageLog] = useState<string[]>([]);
+  const [debugMode, setDebugMode] = useState(false);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Detection logic
+      if (event.data?.type) {
+        console.log("Incoming Message:", event.data);
+        setMessageLog(prev => [`[${new Date().toLocaleTimeString()}] ${JSON.stringify(event.data)}`, ...prev].slice(0, 5));
+      }
+
       if (event.data?.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
         setDetectedExtensions((prev) => {
           const nextSet = new Set(prev);
@@ -50,6 +57,22 @@ export default function TestToolPage() {
 
   return (
     <div className="test-tool-body">
+      {/* 🛠️ DEBUG OVERLAY */}
+      <div style={{ position: 'fixed', bottom: 10, left: 10, right: 10, background: 'rgba(0,0,0,0.9)', color: '#00ff00', padding: '15px', borderRadius: '10px', fontSize: '11px', zIndex: 10000, border: '1px solid #790003' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+           <strong>🔍 DEBUG: EXTENSION SIGNALS</strong>
+           <button 
+             onClick={() => setDebugMode(!debugMode)}
+             style={{ background: debugMode ? '#22c55e' : '#790003', color: 'white', border: 'none', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+           >
+             {debugMode ? 'BYPASS ACTIVE' : 'FORCE BYPASS DETECTION'}
+           </button>
+        </div>
+        <div style={{ background: '#111', padding: '8px', minHeight: '60px', borderRadius: '4px' }}>
+          {messageLog.map((log, i) => <div key={i}>{log}</div>)}
+          {messageLog.length === 0 && <div style={{ color: '#555' }}>No messages detected yet...</div>}
+        </div>
+      </div>
       {/* MIMIC PHP ENVIRONMENT FOR THE EXTENSION */}
       <div dangerouslySetInnerHTML={{ __html: `
         <script id="am-vars-script" type="text/am-vars">{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}</script>
