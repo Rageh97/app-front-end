@@ -100,31 +100,12 @@ export default function TestToolPage() {
             text-align: center;
         }
         
-        .logo-container:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(121, 0, 3, 0.2);
-        }
-        
         .logo-container img {
             width: 100%;
             height: auto;
             max-height: 80px;
             object-fit: contain;
             border-radius: 6px;
-        }
-        
-        .logo-container h1 {
-            font-size: 20px;
-            color: #790003;
-            font-weight: 700;
-            margin-bottom: 0.3rem;
-            letter-spacing: 0.5px;
-        }
-        
-        .logo-container p {
-            color: #475569;
-            font-size: 13px;
-            font-weight: 500;
         }
         
         .tag {
@@ -162,14 +143,6 @@ export default function TestToolPage() {
             font-size: 18px;
             font-weight: 700;
             color: #790003;
-            margin-bottom: 0.3rem;
-            letter-spacing: 0.3px;
-        }
-        
-        .header p {
-            color: #475569;
-            font-size: 14px;
-            font-weight: 500;
         }
         
         .tools-section {
@@ -184,20 +157,6 @@ export default function TestToolPage() {
             margin: 15px 0;
             text-align: center;
             box-shadow: 0 4px 15px rgba(121, 0, 3, 0.12);
-        }
-        
-        .premium-tools-section h3 {
-            color: #790003;
-            font-size: 18px;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-        
-        .premium-tools-section p {
-            color: #475569;
-            margin-bottom: 15px;
-            font-size: 14px;
-            font-weight: 500;
         }
         
         .button-container {
@@ -233,21 +192,6 @@ export default function TestToolPage() {
             background: linear-gradient(135deg, #660002 0%, #550001 100%);
         }
         
-        .tool-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.4s;
-        }
-        
-        .tool-btn:hover::before {
-            left: 100%;
-        }
-        
         .update-info {
             background: linear-gradient(135deg, #790003 0%, #660002 100%);
             color: white;
@@ -271,20 +215,6 @@ export default function TestToolPage() {
             background: #ffffff;
             border-radius: 10px;
             border: 2px solid #790003;
-            box-shadow: 0 3px 12px rgba(121, 0, 3, 0.1);
-        }
-        
-        .warning-header h2 {
-            font-size: 18px;
-            color: #790003;
-            margin-bottom: 0.3rem;
-            font-weight: 700;
-        }
-        
-        .warning-header p {
-            color: #475569;
-            font-size: 14px;
-            font-weight: 500;
         }
         
         .download-section {
@@ -294,21 +224,6 @@ export default function TestToolPage() {
             border-radius: 10px;
             margin: 15px 0;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(121, 0, 3, 0.12);
-        }
-        
-        .download-section h3 {
-            color: #790003;
-            font-size: 18px;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-        
-        .download-section p {
-            color: #475569;
-            margin-bottom: 15px;
-            font-size: 14px;
-            font-weight: 500;
         }
         
         .download-buttons {
@@ -325,19 +240,9 @@ export default function TestToolPage() {
             padding: 12px 20px;
             border-radius: 30px;
             font-weight: 700;
-            transition: all 0.3s ease;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 3px 12px rgba(121, 0, 3, 0.3);
-            font-size: 13px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
             text-align: center;
-        }
-        
-        .download-btn:hover {
-            background: linear-gradient(135deg, #660002 0%, #550001 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(121, 0, 3, 0.4);
+            display: block;
         }
         
         .important-notice {
@@ -349,8 +254,6 @@ export default function TestToolPage() {
             margin: 15px 0;
             font-weight: 600;
             text-align: center;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.12);
-            font-size: 14px;
         }
         
         .installation-grid {
@@ -358,125 +261,33 @@ export default function TestToolPage() {
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             margin: 20px 0;
-            align-items: start;
         }
         
         .notes-section {
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(121, 0, 3, 0.15);
-            overflow: hidden;
             border: 2px solid #790003;
             background: #ffffff;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
+            overflow: hidden;
         }
         
         .notes-header {
             padding: 15px;
             background: linear-gradient(135deg, #790003 0%, #660002 100%);
-            position: relative;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        
-        .notes-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-            animation: shimmer 3s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        
-        .notes-header h3 {
-            font-size: 16px;
-            font-weight: 700;
             color: white;
             text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            position: relative;
-            z-index: 1;
         }
         
-        .notes-content {
-            padding: 20px;
-            background: #ffffff;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-        }
-        
-        .note-item {
-            display: flex;
-            gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(121, 0, 3, 0.1);
-            align-items: flex-start;
-            transition: all 0.3s ease;
-        }
-        
-        .note-item:last-child {
-            border-bottom: none;
-        }
-        
-        .note-item:hover {
-            background: rgba(121, 0, 3, 0.03);
-            border-radius: 6px;
-            padding-left: 6px;
-            margin: 0 -6px;
-            transform: translateX(2px);
-        }
-        
+        .notes-content { padding: 20px; }
+        .note-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(121, 0, 3, 0.1); }
         .note-number {
-            background: linear-gradient(135deg, #790003 0%, #660002 100%);
-            color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(121, 0, 3, 0.25);
-            font-size: 12px;
-            transition: all 0.3s ease;
+            background: #790003; color: white; width: 24px; height: 24px; border-radius: 5px;
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;
         }
-        
-        .note-text {
-            color: #475569;
-            font-size: 13px;
-            line-height: 1.5;
-            font-weight: 500;
-        }
-        
-        .note-text a {
-            color: #1e40af;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
+        .note-text { color: #475569; font-size: 13px; font-weight: 500; }
+
         @media (max-width: 768px) {
-            .container {
-                padding: 0.6rem;
-            }
-            .logo-container {
-                width: 200px;
-            }
-            .button-container, .download-buttons, .installation-grid {
-                grid-template-columns: 1fr;
-            }
+            .container { padding: 0.6rem; }
+            .button-container, .download-buttons, .installation-grid { grid-template-columns: 1fr; }
         }
       ` }} />
 
@@ -499,54 +310,17 @@ export default function TestToolPage() {
                 }
             }
 
-            const handleRawMessage = (event) => {
-                // DEBUG: Log all incoming messages for easy inspection
-                console.log('--- Incoming Message ---', event.data);
-                
-                let msg = event.data;
-
-                // Attempt to parse if it's a string
-                if (typeof msg === 'string') {
-                    try {
-                        msg = JSON.parse(msg);
-                    } catch (e) {
-                        // Not a JSON string, ignore
-                        console.log('Message is a string but not JSON:', event.data);
-                        return;
-                    }
+            window.addEventListener('message', (event) => {
+                console.log('Message Received In Test Tool:', event.data);
+                if (event.data && event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
+                    detectedExtensions.add(event.data.extensionName);
+                    updateUI();
                 }
-
-                if (
-                    msg &&
-                    msg.type === 'EXTENSION_CHECK' && 
-                    requiredExtensions.has(msg.extensionName)
-                ) {
-                    if (!detectedExtensions.has(msg.extensionName)) {
-                        detectedExtensions.add(msg.extensionName);
-                        console.log('Detection Success:', msg.extensionName);
-                        updateUI(); // Update UI immediately on new detection
-                    }
-                }
-            };
-
-            window.addEventListener('message', handleRawMessage, true);
-            
-            const pingInterval = setInterval(() => {
-                window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-            }, 2000);
-
-            // Initial check and cleanup on unload
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', updateUI);
-            } else {
-                updateUI();
-            }
-
-            // Cleanup on page unload
-            window.addEventListener('beforeunload', () => {
-                window.removeEventListener('message', handleRawMessage, true);
-                clearInterval(pingInterval);
             });
+
+            // Run updateUI immediately and periodically
+            updateUI();
+            setInterval(updateUI, 2000); // Polling ensures React re-renders don't break display
         })();
       ` }} />
       <script type="text/am-vars" dangerouslySetInnerHTML={{ __html: `{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}` }} />
@@ -557,7 +331,8 @@ export default function TestToolPage() {
           <span className="tag">Extension</span>
         </div>
 
-        <div className="tools-section" id="toolsSection" style={{ display: 'none' }}>
+        {/* Tools Section - Start with display: block to match dev's HTML, the script will hide it if needed */}
+        <div className="tools-section" id="toolsSection" style={{ display: 'block' }}>
           <div className="header">
             <h2>🛠️ Available Premium Tools</h2>
             <p>Switch servers if any not working or face any limit error</p>
@@ -576,15 +351,13 @@ export default function TestToolPage() {
                   {isLoading && activeServer === tool.tool_id ? '⏳' : tool.tool_name}
                 </button>
               ))}
-              {deduplicatedTools.length === 0 && (
-                <div style={{gridColumn: '1/-1', color: '#790003'}}>No active tools for this account.</div>
-              )}
             </div>
           </div>
           <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
         </div>
 
-        <div className="extension-message" id="extensionMessage" style={{ display: 'block' }}>
+        {/* Extension Required Section - Start with display: none to match dev's HTML behavior */}
+        <div className="extension-message" id="extensionMessage" style={{ display: 'none' }}>
           <div className="warning-header">
             <h2>⚠️ Extensions Required</h2>
             <p>Please install both extensions to unlock premium tools</p>
