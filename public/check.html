@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Extension Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div id="toolsSection" style="display:none; padding: 20px; background: green; color: white;">
+        <h1>SUCCESS: Extension Detected!</h1>
+        <p>If you see this, the extension is working perfectly.</p>
+    </div>
+    <div id="extensionMessage" style="display:block; padding: 20px; background: red; color: white;">
+        <h1>WAITING: Extension Not Detected</h1>
+        <p>Please install extensions or check console.</p>
+    </div>
+
+    <script>
+        const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+        const detectedExtensions = new Set();
+
+        function updateUI() {
+            const toolsSection = document.getElementById('toolsSection');
+            const extensionMessage = document.getElementById('extensionMessage');
+            console.log('Detected Extensions:', Array.from(detectedExtensions));
+            
+            if (detectedExtensions.size === requiredExtensions.size) {
+                toolsSection.style.display = 'block';
+                extensionMessage.style.display = 'none';
+            } else {
+                toolsSection.style.display = 'none';
+                extensionMessage.style.display = 'block';
+            }
+        }
+
+        window.addEventListener('message', (event) => {
+            console.log('Message Received:', event.data);
+            if (event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
+                detectedExtensions.add(event.data.extensionName);
+                updateUI();
+            }
+        });
+
+        // Forced initial check
+        updateUI();
+        setTimeout(updateUI, 3000);
+    </script>
+    <script type="text/am-vars">{"script-replaced":"1"}</script>
+</body>
+</html>

@@ -499,21 +499,54 @@ export default function TestToolPage() {
                 }
             }
 
-            window.addEventListener('message', (event) => {
-                if (event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
-                    detectedExtensions.add(event.data.extensionName);
-                    updateUI();
-                }
-            });
+            const handleRawMessage = (event) => {
+                // DEBUG: Log all incoming messages for easy inspection
+                console.log('--- Incoming Message ---', event.data);
+                
+                let msg = event.data;
 
-            // Initial check
+                // Attempt to parse if it's a string
+                if (typeof msg === 'string') {
+                    try {
+                        msg = JSON.parse(msg);
+                    } catch (e) {
+                        // Not a JSON string, ignore
+                        console.log('Message is a string but not JSON:', event.data);
+                        return;
+                    }
+                }
+
+                if (
+                    msg &&
+                    msg.type === 'EXTENSION_CHECK' && 
+                    requiredExtensions.has(msg.extensionName)
+                ) {
+                    if (!detectedExtensions.has(msg.extensionName)) {
+                        detectedExtensions.add(msg.extensionName);
+                        console.log('Detection Success:', msg.extensionName);
+                        updateUI(); // Update UI immediately on new detection
+                    }
+                }
+            };
+
+            window.addEventListener('message', handleRawMessage, true);
+            
+            const pingInterval = setInterval(() => {
+                window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+            }, 2000);
+
+            // Initial check and cleanup on unload
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', updateUI);
             } else {
                 updateUI();
             }
 
-            setTimeout(updateUI, 3000);
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                window.removeEventListener('message', handleRawMessage, true);
+                clearInterval(pingInterval);
+            });
         })();
       ` }} />
       <script type="text/am-vars" dangerouslySetInnerHTML={{ __html: `{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}` }} />
