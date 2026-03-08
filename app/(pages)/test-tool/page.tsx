@@ -341,16 +341,20 @@ export default function TestToolPage() {
             <h3>🚀 Premium Tools Access</h3>
             <p>Access all premium tools with unlimited usage</p>
             <div className="button-container">
-              {deduplicatedTools.map((tool: any) => (
-                <button 
-                  key={tool.tool_id}
-                  className="tool-btn" 
-                  disabled={isLoading}
-                  onClick={() => handleToolClick(tool.tool_id)}
-                >
-                  {isLoading && activeServer === tool.tool_id ? '⏳' : tool.tool_name}
-                </button>
-              ))}
+              {deduplicatedTools.map((tool: any) => {
+                const buttonId = tool.tool_name.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
+                return (
+                  <button 
+                    key={tool.tool_id}
+                    className="tool-btn" 
+                    id={buttonId}
+                    disabled={isLoading}
+                    onClick={() => handleToolClick(tool.tool_id)}
+                  >
+                    {isLoading && activeServer === tool.tool_id ? '⏳' : tool.tool_name}
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
