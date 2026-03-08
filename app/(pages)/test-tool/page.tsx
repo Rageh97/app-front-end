@@ -1,72 +1,47 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import Script from 'next/script';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import './test-tool.css';
 
-
 export default function TestToolPage() {
   const { data } = useMyInfo();
-  const [detectedExtensions, setDetectedExtensions] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
-  
-  const requiredExtensions = useMemo(() => new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']), []);
+  const [detectedCount, setDetectedCount] = useState(0);
 
-  const allExtensionsDetected = detectedExtensions.size === requiredExtensions.size;
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (
-        event.data?.type === 'EXTENSION_CHECK' && 
-        requiredExtensions.has(event.data.extensionName)
-      ) {
-        setDetectedExtensions((prev) => {
-          const nextSet = new Set(prev);
-          nextSet.add(event.data.extensionName);
-          return nextSet;
-        });
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    
-    const pingInterval = setInterval(() => {
-      window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    }, 1000);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      clearInterval(pingInterval);
-    };
-  }, [requiredExtensions]);
+  // Sync React state with the "Native Script" results
+  // This allows us to use the developer's native script but still react in our React UI
+  React.useEffect(() => {
+    const checkDetection = setInterval(() => {
+        const count = (window as any).detectedExtensionsCount || 0;
+        if (count !== detectedCount) {
+            setDetectedCount(count);
+        }
+    }, 500);
+    return () => clearInterval(checkDetection);
+  }, [detectedCount]);
 
   const handleToolClick = async (toolId: number) => {
     setActiveServer(toolId);
     setIsLoading(true);
-
     const token = localStorage.getItem("a");
     if (!token) {
       window.location.href = "/signin";
       return;
     }
-
-    let requestData = {
-      appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
-      token: token,
-      toolId: toolId,
-    };
-
     try {
-      const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", requestData, {
+      const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
+        appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
+        token: token,
+        toolId: toolId,
+      }, {
         headers: {
           "Content-Type": "application/json",
           "User-Client": (globalThis as any).clientId1328 || "",
         },
       });
-
       if (res?.status === 200) {
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
       }
@@ -77,15 +52,12 @@ export default function TestToolPage() {
     }
   };
 
- 
   const deduplicatedTools = useMemo(() => {
     const toolsMap = new Map();
-
     data?.userToolsData?.forEach((ut: any) => {
       const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == ut.tool_id);
       if (toolInfo) toolsMap.set(toolInfo.tool_id, toolInfo);
     });
-
     data?.userPacksData?.forEach((up: any) => {
       const pack = data?.packsData?.find((p: any) => p.pack_id === up.pack_id);
       if (pack) {
@@ -98,34 +70,48 @@ export default function TestToolPage() {
         } catch (e) {}
       }
     });
-
     return Array.from(toolsMap.values()).sort((a: any, b: any) => a.tool_name.localeCompare(b.tool_name));
   }, [data]);
 
   return (
     <div className="test-tool-body">
-      <div className="am-content-page"></div>
-
-     
+      {/* 
+        NATIVE SCRIPT INJECTION: 
+        This is exactly what the developer wants to see in the HTML source.
+      */}
       <div dangerouslySetInnerHTML={{ __html: `
-        <script id="nt-detection-script">
-          (function() {
-            window.NT_SITE_IDENTITY = "NEXUS_NEXTJS_APP";
-            console.log('NT Detection Script Loaded - Mimicking PHP Environment');
-            window.NT_REQUIRED_EXTENSIONS = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
-            window.NT_DETECTED_EXTENSIONS = [];
-            
-            window.addEventListener('message', function(event) {
-              if (event.data && event.data.type === 'EXTENSION_CHECK') {
-                if (window.NT_REQUIRED_EXTENSIONS.includes(event.data.extensionName)) {
-                  if (!window.NT_DETECTED_EXTENSIONS.includes(event.data.extensionName)) {
-                    window.NT_DETECTED_EXTENSIONS.push(event.data.extensionName);
-                    console.log('Extension Detected:', event.data.extensionName);
-                  }
+        <script>
+            (function() {
+                const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+                const detectedExtensions = new Set();
+                window.detectedExtensionsCount = 0;
+
+                function updateUI() {
+                    const toolsSection = document.getElementById('toolsSection');
+                    const extensionMessage = document.getElementById('extensionMessage');
+                    if (!toolsSection || !extensionMessage) return;
+
+                    if (detectedExtensions.size === requiredExtensions.size) {
+                        toolsSection.style.display = 'block';
+                        extensionMessage.style.display = 'none';
+                        window.detectedExtensionsCount = detectedExtensions.size;
+                    } else {
+                        toolsSection.style.display = 'none';
+                        extensionMessage.style.display = 'block';
+                        window.detectedExtensionsCount = detectedExtensions.size;
+                    }
                 }
-              }
-            });
-          })();
+
+                window.addEventListener('message', function(event) {
+                    if (event.data && event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
+                        detectedExtensions.add(event.data.extensionName);
+                        updateUI();
+                    }
+                });
+
+                // Periodic check to ensure visibility is correct
+                setInterval(updateUI, 1000);
+            })();
         </script>
         <script type="text/am-vars">{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}</script>
       `}} />
@@ -136,95 +122,60 @@ export default function TestToolPage() {
           <span className="tag">Extension</span>
         </div>
 
-        {allExtensionsDetected ? (
-          <div className="tools-section" id="toolsSection">
-            <div className="header">
-              <h2>🛠️ Available Premium Tools</h2>
-              <p>Switch servers if any not working or face any limit error</p>
-            </div>
-
-            <div className="premium-tools-section">
-              <h3>🚀 Premium Tools Access</h3>
-              <p>Access all premium tools with unlimited usage</p>
-
-              <div className="button-container">
-                {deduplicatedTools.map((tool: any) => (
-                  <button 
-                    key={tool.tool_id}
-                    className="tool-btn" 
-                    id={`tool-${tool.tool_id}`}
-                    disabled={isLoading}
-                    onClick={() => handleToolClick(tool.tool_id)}
-                  >
-                    {isLoading && activeServer === tool.tool_id ? '⏳ Loading...' : tool.tool_name}
-                  </button>
-                ))}
-
-                {deduplicatedTools.length === 0 && (
-                   <p style={{ gridColumn: '1 / -1', color: '#64748b', padding: '10px' }}>
-                     No active tools found for this account.
-                   </p>
-                )}
-              </div>
-            </div>
-
-            <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
+        {/* 
+            Notice: Both sections are rendered in the DOM always. 
+            Display is controlled by IDs and Inline Styles for the extension to touch.
+        */}
+        
+        {/* Tools Section */}
+        <div className="tools-section" id="toolsSection" style={{ display: 'none' }}>
+          <div className="header">
+            <h2>🛠️ Available Premium Tools</h2>
+            <p>Switch servers if any not working or face any limit error</p>
           </div>
-        ) : (
-          <div className="extension-message" id="extensionMessage">
-            <div className="warning-header">
-              <h2>⚠️ Extensions Required</h2>
-              <p>Please install both extensions to unlock premium tools</p>
+          <div className="premium-tools-section">
+            <h3>🚀 Premium Tools Access</h3>
+            <div className="button-container">
+              {deduplicatedTools.map((tool: any) => (
+                <button 
+                  key={tool.tool_id}
+                  className="tool-btn" 
+                  disabled={isLoading}
+                  onClick={() => handleToolClick(tool.tool_id)}
+                >
+                  {isLoading && activeServer === tool.tool_id ? '⏳ Loading...' : tool.tool_name}
+                </button>
+              ))}
             </div>
+          </div>
+          <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
+        </div>
 
-            <div className="download-section">
-              <h3>📥 Download Extensions</h3>
-              <p>Get instant access to all premium features</p>
-
-              <div className="download-buttons">
-                <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">
-                  ⬇️ Extension 1
-                </a>
-                <a className="download-btn" href="/Nexustoolz.com.zip" download="Nexustoolz.com.zip">
-                  ⬇️ Extension 2
-                </a>
-              </div>
+        {/* Extension Required Section */}
+        <div className="extension-message" id="extensionMessage" style={{ display: 'block' }}>
+          <div className="warning-header">
+            <h2>⚠️ Extensions Required</h2>
+            <p>Please install both extensions to unlock premium tools</p>
+          </div>
+          <div className="download-section">
+            <div className="download-buttons">
+              <a className="download-btn" href="/Nexustoolz.com.zip" download>⬇️ Extension 1</a>
+              <a className="download-btn" href="/Nexustoolz.com.zip" download>⬇️ Extension 2</a>
             </div>
-
-            <div className="important-notice">
-              🔔 <strong>Important:</strong> Remove other extensions or create a new Chrome profile for best performance.
-            </div>
-
+          </div>
           
-            <div className="installation-grid">
-              <div className="notes-section">
-                <div className="notes-header">
-                  <h3>💻 PC Installation</h3>
-                </div>
-                <div className="notes-content">
-                  <div className="note-item"><span className="note-number">1</span> <span className="note-text">📁 Download and Extract both extensions</span></div>
-                  <div className="note-item"><span className="note-number">2</span> <span className="note-text">🌐 Open <strong>chrome://extensions/</strong></span></div>
-                  <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable <strong>Developer Mode</strong></span></div>
-                  <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Click <strong>Load Unpacked</strong> for each folder</span></div>
-                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">✅ Boom You are Done! <a href="#" target="_blank" rel="noopener noreferrer">Watch Tutorial</a></span></div>
-                </div>
-              </div>
-
-              <div className="notes-section">
-                <div className="notes-header">
-                  <h3>📱 Mobile Installation</h3>
-                </div>
-                <div className="notes-content">
-                  <div className="note-item"><span className="note-number">1</span> <span className="note-text">📲 Download <strong>Mises Browser</strong></span></div>
-                  <div className="note-item"><span className="note-number">2</span> <span className="note-text">🔗 <a href="https://play.google.com/store/apps/details?id=site.mises.browser" target="_blank" rel="noopener noreferrer">Get Mises Browser</a></span></div>
-                  <div className="note-item"><span className="note-number">3</span> <span className="note-text">🔧 Enable Developer Mode in browser</span></div>
-                  <div className="note-item"><span className="note-number">4</span> <span className="note-text">📤 Load both extensions</span></div>
-                  <div className="note-item"><span className="note-number">5</span> <span className="note-text">🎉 Enjoy! <a href="#" target="_blank" rel="noopener noreferrer">Watch Mobile Guide</a></span></div>
-                </div>
-              </div>
+          <div className="installation-grid">
+            <div className="notes-section">
+               <div className="notes-header"><h3>💻 PC Installation</h3></div>
+               <div className="notes-content">
+                  <p className="note-text">1. Download and Extract</p>
+                  <p className="note-text">2. Open chrome://extensions/</p>
+                  <p className="note-text">3. Load Unpacked</p>
+               </div>
             </div>
           </div>
-        )}
+        </div>
+
       </div>
     </div>
   );
