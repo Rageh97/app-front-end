@@ -77,16 +77,6 @@ const AI_TOOLS = [
     image: '/images/الصورة لنص.png',
     href: '/ai/image-to-text'
   },
-  // {
-  //   id: 'upscale',
-  //   title: 'رفع دقة الصور',
-  //   description: 'حسن جودة الصور وزد من دقتها بذكاء',
-  //   icon: Maximize,
-  //   category: 'image',
-  //   gradient: 'from-indigo-600/80 to-purple-600/80',
-  //   image: '/images/رفع جودة الصور.png',
-  //   href: '/ai/upscale'
-  // },
   {
     id: 'bg-remove',
     title: 'حذف الخلفية',
@@ -137,7 +127,6 @@ const AI_TOOLS = [
     image: '/images/نماذج لمنتجك.png',
     href: '/ai/product'
   },
- 
   {
     id: 'colorize',
     title: 'تلوين الصور',
@@ -158,9 +147,7 @@ const AI_TOOLS = [
     image: '/images/تعديل الصور.png',
     href: '/ai/edit'
   },
-  
- 
-   {
+  {
     id: 'sketch',
     title: 'رسم إلى صورة',
     description: 'حول مسوداتك إلى أعمال فنية احترافية',
@@ -170,7 +157,7 @@ const AI_TOOLS = [
     image: '/images/رسم الصور.png',
     href: '/ai/sketch'
   },
-   {
+  {
     id: 'logo',
     title: 'صانع الشعارات',
     description: 'تصميم شعارات احترافية للعلامات التجارية',
@@ -180,7 +167,7 @@ const AI_TOOLS = [
     image: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=1000',
     href: '/ai/logo'
   },
-   {
+  {
     id: 'motion',
     title: 'تحريك الصور',
     description: 'أضف حركة حية لصورك الثابتة',
@@ -189,9 +176,8 @@ const AI_TOOLS = [
     gradient: 'from-sky-600/80 to-blue-600/80',
     image: '/images/محاكاة الحركة.png',
     href: '/ai/motion',
-    
   },
-   {
+  {
     id: 'long-video',
     title: ' انشاء فيديو طويل',
     description: 'إنشاء فيديوهات طويلة ومتسلسلة',
@@ -213,8 +199,6 @@ const AI_TOOLS = [
     href: '/ai/effects',
     comingSoon: true
   },
- 
- 
   {
     id: 'ugc',
     title: 'فيديوهات UGC',
@@ -248,7 +232,7 @@ const AI_TOOLS = [
     href: '/ai/resize',
     comingSoon: true
   },
-   {
+  {
     id: 'lipsync',
     title: 'تحريك الشفاه',
     description: 'طابق حركة الشفاه مع الصوت بدقة مذهلة',
@@ -259,7 +243,6 @@ const AI_TOOLS = [
     href: '/ai/lipsync',
     comingSoon: true
   }
- 
 ];
 
 export default function AIHomePage() {
@@ -278,24 +261,22 @@ export default function AIHomePage() {
     : AI_TOOLS.filter(tool => tool.category === selectedCategory);
 
   return (
-    <div className="h-full bg-[#000000] text-white selection:bg-blue-500/30 font-sans" dir="rtl">
+    <div className="h-full bg-[#000000] text-white selection:bg-blue-500/30 font-sans overflow-x-hidden" dir="rtl">
       {/* Dynamic Background */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-900/20 blur-[140px] rounded-full pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-900/20 blur-[140px] rounded-full pointer-events-none"></div>
+      <div className="fixed top-[-10%] left-[-10%] w-[80%] md:w-[60%] h-[60%] bg-blue-900/20 blur-[100px] md:blur-[140px] rounded-full pointer-events-none"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[80%] md:w-[60%] h-[60%] bg-purple-900/20 blur-[100px] md:blur-[140px] rounded-full pointer-events-none"></div>
 
       {/* Modern Header */}
-      <header className={`sticky top-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-black/80 backdrop-blur-2xl  py-3' : 'bg-transparent py-6'}`}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between">
+      <header className={`sticky top-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-black/80 backdrop-blur-2xl py-3 shadow-lg' : 'bg-transparent py-4 md:py-6'}`}>
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="flex items-center justify-between gap-4">
             <Link 
               href="/dashboard" 
-              className="px-6 py-2 rounded-full bg-white text-black text-sm font-black transition-all duration-300 hover:shadow-[0_15px_30px_-10px_rgba(255,255,255,0.4)] hover:scale-[1.03] active:scale-95 flex items-center gap-3 group relative overflow-hidden shadow-xl"
+              className="px-4 md:px-6 py-2 rounded-full bg-white text-black text-sm font-black transition-all duration-300 hover:shadow-[0_15px_30px_-10px_rgba(255,255,255,0.4)] hover:scale-[1.03] active:scale-95 flex items-center gap-2 md:gap-3 group relative overflow-hidden shadow-xl shrink-0"
             >
-              {/* Dynamic Sheen Effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              
-              <span className="relative z-10">عودة للرئيسية</span>
+              <span className="relative z-10 hidden sm:inline">عودة للرئيسية</span>
               <div className="relative z-10 flex items-center justify-center w-7 h-7 bg-black/[0.04] rounded-full group-hover:bg-black group-hover:text-white transition-all duration-300">
                 <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform duration-300" />
               </div>
@@ -316,118 +297,92 @@ export default function AIHomePage() {
                     >
                         <item.icon size={16} className={`transition-all duration-300 ${item.color} opacity-80 group-hover:opacity-100 group-hover:scale-110`} />
                         <span className="relative z-10">{item.name}</span>
-                        {/* Interactive Sheen */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     </Link>
                 ))}
-                
-                {/* Persistent Glowing Center Line (The "Board" effect) */}
                 <div className="absolute -bottom-[1px] left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/50 to-transparent shadow-[0_0_15px_rgba(255,255,255,0.4)]"></div>
             </nav>
 
-            <Link href="/dashboard" className="flex items-center gap-3 group">
-              {/* <div className="w-11 h-11 bg-white text-black rounded-2xl flex items-center justify-center shadow-xl group-hover:rotate-[10deg] transition-all duration-500">
-                <Sparkles size={24} fill="currentColor" />
-              </div> */}
-                            <span className="text-2xl font-black tracking-tighter">NEXUS TOOLZ AI</span>
-
-             <div className="relative w-fit rounded-full overflow-hidden">
-               <Image
-                src="/images/icon.png.png"
-                alt="Logo"
-                width={50}
-                height={50}
-                className="rounded-full"
-              />
-              <BorderBeam size={50} duration={1} className="rounded-full" />
-             </div>
+            <Link href="/dashboard" className="flex items-center gap-2 md:gap-3 group shrink-0">
+              <span className="text-lg md:text-2xl font-black tracking-tighter truncate max-w-[120px] md:max-w-none">NEXUS TOOLZ</span>
+              <div className="relative w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden shrink-0">
+                <Image
+                  src="/images/icon.png.png"
+                  alt="Logo"
+                  fill
+                  className="rounded-full object-cover"
+                />
+                <BorderBeam size={40} duration={1} className="rounded-full" />
+              </div>
             </Link>
           </div>
         </div>
       </header>
 
       {/* Hero Content */}
-      <section className="relative   overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6  text-center relative z-10">
-          
-          <h1 className="text-6xl mb-10 md:text-8xl font-black  leading-[1.1] tracking-tight">
-            {/* <span className="text-white block"> NEXUS AI</span> */}
-            <span className="bg-gradient-to-r py-5 from-blue-600 via-purple-400 to-emerald-700 bg-clip-text text-transparent bg-300% animate-gradient block">
+      <section className="relative overflow-hidden py-12 md:py-20">
+        <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
+          <h1 className="text-4xl md:text-8xl font-black leading-[1.2] md:leading-[1.1] tracking-tight mb-8">
+            <span className="bg-gradient-to-r py-3 md:py-5 from-blue-600 via-purple-400 to-emerald-700 bg-clip-text text-transparent bg-300% animate-gradient block">
                  NEXUS TOOLZ PRO
             </span>
           </h1>
-
-          <div className="text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto  h-16">
-            {/* @ts-ignore */}
+          <div className="text-lg md:text-2xl text-gray-500 max-w-2xl mx-auto h-20 md:h-16 px-4">
             <TextType 
                 text={["حول خيالك إلى حقيقة في ثوانٍ", "مستقبل الذكاء الاصطناعي الآن بين يديك"]}
                 typingSpeed={50}
                 loop={true}
             />
           </div>
-
-          
         </div>
       </section>
 
-      {/* Featured Tools - Full Image Boxes */}
-      <section className="max-w-7xl mx-auto px-6 ">
-         <div className="flex items-center justify-between mb-12">
-            <div className="flex items-center gap-4">
-                <div className="w-1.5 h-10 bg-blue-500 rounded-full"></div>
+      {/* Featured Tools */}
+      <section className="max-w-7xl mx-auto px-4 md:px-6">
+         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 md:mb-12 gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
+                <div className="w-1.5 h-8 md:h-10 bg-blue-500 rounded-full"></div>
                 <div>
-                    <h2 className="text-3xl font-black">الأدوات المميزة</h2>
-                    <p className="text-gray-500 text-sm mt-1">الأدوات الأكثر قوة وشهرة في الاستوديو</p>
+                    <h2 className="text-2xl md:text-3xl font-black">الأدوات المميزة</h2>
+                    <p className="text-gray-500 text-xs md:text-sm mt-1">الأدوات الأكثر قوة وشهرة</p>
                 </div>
             </div>
             <Link href="#all" className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">عرض كافة الأدوات</Link>
          </div>
 
-         <div className="grid  md:grid-cols-2 lg:grid-cols-3 gap-8">
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {featuredTools.map((tool) => (
                 <Link
                     key={tool.id}
                     href={tool.href}
-                    className="group relative h-[450px] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:border-white/30"
+                    className="group relative h-[350px] md:h-[450px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:border-white/30"
                 >
-                    {/* Background Image */}
                     <img 
                         src={tool.image} 
                         alt={tool.title} 
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 " 
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
                     />
-                    
-                    {/* Overlay Gradients */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
-                    {/* <div className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} mix-blend-multiply opacity-40 group-hover:opacity-60 transition-all duration-700`}></div> */}
-
-                    {/* Content */}
-                    <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                          {/* <div className="w-14 h-14 bg-white/10 backdrop-blur-2xl rounded-2xl flex items-center justify-center mb-6 border border-white/20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                              <tool.icon size={28} className="text-white" />
-                          </div> */}
-                        <h3 className="text-3xl font-black mb-3 text-white group-hover:translate-x-1 transition-transform">{tool.title}</h3>
-                        <p className="text-gray-300 text-sm leading-relaxed mb-6 line-clamp-2">{tool.description}</p>
-                        
-                        <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300 w-fit">
-                            <span className="text-xs font-black uppercase tracking-widest text-white/90">جرب الأداة الآن</span>
-                            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-                                <ArrowLeft size={12} className="group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end">
+                        <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-3 text-white group-hover:translate-x-1 transition-transform">{tool.title}</h3>
+                        <p className="text-gray-300 text-xs md:text-sm leading-relaxed mb-4 md:mb-6 line-clamp-2">{tool.description}</p>
+                        <div className="inline-flex items-center gap-3 px-4 md:px-5 py-2 md:py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300 w-fit">
+                            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/90">جرب الأداة الآن</span>
+                            <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                                <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
                             </div>
                         </div>
                     </div>
-
-                  
                 </Link>
             ))}
          </div>
       </section>
 
-      {/* Filtered Tools Library */}
-      <section id="all" className="max-w-7xl mx-auto px-6 py-20 pb-40">
-        <div className="text-center mb-16">
-            <h2 className="text-4xl font-black mb-10"> تصفح كامل الأدوات</h2>
-            <div className="relative inline-flex items-center gap-1 p-1.5 bg-black/60 backdrop-blur-3xl border border-white/10 rounded-full shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+      {/* All Tools Library */}
+      <section id="all" className="max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-20 pb-32">
+        <div className="text-center mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl font-black mb-8 md:mb-10"> تصفح كامل الأدوات</h2>
+            <div className="relative inline-flex flex-wrap justify-center items-center gap-2 p-1.5 bg-black/40 md:bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-full shadow-2xl">
                 {[
                     { id: 'all', name: 'عرض الكل', icon: Layers, color: 'text-purple-400' },
                     { id: 'image', name: 'أدوات الصور', icon: ImageIcon, color: 'text-blue-400' },
@@ -436,86 +391,55 @@ export default function AIHomePage() {
                     <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
-                        className={`group relative px-4 md:px-8 py-2.5 rounded-full text-sm font-bold transition-all duration-500 flex items-center gap-2 overflow-hidden ${
+                        className={`group relative px-4 md:px-8 py-2 md:py-2.5 rounded-xl md:rounded-full text-xs md:text-sm font-bold transition-all duration-500 flex items-center gap-2 overflow-hidden ${
                             selectedCategory === cat.id
                                 ? 'bg-white/10 text-white shadow-inner'
                                 : 'text-gray-400 hover:text-white'
                         }`}
                     >
-                        <cat.icon size={16} className={`transition-all duration-300 ${cat.color} ${selectedCategory === cat.id ? 'opacity-100 scale-110' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
+                        <cat.icon size={14} className={`transition-all duration-300 ${cat.color} ${selectedCategory === cat.id ? 'opacity-100 scale-110' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
                         <span className="relative z-10">{cat.name}</span>
-                        
-                        {/* Interactive Sheen */}
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     </button>
                 ))}
-
-                {/* Persistent Glowing Center Line (The "Board" effect) */}
-                <div className="absolute -bottom-[1px] left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/50 to-transparent shadow-[0_0_15px_rgba(255,255,255,0.4)]"></div>
+                <div className="absolute -bottom-[1px] left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/50 to-transparent shadow-[0_0_15px_rgba(255,255,255,0.4)] hidden md:block"></div>
             </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
             {filteredTools.map((tool) => {
                 const isComingSoon = tool.comingSoon;
                 return (
                     <div
                         key={tool.id}
-                        className={`group relative h-[300px] rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
-                            isComingSoon ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20'
+                        className={`group relative h-[250px] md:h-[300px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
+                            isComingSoon ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
                         }`}
                     >
                         {!isComingSoon ? (
                             <Link href={tool.href} className="absolute inset-0 z-10" />
                         ) : (
-                            <div className="absolute top-0 left-0 z-20 w-32 h-32 overflow-hidden pointer-events-none">
-                                <div className="absolute top-5 -left-10 w-40 bg-gradient-to-r from-emerald-600 via-teal-600 to-pink-600 backdrop-blur-xl text-white text-[10px] font-bold py-1.5 shadow-2xl transform -rotate-45 border-y border-white/10 flex justify-center items-center tracking-widest uppercase">
+                            <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
+                                <div className="absolute top-4 md:top-5 -left-8 md:-left-10 w-32 md:w-40 bg-gradient-to-r from-emerald-600 via-teal-600 to-pink-600 backdrop-blur-xl text-white text-[8px] md:text-[10px] font-bold py-1 shadow-2xl transform -rotate-45 border-y border-white/10 flex justify-center items-center tracking-widest uppercase">
                                     قريباً
                                 </div>
                             </div>
                         )}
-                        
                         <img 
                             src={tool.image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400'} 
                             alt={tool.title} 
-                            className="absolute w-full h-full object-cover transition-all duration-700 " 
+                            className="absolute w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
-
-                        <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                            <h3 className="text-lg font-bold mb-1 text-white">{tool.title}</h3>
-                            <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed">{tool.description}</p>
+                        <div className="absolute inset-0 p-4 md:p-6 flex flex-col justify-end">
+                            <h3 className="text-base md:text-lg font-bold mb-1 text-white">{tool.title}</h3>
+                            <p className="text-[9px] md:text-[10px] text-gray-400 line-clamp-2 leading-relaxed">{tool.description}</p>
                         </div>
                     </div>
                 );
             })}
         </div>
       </section>
-
-      {/* Footer CTA */}
-      {/* <div className="max-w-7xl mx-auto px-6 pb-24 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="relative overflow-hidden rounded-[3rem] bg-[#0a0a0a] border border-white/5 p-20 text-center shadow-2xl">
-          <div className="relative z-10 max-w-2xl mx-auto">
-            <h2 className="text-4xl md:text-5xl font-black mb-6 leading-tight">ابدأ في بناء <br/> مستقبلك الإبداعي</h2>
-            <p className="text-gray-500 mb-10 text-lg leading-relaxed">
-              انضم إلى آلاف المبدعين الذين يستخدمون نيكسوس يومياً لتوفير الوقت والجهد وتحقيق نتائج مذهلة.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                    href="/ai/plans"
-                    className="px-10 py-5 bg-white text-black rounded-2xl font-bold hover:scale-105 transition-all text-lg"
-                >
-                    ترقية حسابك للبرو
-                </Link>
-                <div className="flex items-center gap-3 px-6 py-4 bg-white/5 rounded-2xl border border-white/5">
-                    <Crown size={20} className="text-yellow-500" fill="currentColor" />
-                    <span className="text-sm font-bold text-gray-400">نيكسوس برو متاح الآن</span>
-                </div>
-            </div>
-          </div>
-        </div>
-      </div> */}
     </div>
   );
 }
