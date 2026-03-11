@@ -18,9 +18,10 @@ const Dashboard: FunctionComponent = () => {
   const { t } = useTranslation();
   const { data } = useMyInfo();
 
-  const [toolsData, setToolsData] = useState(global.globalAppsToolsData);
-  const [activeApp, setActiveApp] = useState<number>(global.activeTool);
-  const [isLoaded, setIsLoaded] = useState<boolean>(global.isLoaded);
+  const [activeApp, setActiveApp] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoaded, setIsLoaded] = useState<boolean | null>(null);
+  const [toolsData, setToolsData] = useState<any[]>([]);
 
   const [openErrorEx, setIsOpenErrorEx] = useState<boolean>(false);
 
@@ -35,12 +36,10 @@ const Dashboard: FunctionComponent = () => {
 
   const launchApp = async (tool_id: number) => {
     setActiveApp(tool_id);
-    global.activeTool = tool_id;
     setIsLoaded(null);
-    global.isLoaded = null;
     setIsOpenErrorModal(false);
     setErrorMessage(null);
-    global.isLoading = true;
+    setIsLoading(true);
 
     const token = localStorage.getItem("a");
 
@@ -67,20 +66,15 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
-        // Send message IMMEDIATELY like test-tool
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
-        
-        // Then update UI
         setIsLoaded(true);
-        global.isLoaded = true;
-        global.isLoading = false;
+        setIsLoading(false);
       }
     } catch (err) {
       setErrorMessage("Something went wrong, Please try again later.");
       setIsOpenErrorModal(true);
       setIsLoaded(false);
-      global.isLoaded = false;
-      global.isLoading = false;
+      setIsLoading(false);
     }
   };
 
@@ -89,14 +83,7 @@ const Dashboard: FunctionComponent = () => {
       <LaunchCard
         buttonId={item.buttonId}
         content={item.tool_content}
-        onClick={() => {
-          if (!global.isLoading) {
-            launchApp(item.tool_id);
-          } else {
-            setErrorMessage(t('subscriptions.waitForLoading'));
-            setIsOpenErrorModal(true);
-          }
-        }}
+        onClick={() => launchApp(item.tool_id)}
         activeApp={activeApp}
         isLoaded={isLoaded}
         key={item.tool_id}
@@ -177,35 +164,21 @@ const Dashboard: FunctionComponent = () => {
 
         return deduplicatedTools.length !== 0 && (
           <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {deduplicatedTools.map(
-              (index: any) =>
-                data?.toolsData?.find(
-                  (item: any) => item.tool_id == index.tool_id
-                ) && (
-                  <LaunchCard
-                    buttonId={getButtonId(data?.toolsData?.find((item: any) => item.tool_id == index.tool_id)?.tool_name)}
-                    onClick={() => {
-                      if (!global.isLoading) {
-                        launchApp(
-                          data?.toolsData?.find(
-                            (item: any) => item.tool_id == index.tool_id
-                          )?.tool_id
-                        );
-                      } else {
-                        setErrorMessage(t('subscriptions.waitForLoading'));
-                        setIsOpenErrorModal(true);
-                      }
-                    }}
-                    activeApp={activeApp}
-                    isLoaded={isLoaded}
-                    key={index?.users_tools_id}
-                    toolData={data?.toolsData?.find(
-                      (item: any) => item.tool_id == index.tool_id
-                    )}
-                    endedAt={index.endedAt}
-                  />
-                )
-            )}
+        {deduplicatedTools.map((userTool: any) => {
+          const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
+          if (!tool) return null;
+          return (
+            <LaunchCard
+              buttonId={getButtonId(tool.tool_name)}
+              onClick={() => launchApp(tool.tool_id)}
+              activeApp={activeApp}
+              isLoaded={isLoaded}
+              key={userTool?.users_tools_id}
+              toolData={tool}
+              endedAt={userTool.endedAt}
+            />
+          );
+        })}
           </div>
         );
       })()}
@@ -236,26 +209,22 @@ const Dashboard: FunctionComponent = () => {
               containerClassName="py-9 inner-shadow rounded-xl"
             >
               <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-                {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((c) =>
-                  data?.toolsData.find((d: any) => d.tool_id === c) &&
-                  <LaunchCard
-                    buttonId={getButtonId(data?.toolsData.find((d: any) => d.tool_id === c)?.tool_name)}
-                    content={data?.toolsData.find((d: any) => d.tool_id === c).tool_content}
-                    onClick={() => {
-                      if (!global.isLoading) {
-                        launchApp(data?.toolsData.find((d: any) => d.tool_id === c).tool_id);
-                      } else {
-                        setErrorMessage(t('subscriptions.waitForLoading'));
-                        setIsOpenErrorModal(true);
-                      }
-                    }}
-                    activeApp={activeApp}
-                    isLoaded={isLoaded}
-                    key={data?.toolsData.find((d: any) => d.tool_id === c).tool_id}
-                    toolData={data?.toolsData.find((d: any) => d.tool_id === c)}
-                    endedAt={data?.toolsData.find((d: any) => d.tool_id === c).endedAt}
-                  />
-                )}
+                {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((toolId: number) => {
+                  const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
+                  if (!tool) return null;
+                  return (
+                    <LaunchCard
+                      buttonId={getButtonId(tool.tool_name)}
+                      content={tool.tool_content}
+                      onClick={() => launchApp(tool.tool_id)}
+                      activeApp={activeApp}
+                      isLoaded={isLoaded}
+                      key={tool.tool_id}
+                      toolData={tool}
+                      endedAt={tool.endedAt}
+                    />
+                  );
+                })}
               </div>
             </Panel>
           </div>
