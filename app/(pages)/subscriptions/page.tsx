@@ -189,12 +189,9 @@ const Dashboard: FunctionComponent = () => {
                             <AlertTriangle className="text-amber-500" size={32} />
                         </div>
                         <div>
-                            <h3 className="text-xl md:text-2xl font-black text-amber-500 mb-1 tracking-tight">
+                            <h3 className="text-xl md:text-2xl font-black text-amber-500 tracking-tight">
                                 إذا لم تكن قمت بتنزيل الإضافة، يرجى تنزيلها وتثبيتها أولاً
                             </h3>
-                            <p className="text-white/70 text-sm md:text-base font-medium max-w-md leading-relaxed">
-                                لضمان عمل الأدوات المدفوعة وسحب الجلسات بشكل صحيح على متصفحك.
-                            </p>
                         </div>
                     </div>
 
