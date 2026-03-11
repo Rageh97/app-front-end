@@ -36,15 +36,20 @@ const Dashboard: FunctionComponent = () => {
           try { msg = JSON.parse(msg); } catch (e) {}
       }
 
-      // Old extension directly
-      if (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") {
-        setCanLaunch(true);
-      }
-      // New extension via script notification OR directly
-      if (msg?.type === 'NT_NEW_EXT_DETECTED' || (msg?.type === 'EXTENSION_CHECK' && msg?.extensionName)) {
+      // Check for detection from any of the valid sources
+      const isDetected = 
+        (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
+        (msg?.type === 'NT_NEW_EXT_DETECTED') ||
+        (msg?.type === 'EXTENSION_CHECK' && msg?.extensionName);
+
+      if (isDetected) {
         setCanLaunch(true);
       }
     };
+    
+    // Initial ping to catch already loaded extensions
+    window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+    
     window.addEventListener('message', handleExtMessage);
     return () => window.removeEventListener('message', handleExtMessage);
   }, []);
@@ -190,7 +195,16 @@ const Dashboard: FunctionComponent = () => {
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
             const requiredExtensions = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
-            window.addEventListener('message', (event) => {
+            function check() {
+                let msg = event.data;
+                if (typeof msg === 'string') {
+                    try { msg = JSON.parse(msg); } catch (e) {}
+                }
+                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.includes(msg.extensionName)) {
+                    window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
+                }
+            }
+            window.addEventListener('message', function(event) {
                 let msg = event.data;
                 if (typeof msg === 'string') {
                     try { msg = JSON.parse(msg); } catch (e) {}
@@ -199,9 +213,11 @@ const Dashboard: FunctionComponent = () => {
                     window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
                 }
             });
+            // Immediate check and interval
+            window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
             setInterval(() => {
                 window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-            }, 2000);
+            }, 1000);
         })();
       ` }} />
       <script type="text/am-vars" dangerouslySetInnerHTML={{ __html: `{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}` }} />
