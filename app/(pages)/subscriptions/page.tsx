@@ -11,7 +11,7 @@ import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useModal } from "@/components/providers/ModalProvider";
 import { getDangerActionConfirmationModal } from "@/components/Modals/DangerActionConfirmation";
 import DataStatsThree from "@/components/DataStats/DataStatsThree";
-import { Clock, ShipWheel, UserRound } from "lucide-react";
+import { Clock, ShipWheel, UserRound, AlertTriangle, Download, RefreshCw } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
 const Dashboard: FunctionComponent = () => {
@@ -97,9 +97,8 @@ const Dashboard: FunctionComponent = () => {
           }
       }
 
-      // Final check: if still not detected, show error and stop
+      // Final check: if still not detected, just stop. Banner at top will explain why.
       if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
-        setIsOpenErrorEx(true);
         return;
       }
 
@@ -176,6 +175,50 @@ const Dashboard: FunctionComponent = () => {
        <h2 className="w-full mt-10 px-20 font-bold md:px-40 py-3 md:py-4 text-xl md:text-4xl text-white bg-[linear-gradient(135deg,#4f008c,#190237,#190237)] gradient-border-3 rounded-xl text-center">
        {t("subscriptions.pageTitle")}
       </h2>
+
+      {/* Extension Not Detected Banner */}
+      {(!canLaunch && !(globalThis as any).NT_EXT_DETECTED) && (
+        <div className="w-full mt-8 px-4 md:px-10 animate-in fade-in slide-in-from-top duration-700">
+            <div className="relative overflow-hidden p-[2px] rounded-2xl bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.2)]">
+                <div className="relative bg-[#0f0221] p-6 rounded-[14px] flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
+                    {/* Background Glow */}
+                    <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+                    
+                    <div className="flex items-center gap-5 text-center md:text-start z-10">
+                        <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30 shadow-[0_0_15px_rgba(217,119,6,0.1)]">
+                            <AlertTriangle className="text-amber-500" size={32} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl md:text-2xl font-black text-amber-500 mb-1 uppercase tracking-tight">
+                                {t("subscriptions.extensionNotDetected")}
+                            </h3>
+                            <p className="text-white/70 text-sm md:text-base font-medium max-w-md leading-relaxed">
+                                Please install the Nexus Toolz Extension to safely launch and use your premium tools.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 z-10">
+                        <a 
+                            href="/Nexustoolz.com.zip" 
+                            download 
+                            className="group flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl transition-all duration-300 shadow-[0_5px_15px_rgba(217,119,6,0.3)] hover:scale-[1.05] active:scale-95"
+                        >
+                            <Download size={20} className="group-hover:animate-bounce" />
+                            DOWNLOAD EXTENSION
+                        </a>
+                        <button 
+                            onClick={() => window.location.reload()}
+                            className="p-4 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/10 shadow-xl"
+                            title="Refresh Page"
+                        >
+                            <RefreshCw size={20} className="active:rotate-180 transition-all duration-500" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
 
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
@@ -404,13 +447,6 @@ const Dashboard: FunctionComponent = () => {
         message={errorMessage}
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
-      />
-
-      <ToolErrorExtention
-        title={t('subscriptions.extensionNotDetected')}
-        message={""}
-        modalOpen={openErrorEx}
-        setModalOpen={setIsOpenErrorEx}
       />
     </>
   );
