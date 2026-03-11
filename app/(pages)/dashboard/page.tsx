@@ -162,8 +162,9 @@ const Dashboard: FunctionComponent = () => {
   useEffect(() => {
     const handleExtensionPing = (event: MessageEvent) => {
       if (
-        event.data?.type === "FROM_EXTENSION" &&
-        event.data?.data?.m === "Hello from the extension!"
+        (event.data?.type === "FROM_EXTENSION" &&
+        event.data?.data?.m === "Hello from the extension!") ||
+        event.data?.type === 'NT_NEW_EXT_DETECTED'
       ) {
         setExtensionDetected(true);
         global.freeToolsExtensionDetected = true;
@@ -704,9 +705,7 @@ useEffect(() => {
        
       {/* </div> */}
 
-      {/* ......... */}
-
-      <div className="flex flex-wrap w-full gap-6 justify-center px-3  md:px-0">
+      <div className="grid w-full gap-2 px-1 md:px-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))" }}>
   {isSearching ? (
     <div className="col-span-full text-center text-white">{t('dashboard.searching')}</div>
   ) : showNoResults ? (

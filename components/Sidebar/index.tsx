@@ -106,12 +106,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   return (
     <aside
       ref={sidebar}
-      className="fixed left-0 top-0 z-[999] hidden md:flex flex-col h-screen w-[80px] duration-300 ease-linear 
-      bg-gradient-to-b from-[#0f021b]/95 via-[#190237]/80 to-[#0f021b]/95 backdrop-blur-3xl border-r border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] 
-      pt-30 pb-5 overflow-visible items-center ring-1 ring-white/5"
+      className="fixed start-0 top-0 z-[999] hidden md:flex flex-col h-screen w-40 xl:w-44 duration-300 ease-linear 
+      bg-gradient-to-b from-[#0f021b]/95 via-[#190237]/80 to-[#0f021b]/95 backdrop-blur-3xl border-e border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] 
+      pt-30 pb-5 overflow-visible ring-1 ring-white/5"
     >
       {/* Shiny Glowing Border Effect */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 h-[70%] w-[1px] bg-gradient-to-b from-transparent via-[#ff7702] to-transparent opacity-80"></div>
+      <div className="absolute end-0 top-1/2 -translate-y-1/2 h-[70%] w-[1px] bg-gradient-to-b from-transparent via-[#ff7702] to-transparent opacity-80"></div>
       
       <div className="flex-1 w-full flex flex-col items-center gap-2 overflow-y-auto no-scrollbar">
          {SidebarContent}
@@ -152,6 +152,7 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
   children,
   icon,
   getIsActive,
+  name,
 }) => {
   const pathname = usePathname();
 
@@ -163,20 +164,23 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
     <Link
       href={completeHref}
       className={clsx(
-        "group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-500 ease-out",
+        "group relative flex items-center justify-start w-full px-2 h-12 gap-2 rounded-xl transition-all duration-500 ease-out",
         {
-          "bg-white/10 backdrop-blur-xl border border-white/20 text-emerald-500 inner-shadow shadow-[0_0_20px_rgba(255,255,255,0.3),inset_0_0_10px_rgba(255,255,255,0.05)] scale-110": isActive,
-          "text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:scale-105 border border-transparent hover:border-white/10": !isActive,
+          "bg-white/10 backdrop-blur-xl border border-white/20 text-emerald-500 inner-shadow shadow-[0_0_20px_rgba(255,255,255,0.3),inset_0_0_10px_rgba(255,255,255,0.05)] scale-[1.02]": isActive,
+          "text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:scale-[1.02] border border-transparent hover:border-white/10": !isActive,
         }
       )}
     >
-      <span className="relative z-10 transition-transform duration-300 group-hover:scale-110">
+      <span className="relative z-10 transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
         {icon}
+      </span>
+      <span className="relative z-10 font-medium whitespace-nowrap text-sm truncate">
+        {name}
       </span>
       
       {/* Animated glow on hover for non-active items */}
       {!isActive && (
-        <div className="absolute inset-0 rounded-2xl bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-90 group-hover:scale-100" />
+        <div className="absolute inset-0 rounded-2xl bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-95 group-hover:scale-100" />
       )}
     </Link>
   );
@@ -188,46 +192,22 @@ type SidebarMenuProps = {
 };
 
 const SidebarMenu: FunctionComponent<SidebarMenuProps> = ({ items, title }) => {
-  const [tooltip, setTooltip] = useState({ show: false, text: '', top: 0 });
-
   return (
-    <>
-      {tooltip.show && (
-        <div
-          className="fixed left-24 z-[1000] hidden md:flex bg-[#190237]/80 backdrop-blur-xl border border-white/10 text-white rounded-xl px-4 py-2 text-sm font-medium shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-opacity duration-200 pointer-events-none whitespace-nowrap"
-          style={{ top: `${tooltip.top}px`, transform: 'translateY(-50%)' }}
-        >
-          {tooltip.text}
-          {/* Arrow pointing to sidebar */}
-          <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 bg-[#190237]/80 backdrop-blur-xl border-l border-b border-white/10 transform rotate-45"></div>
-        </div>
-      )}
-
-      <div className="w-full flex py-5 flex-col items-center gap-3">
-        <ul className="flex flex-col items-center gap-3 w-full">
-          {items.map(
-            (item) =>
-              item.permission && (
-                <li
-                  className="relative group w-full flex justify-center"
-                  key={item.completeHref}
-                  onMouseEnter={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setTooltip({
-                      show: true,
-                      text: item.name || '',
-                      top: rect.top + rect.height / 2,
-                    });
-                  }}
-                  onMouseLeave={() => setTooltip({ ...tooltip, show: false })}
-                >
-                  <SidebarLink {...item}>{item.children}</SidebarLink>
-                </li>
-              )
-          )}
-        </ul>
-      </div>
-    </>
+    <div className="w-full flex py-5 flex-col gap-3 px-2 xl:px-3">
+      <ul className="flex flex-col gap-2 w-full text-base">
+        {items.map(
+          (item) =>
+            item.permission && (
+              <li
+                className="relative group w-full flex"
+                key={item.completeHref}
+              >
+                <SidebarLink {...item} name={item.name}>{item.children}</SidebarLink>
+              </li>
+            )
+        )}
+      </ul>
+    </div>
   );
 };
 

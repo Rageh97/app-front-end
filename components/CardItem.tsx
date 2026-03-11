@@ -39,7 +39,7 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
       onClick={() => {
         if (isStable) onClick();
       }}
-      className={`w-80 mb-5 cursor-pointer bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] border-2 border-[#ff7702] shadow-xl rounded-[20px] duration-500 hover:scale-95 hover:shadow-xl relative overflow-hidden ${
+      className={`w-full h-full mb-5 cursor-pointer bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] border-2 border-[#ff7702] shadow-xl rounded-[20px] duration-500 hover:scale-[1.03] hover:shadow-xl relative overflow-hidden ${
         !isStable ? "cursor-not-allowed" : ""
       }`}
     >
@@ -58,7 +58,7 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
         </div>
       )}
 
-      <div className={!isStable ? "filter blur-[2px] grayscale-[0.5]" : ""}>
+      <div className={`flex flex-col h-full w-full ${!isStable ? "filter blur-[2px] grayscale-[0.5]" : ""}`}>
         <div className="h-[230px]  flex justify-center items-center relative">
           <img
             src={
@@ -95,7 +95,7 @@ const CardItem: FunctionComponent<CardItemProps> = ({ toolData, onClick }) => {
           </div>
         </div>
 
-        <div className="w-full relative flex justify-center h-[125px]">
+        <div className="w-full relative flex justify-center h-[125px] mt-auto">
           <div className="absolute flex items-center justify-center gradient-border-3 text-3xl font-bold bottom-15 z-1 w-15 h-15 bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)] rounded-full text-black">
           <img src="/images/icon.png.png" alt="Sub Logo" className="w-full h-full object-contain" />
           </div>

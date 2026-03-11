@@ -5,6 +5,9 @@ import { CreditCard, ShieldCheck, Zap, CheckCircle2, X, Phone, ArrowLeft } from 
 import PayTabsPayment from "../Payments/PayTabsPayment";
 import { BorderBeam } from "../ui/border-beam";
 import Image from "next/image";
+import { useMyInfo } from "@/utils/user-info/getUserInfo";
+import axios from "axios";
+import { Loader2 } from "lucide-react";
 
 type Period = "month" | "year" | "day";
 
@@ -28,6 +31,37 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onBuySuccess,
 }) => {
   const { t } = useTranslation();
+  const { data: userInfo } = useMyInfo();
+  const isAdmin = userInfo?.userRole === "admin" || userInfo?.userRole === "manager";
+  const [isActivating, setIsActivating] = useState(false);
+
+  const handleAdminActivation = async () => {
+    try {
+      setIsActivating(true);
+      const token = localStorage.getItem("a");
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/direct-activate-subscription`,
+        {
+          period,
+          productType,
+          productId,
+        },
+        {
+          headers: {
+            Authorization: token,
+            "User-Client": (global as any).clientId1328 || "",
+          },
+        }
+      );
+      setModalOpen(false);
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to activate", error);
+      alert("Activation failed, please try again.");
+    } finally {
+      setIsActivating(false);
+    }
+  };
 
   return (
     <Transition.Root show={modalOpen} as={Fragment}>
@@ -140,6 +174,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                           Secured & Encrypted Transaction
                         </p>
                       </div>
+
+                      {isAdmin && (productType === "tool" || productType === "pack") && (
+                        <div className="mt-4 flex flex-col items-center">
+                          <button
+                            onClick={handleAdminActivation}
+                            disabled={isActivating}
+                            className={`w-full group relative flex items-center justify-center gap-3 py-4.5 rounded-xl font-black text-white text-lg overflow-hidden transition-all duration-500 ${
+                              isActivating
+                                ? "bg-purple-600/40 cursor-not-allowed"
+                                : "bg-purple-600 hover:bg-purple-700"
+                            }`}
+                          >
+                            {isActivating ? (
+                              <>
+                                <Loader2 size={20} className="animate-spin" />
+                                <span>جاري التفعيل...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Zap size={22} className="group-hover:scale-110 transition-transform" />
+                                تسجيل اشتراك مجاني (للمدير)
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

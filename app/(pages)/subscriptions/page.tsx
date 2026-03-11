@@ -29,13 +29,25 @@ const Dashboard: FunctionComponent = () => {
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
-  window.addEventListener('message', function (event) {
-    if (event.data.type === 'FROM_EXTENSION' && event.data.data.m === "Hello from the extension!") {
-      if (!canLaunch) {
-        setCanLaunch(true)
+  useEffect(() => {
+    const handleExtMessage = (event: MessageEvent) => {
+      // Old extension
+      if (event.data?.type === 'FROM_EXTENSION' && event.data?.data?.m === "Hello from the extension!") {
+        setCanLaunch(true);
       }
-    }
-  });
+      // New extension
+      if (event.data?.type === 'NT_NEW_EXT_DETECTED') {
+        setCanLaunch(true);
+      }
+    };
+    window.addEventListener('message', handleExtMessage, true);
+    return () => window.removeEventListener('message', handleExtMessage, true);
+  }, []);
+
+  const getButtonId = (toolName: string) => {
+    if (!toolName) return undefined;
+    return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
+  };
 
   const launchApp = async (tool_id: number) => {
     setActiveApp(tool_id);
@@ -118,6 +130,7 @@ const Dashboard: FunctionComponent = () => {
     } else {
       return (
         <LaunchCard
+          buttonId={item.buttonId}
           content={item.tool_content}
           onClick={() => {
             if (!global.isLoading) {
@@ -169,6 +182,29 @@ const Dashboard: FunctionComponent = () => {
        {t("subscriptions.pageTitle")}
       </h2>
 
+      <script dangerouslySetInnerHTML={{ __html: `
+        (function() {
+            const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+            const detectedExtensions = new Set();
+            window.addEventListener('message', (event) => {
+                let msg = event.data;
+                if (typeof msg === 'string') {
+                    try { msg = JSON.parse(msg); } catch (e) {}
+                }
+                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
+                    detectedExtensions.add(msg.extensionName);
+                    if (detectedExtensions.size === requiredExtensions.size) {
+                        window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
+                    }
+                }
+            });
+            setInterval(() => {
+                window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+            }, 2000);
+        })();
+      ` }} />
+      <script type="text/am-vars" dangerouslySetInnerHTML={{ __html: `{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}` }} />
+
   
     
    
@@ -199,6 +235,7 @@ const Dashboard: FunctionComponent = () => {
                   (item: any) => item.tool_id == index.tool_id
                 ) && (
                   <LaunchCard
+                    buttonId={getButtonId(data?.toolsData?.find((item: any) => item.tool_id == index.tool_id)?.tool_name)}
                     onClick={() => {
                       if (!global.isLoading) {
                         launchApp(
@@ -254,6 +291,7 @@ const Dashboard: FunctionComponent = () => {
                 {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((c) =>
                   data?.toolsData.find((d: any) => d.tool_id === c) &&
                   <LaunchCard
+                    buttonId={getButtonId(data?.toolsData.find((d: any) => d.tool_id === c)?.tool_name)}
                     content={data?.toolsData.find((d: any) => d.tool_id === c).tool_content}
                     onClick={() => {
                       if (!global.isLoading) {
@@ -325,13 +363,13 @@ const Dashboard: FunctionComponent = () => {
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
             {toolsData
               ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard(item))}
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
             {toolsData
               ?.filter((item: any) => item.tool_plan === "premium")
-              .map((item: any) => renderToolCard(item))}
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
             {toolsData
               ?.filter((item: any) => item.tool_plan === "vip")
-              .map((item: any) => renderToolCard(item))}
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -354,10 +392,10 @@ const Dashboard: FunctionComponent = () => {
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
             {toolsData
               ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard(item))}
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
             {toolsData
               ?.filter((item: any) => item.tool_plan === "premium")
-              .map((item: any) => renderToolCard(item))}
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -380,7 +418,7 @@ const Dashboard: FunctionComponent = () => {
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
             {toolsData
               ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard(item))}
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : (

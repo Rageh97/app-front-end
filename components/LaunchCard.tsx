@@ -12,6 +12,7 @@ interface LaunchCardProps {
   activeApp: number;
   isLoaded: boolean;
   content?: string;
+  buttonId?: string;
 }
 
 const LaunchCard: FunctionComponent<LaunchCardProps> = ({
@@ -21,6 +22,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
   activeApp,
   isLoaded,
   content,
+  buttonId,
 }) => {
   // Check if this is a cloud tool
   const isCloudTool = toolData?.tool_mode === "cloud";
@@ -48,8 +50,8 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
       <Link
         href={isStable ? `/cloud-tool?toolId=${toolData.tool_id}&toolName=${encodeURIComponent(toolData.tool_name)}&toolUrl=${encodeURIComponent(toolData.tool_url)}&toolDescription=${encodeURIComponent(content || "")}&toolImage=${encodeURIComponent(toolData.tool_image || "")}` : "#"}
         onClick={(e) => !isStable && e.preventDefault()}
-        className={`flex flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-[330px] gradient-border-3 relative rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden ${
-          isStable ? "cursor-pointer hover:scale-105 hover:shadow-xl" : "cursor-not-allowed"
+        className={`flex flex-col h-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden ${
+          isStable ? "cursor-pointer hover:scale-[1.03] hover:shadow-xl" : "cursor-not-allowed"
         }`}
       >
         {maintenanceOverlay}
@@ -91,11 +93,12 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
   // Regular tool (needs extension)
   return (
     <div
+      id={buttonId}
       onClick={() => {
         if (isStable) onClick();
       }}
-      className={`flex mt-5 flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-[330px] gradient-border-3 relative rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden ${
-        isStable ? "cursor-pointer hover:scale-105 hover:shadow-xl" : "cursor-not-allowed"
+      className={`flex mt-5 h-full flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden ${
+        isStable ? "cursor-pointer hover:scale-[1.03] hover:shadow-xl" : "cursor-not-allowed"
       }`}
     >
       {maintenanceOverlay}
@@ -121,7 +124,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
           </div>
         </div>
 
-        <div className="px-4 -mt-3 h-full rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)]">
+        <div className="px-4 -mt-3 h-full rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)] mt-auto flex flex-col justify-between">
           <p className="text-lg font-bold text-white truncate block capitalize">
             {toolData?.tool_name}
           </p>
