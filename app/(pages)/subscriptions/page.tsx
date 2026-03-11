@@ -76,7 +76,7 @@ const Dashboard: FunctionComponent = () => {
             setTimeout(() => {
                 window.removeEventListener('message', check);
                 resolve(false);
-            }, 500);
+            }, 1000);
         });
     }
 
