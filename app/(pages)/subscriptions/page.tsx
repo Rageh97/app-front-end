@@ -27,25 +27,6 @@ const Dashboard: FunctionComponent = () => {
   const [openErrorModal, setIsOpenErrorModal] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>(null);
 
-  const [canLaunch, setCanLaunch] = useState<boolean>(true);
-
-  useEffect(() => {
-    const handleExtMessage = (event: MessageEvent) => {
-      // In subscriptions, we use a modal, but let's at least log like test-tool
-      console.log('Message Received In Subscriptions:', event.data);
-      
-      let msg = event.data;
-      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
-      
-      const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
-      if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
-        setCanLaunch(true);
-      }
-    };
-    
-    window.addEventListener('message', handleExtMessage);
-    return () => window.removeEventListener('message', handleExtMessage);
-  }, []);
 
   const getButtonId = (toolName: string) => {
     if (!toolName) return undefined;
@@ -103,38 +84,26 @@ const Dashboard: FunctionComponent = () => {
     }
   };
 
-  // Helper function to render the appropriate card component
   const renderToolCard = (item: any) => {
-    if (item.tool_mode === "cloud") {
-      return (
-        <CloudLaunchCard
-          key={item.tool_id}
-          toolData={item}
-          endedAt={item.endedAt}
-          content={item.tool_content}
-        />
-      );
-    } else {
-      return (
-        <LaunchCard
-          buttonId={item.buttonId}
-          content={item.tool_content}
-          onClick={() => {
-            if (!global.isLoading) {
-              launchApp(item.tool_id);
-            } else {
-              setErrorMessage(t('subscriptions.waitForLoading'));
-              setIsOpenErrorModal(true);
-            }
-          }}
-          activeApp={activeApp}
-          isLoaded={isLoaded}
-          key={item.tool_id}
-          toolData={item}
-          endedAt={item.endedAt}
-        />
-      );
-    }
+    return (
+      <LaunchCard
+        buttonId={item.buttonId}
+        content={item.tool_content}
+        onClick={() => {
+          if (!global.isLoading) {
+            launchApp(item.tool_id);
+          } else {
+            setErrorMessage(t('subscriptions.waitForLoading'));
+            setIsOpenErrorModal(true);
+          }
+        }}
+        activeApp={activeApp}
+        isLoaded={isLoaded}
+        key={item.tool_id}
+        toolData={item}
+        endedAt={item.endedAt}
+      />
+    );
   };
 
   useEffect(() => {
