@@ -80,28 +80,30 @@ const Dashboard: FunctionComponent = () => {
     setErrorMessage(null);
     setIsLoading(true);
 
-    const token = localStorage.getItem("a");
-    if (!token) {
-      window.location.href = "/signin";
-      return;
-    }
-
-    let hasSucceeded = false;
-
-    // Start a background check for extension without blocking the API call
-    const extensionCheckPromise = (async () => {
-        if ((globalThis as any).NT_EXT_DETECTED || canLaunch) return true;
-        
-        window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-        // Wait up to 2.5 seconds for detection
-        for (let i = 0; i < 25; i++) {
-            if ((globalThis as any).NT_EXT_DETECTED || canLaunch || hasSucceeded) return true;
-            await new Promise(r => setTimeout(r, 100));
-        }
-        return false;
-    })();
-
     try {
+      const token = localStorage.getItem("a");
+      if (!token) {
+        window.location.href = "/signin";
+        return;
+      }
+
+      // Check for extension detection
+      if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
+          window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+          // Wait up to 1.5s for detection
+          for (let i = 0; i < 15; i++) {
+              if ((globalThis as any).NT_EXT_DETECTED || canLaunch) break;
+              await new Promise(r => setTimeout(r, 100));
+          }
+      }
+
+      // Final check: if still not detected, show error and stop
+      if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
+        setIsOpenErrorEx(true);
+        return;
+      }
+
+      // API call to get session
       const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
@@ -114,25 +116,17 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
-        hasSucceeded = true;
-        setIsOpenErrorEx(false);
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
         setIsLoaded(true);
-        setIsLoading(false);
+        setIsOpenErrorEx(false);
       }
     } catch (err) {
+      console.error("Launch Error:", err);
       setErrorMessage("Something went wrong, Please try again later.");
       setIsOpenErrorModal(true);
       setIsLoaded(false);
+    } finally {
       setIsLoading(false);
-      return; // Stop here if API failed
-    }
-
-    // After API call finishes (or reaches threshold), check if extension was ever found
-    const isDetected = await extensionCheckPromise;
-    if (!isDetected && !hasSucceeded) {
-        setIsOpenErrorEx(true);
-        setIsLoading(false);
     }
   };
 
