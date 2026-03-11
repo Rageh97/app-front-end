@@ -29,6 +29,41 @@ const Dashboard: FunctionComponent = () => {
   const [errorMessage, setErrorMessage] = useState<string>(null);
 
 
+  const [canLaunch, setCanLaunch] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleExtMessage = (event: MessageEvent) => {
+      let msg = event.data;
+      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
+      
+      const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+      if (
+        (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) ||
+        (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
+        (msg?.type === 'NT_NEW_EXT_DETECTED')
+      ) {
+        setCanLaunch(true);
+        (window as any).NT_EXT_DETECTED = true;
+      }
+    };
+    
+    window.addEventListener('message', handleExtMessage);
+    
+    // Check if orleady detected globally
+    if ((window as any).NT_EXT_DETECTED) setCanLaunch(true);
+
+    // Initial and periodic check
+    window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+    const interval = setInterval(() => {
+        window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+    }, 2000);
+
+    return () => {
+      window.removeEventListener('message', handleExtMessage);
+      clearInterval(interval);
+    };
+  }, []);
+
   const getButtonId = (toolName: string) => {
     if (!toolName) return undefined;
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
@@ -49,9 +84,13 @@ const Dashboard: FunctionComponent = () => {
     }
 
     /* 
-    Removed blocking extension check to match test-tool behavior. 
-    The extension will handle the message once the session is retrieved.
+    Check if extension is detected. If not, show the required modal.
     */
+    if (!canLaunch && !(window as any).NT_EXT_DETECTED) {
+      setIsOpenErrorEx(true);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
