@@ -31,17 +31,22 @@ const Dashboard: FunctionComponent = () => {
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
-      // Old extension
-      if (event.data?.type === 'FROM_EXTENSION' && event.data?.data?.m === "Hello from the extension!") {
+      let msg = event.data;
+      if (typeof msg === 'string') {
+          try { msg = JSON.parse(msg); } catch (e) {}
+      }
+
+      // Old extension directly
+      if (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") {
         setCanLaunch(true);
       }
-      // New extension
-      if (event.data?.type === 'NT_NEW_EXT_DETECTED') {
+      // New extension via script notification OR directly
+      if (msg?.type === 'NT_NEW_EXT_DETECTED' || (msg?.type === 'EXTENSION_CHECK' && msg?.extensionName)) {
         setCanLaunch(true);
       }
     };
-    window.addEventListener('message', handleExtMessage, true);
-    return () => window.removeEventListener('message', handleExtMessage, true);
+    window.addEventListener('message', handleExtMessage);
+    return () => window.removeEventListener('message', handleExtMessage);
   }, []);
 
   const getButtonId = (toolName: string) => {
@@ -184,18 +189,14 @@ const Dashboard: FunctionComponent = () => {
 
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
-            const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
-            const detectedExtensions = new Set();
+            const requiredExtensions = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
             window.addEventListener('message', (event) => {
                 let msg = event.data;
                 if (typeof msg === 'string') {
                     try { msg = JSON.parse(msg); } catch (e) {}
                 }
-                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
-                    detectedExtensions.add(msg.extensionName);
-                    if (detectedExtensions.size === requiredExtensions.size) {
-                        window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
-                    }
+                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.includes(msg.extensionName)) {
+                    window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
                 }
             });
             setInterval(() => {
