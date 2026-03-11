@@ -31,29 +31,20 @@ const Dashboard: FunctionComponent = () => {
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
+      // In subscriptions, we use a modal, but let's at least log like test-tool
+      console.log('Message Received In Subscriptions:', event.data);
+      
       let msg = event.data;
       if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
       
-      if (
-        (msg?.type === 'EXTENSION_CHECK') ||
-        (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
-        (msg?.type === 'NT_NEW_EXT_DETECTED')
-      ) {
+      const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+      if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
         setCanLaunch(true);
       }
     };
     
     window.addEventListener('message', handleExtMessage);
-    // Initial and periodic check
-    window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    const interval = setInterval(() => {
-      window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    }, 2000);
-
-    return () => {
-      window.removeEventListener('message', handleExtMessage);
-      clearInterval(interval);
-    };
+    return () => window.removeEventListener('message', handleExtMessage);
   }, []);
 
   const getButtonId = (toolName: string) => {
@@ -95,19 +86,20 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
+        // Send message IMMEDIATELY like test-tool
+        window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
+        
+        // Then update UI
         setIsLoaded(true);
         global.isLoaded = true;
         global.isLoading = false;
-        window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
       }
     } catch (err) {
-      setTimeout(() => {
-        setErrorMessage("Something went wrong, Please try again later.");
-        setIsOpenErrorModal(true);
-        setIsLoaded(false);
-        global.isLoaded = false;
-        global.isLoading = false;
-      }, 1000);
+      setErrorMessage("Something went wrong, Please try again later.");
+      setIsOpenErrorModal(true);
+      setIsLoaded(false);
+      global.isLoaded = false;
+      global.isLoading = false;
     }
   };
 
@@ -180,18 +172,14 @@ const Dashboard: FunctionComponent = () => {
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
             const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+            const detectedExtensions = new Set();
+
             window.addEventListener('message', (event) => {
-                let msg = event.data;
-                if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
-                
-                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
-                    // Update any global flags if necessary
-                    window.NT_EXT_DETECTED = true;
+                console.log('Message Received In Subscriptions Script:', event.data);
+                if (event.data && event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
+                    detectedExtensions.add(event.data.extensionName);
                 }
             });
-            setInterval(() => {
-                window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-            }, 2000);
         })();
       ` }} />
       <script type="text/am-vars" dangerouslySetInnerHTML={{ __html: `{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}` }} />

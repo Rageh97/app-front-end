@@ -92,17 +92,18 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
 
   // Regular tool (needs extension)
   return (
-    <div
+    <button
+      type="button"
       id={buttonId}
       onClick={() => {
         if (isStable) onClick();
       }}
-      className={`flex mt-5 h-full flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden ${
+      className={`flex mt-5 h-full flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden text-start ${
         isStable ? "cursor-pointer hover:scale-[1.03] hover:shadow-xl" : "cursor-not-allowed"
       }`}
     >
       {maintenanceOverlay}
-      <div className={`h-full flex flex-col ${!isStable ? "filter blur-[2px] grayscale-[0.5]" : ""}`}>
+      <div className={`h-full flex flex-col w-full ${!isStable ? "filter blur-[2px] grayscale-[0.5]" : ""}`}>
         <div className="h-[200px] flex justify-center items-center relative">
           <img
             src={
@@ -149,7 +150,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
           className="max-w-[22px] absolute bottom-[10px] right-[10px]"
         />
       )}
-    </div>
+    </button>
   );
 };
 
