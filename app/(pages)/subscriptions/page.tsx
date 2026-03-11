@@ -31,6 +31,43 @@ const Dashboard: FunctionComponent = () => {
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
+  useEffect(() => {
+    const handleExtMessage = (event: MessageEvent) => {
+      let msg = event.data;
+      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
+      
+      const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+      if (
+        (msg && msg.type === 'EXTENSION_CHECK' && (requiredExtensions.has(msg.extensionName) || msg.extensionName === "Free Tools")) ||
+        (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
+        (msg?.type === 'NT_NEW_EXT_DETECTED')
+      ) {
+        (globalThis as any).NT_EXT_DETECTED = true;
+        setCanLaunch(true);
+        setIsOpenErrorEx(false);
+      }
+    };
+    
+    window.addEventListener('message', handleExtMessage);
+    
+    // Check if already detected globally
+    if ((globalThis as any).NT_EXT_DETECTED) {
+        setCanLaunch(true);
+    }
+
+    // Interval pulse to keep extension awake/detected
+    const interval = setInterval(() => {
+        if (!(globalThis as any).NT_EXT_DETECTED) {
+            window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+        }
+    }, 1000);
+
+    return () => {
+      window.removeEventListener('message', handleExtMessage);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Removed passive listeners to prevent unexpected modal triggers.
   // We will check for extension directly in the launch flow.
 
@@ -39,11 +76,12 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
-  const launchApp = async (tool_id: number) => {
-    setActiveApp(tool_id);
+  const launchApp = async (toolId: number) => {
+    if (isLoading) return;
+    setActiveApp(toolId);
     setIsLoaded(null);
-    setIsOpenErrorEx(false);
     setIsOpenErrorModal(false);
+    setIsOpenErrorEx(false);
     setErrorMessage(null);
     setIsLoading(true);
 
@@ -55,32 +93,19 @@ const Dashboard: FunctionComponent = () => {
     }
 
     /* 
-    Active Extension Check:
-    We send a ping and wait for a very brief moment to see if someone answers.
+    Final check before API call.
+    Wait for background listener to confirm extension first.
     */
-    if (!(window as any).NT_EXT_DETECTED) {
+    if (!(globalThis as any).NT_EXT_DETECTED) {
         window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-        
-        // Wait up to 500ms for a response
-        await new Promise((resolve) => {
-            const check = (event: MessageEvent) => {
-                let msg = event.data;
-                if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
-                if (msg?.type === 'EXTENSION_CHECK' || msg?.type === 'NT_NEW_EXT_DETECTED' || (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!")) {
-                    (window as any).NT_EXT_DETECTED = true;
-                    window.removeEventListener('message', check);
-                    resolve(true);
-                }
-            };
-            window.addEventListener('message', check);
-            setTimeout(() => {
-                window.removeEventListener('message', check);
-                resolve(false);
-            }, 1000);
-        });
+        // Wait up to 1.2s, but check every 100ms to be faster
+        for (let i = 0; i < 12; i++) {
+            if ((globalThis as any).NT_EXT_DETECTED) break;
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
     }
 
-    if (!(window as any).NT_EXT_DETECTED) {
+    if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
       setIsOpenErrorEx(true);
       setIsLoading(false);
       return;
@@ -90,7 +115,7 @@ const Dashboard: FunctionComponent = () => {
       const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
-        toolId: tool_id,
+        toolId: toolId,
       }, {
         headers: {
           "Content-Type": "application/json",
