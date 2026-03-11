@@ -36,12 +36,11 @@ const Dashboard: FunctionComponent = () => {
       let msg = event.data;
       if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
       
-      const isDetected = 
+      if (
         (msg && msg.type === 'EXTENSION_CHECK') ||
         (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
-        (msg?.type === 'NT_NEW_EXT_DETECTED');
-
-      if (isDetected) {
+        (msg?.type === 'NT_NEW_EXT_DETECTED')
+      ) {
         (globalThis as any).NT_EXT_DETECTED = true;
         setCanLaunch(true);
         setIsOpenErrorEx(false);
@@ -55,7 +54,7 @@ const Dashboard: FunctionComponent = () => {
         if (!(globalThis as any).NT_EXT_DETECTED) {
             window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
         }
-    }, 1500);
+    }, 2000);
 
     return () => {
       window.removeEventListener('message', handleExtMessage);
@@ -87,20 +86,20 @@ const Dashboard: FunctionComponent = () => {
       return;
     }
 
-    // Persistent check: wait up to 2 seconds for detection
-    if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
+    let hasSucceeded = false;
+
+    // Start a background check for extension without blocking the API call
+    const extensionCheckPromise = (async () => {
+        if ((globalThis as any).NT_EXT_DETECTED || canLaunch) return true;
+        
         window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-        for (let i = 0; i < 20; i++) {
-            if ((globalThis as any).NT_EXT_DETECTED || canLaunch) break;
+        // Wait up to 2.5 seconds for detection
+        for (let i = 0; i < 25; i++) {
+            if ((globalThis as any).NT_EXT_DETECTED || canLaunch || hasSucceeded) return true;
             await new Promise(r => setTimeout(r, 100));
         }
-    }
-
-    if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
-      setIsOpenErrorEx(true);
-      setIsLoading(false);
-      return;
-    }
+        return false;
+    })();
 
     try {
       const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
@@ -115,6 +114,7 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
+        hasSucceeded = true;
         setIsOpenErrorEx(false);
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
         setIsLoaded(true);
@@ -125,6 +125,14 @@ const Dashboard: FunctionComponent = () => {
       setIsOpenErrorModal(true);
       setIsLoaded(false);
       setIsLoading(false);
+      return; // Stop here if API failed
+    }
+
+    // After API call finishes (or reaches threshold), check if extension was ever found
+    const isDetected = await extensionCheckPromise;
+    if (!isDetected && !hasSucceeded) {
+        setIsOpenErrorEx(true);
+        setIsLoading(false);
     }
   };
 
