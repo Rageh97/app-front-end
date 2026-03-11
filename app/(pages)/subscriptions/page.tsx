@@ -44,6 +44,7 @@ const Dashboard: FunctionComponent = () => {
       ) {
         setCanLaunch(true);
         (window as any).NT_EXT_DETECTED = true;
+        setIsOpenErrorEx(false);
       }
     };
     
@@ -72,6 +73,7 @@ const Dashboard: FunctionComponent = () => {
   const launchApp = async (tool_id: number) => {
     setActiveApp(tool_id);
     setIsLoaded(null);
+    setIsOpenErrorEx(false);
     setIsOpenErrorModal(false);
     setErrorMessage(null);
     setIsLoading(true);
@@ -85,7 +87,12 @@ const Dashboard: FunctionComponent = () => {
 
     /* 
     Check if extension is detected. If not, show the required modal.
+    We add a small delay to ensure detection has time to propagate.
     */
+    if (!canLaunch && !(window as any).NT_EXT_DETECTED) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
     if (!canLaunch && !(window as any).NT_EXT_DETECTED) {
       setIsOpenErrorEx(true);
       setIsLoading(false);
@@ -108,6 +115,7 @@ const Dashboard: FunctionComponent = () => {
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
         setIsLoaded(true);
         setIsLoading(false);
+        setIsOpenErrorEx(false);
       }
     } catch (err) {
       setErrorMessage("Something went wrong, Please try again later.");
