@@ -27,48 +27,29 @@ const Dashboard: FunctionComponent = () => {
   const [openErrorModal, setIsOpenErrorModal] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>(null);
 
-  const [canLaunch, setCanLaunch] = useState<boolean>(false);
+  const [canLaunch, setCanLaunch] = useState<boolean>(true);
 
   useEffect(() => {
-    // 1. Define the checker function
-    const checkExtensions = () => {
-      if (global.freeToolsExtensionDetected || window.NT_EXT_DETECTED === true) {
-        setCanLaunch(true);
-        return true;
-      }
-      return false;
-    };
-
-    // 2. Initial check
-    checkExtensions();
-
-    // 3. Listener for messages
     const handleExtMessage = (event: MessageEvent) => {
       let msg = event.data;
-      if (typeof msg === 'string') {
-          try { msg = JSON.parse(msg); } catch (e) {}
-      }
-
-      const isDetected = 
+      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
+      
+      if (
+        (msg?.type === 'EXTENSION_CHECK') ||
         (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
-        (msg?.type === 'NT_NEW_EXT_DETECTED') ||
-        (msg?.type === 'EXTENSION_CHECK' && msg?.extensionName);
-
-      if (isDetected) {
+        (msg?.type === 'NT_NEW_EXT_DETECTED')
+      ) {
         setCanLaunch(true);
-        window.NT_EXT_DETECTED = true; 
-        global.freeToolsExtensionDetected = true;
       }
     };
     
     window.addEventListener('message', handleExtMessage);
-    
-    // 4. Persistence Interval to catch detection at any time
-    const interval = setInterval(checkExtensions, 1000);
-    
-    // 5. Ping
+    // Initial and periodic check
     window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    
+    const interval = setInterval(() => {
+      window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+    }, 2000);
+
     return () => {
       window.removeEventListener('message', handleExtMessage);
       clearInterval(interval);
@@ -96,13 +77,10 @@ const Dashboard: FunctionComponent = () => {
       return;
     }
 
-    if (!canLaunch) {
-      setIsOpenErrorEx(true);
-      setIsLoaded(false);
-      global.isLoaded = false;
-      global.isLoading = false;
-      return
-    }
+    /* 
+    Removed blocking extension check to match test-tool behavior. 
+    The extension will handle the message once the session is retrieved.
+    */
 
     let data = {
       appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
@@ -215,22 +193,19 @@ const Dashboard: FunctionComponent = () => {
 
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
-            const requiredExtensions = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
-            window.addEventListener('message', function(event) {
+            const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
+            window.addEventListener('message', (event) => {
                 let msg = event.data;
-                if (typeof msg === 'string') {
-                    try { msg = JSON.parse(msg); } catch (e) {}
-                }
-                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.includes(msg.extensionName)) {
+                if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
+                
+                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
+                    // Update any global flags if necessary
                     window.NT_EXT_DETECTED = true;
-                    window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
                 }
             });
-            // Immediate check and interval
-            const pinger = setInterval(() => {
+            setInterval(() => {
                 window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-                if(window.NT_EXT_DETECTED) clearInterval(pinger);
-            }, 1000);
+            }, 2000);
         })();
       ` }} />
       <script type="text/am-vars" dangerouslySetInnerHTML={{ __html: `{"script-replaced-_menu-narrow":"1","script-replaced-_menu":"1"}` }} />
