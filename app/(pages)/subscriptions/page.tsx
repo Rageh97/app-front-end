@@ -30,13 +30,25 @@ const Dashboard: FunctionComponent = () => {
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
   useEffect(() => {
+    // 1. Define the checker function
+    const checkExtensions = () => {
+      if (global.freeToolsExtensionDetected || window.NT_EXT_DETECTED === true) {
+        setCanLaunch(true);
+        return true;
+      }
+      return false;
+    };
+
+    // 2. Initial check
+    checkExtensions();
+
+    // 3. Listener for messages
     const handleExtMessage = (event: MessageEvent) => {
       let msg = event.data;
       if (typeof msg === 'string') {
           try { msg = JSON.parse(msg); } catch (e) {}
       }
 
-      // Check for detection from any of the valid sources
       const isDetected = 
         (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
         (msg?.type === 'NT_NEW_EXT_DETECTED') ||
@@ -44,14 +56,23 @@ const Dashboard: FunctionComponent = () => {
 
       if (isDetected) {
         setCanLaunch(true);
+        window.NT_EXT_DETECTED = true; 
+        global.freeToolsExtensionDetected = true;
       }
     };
     
-    // Initial ping to catch already loaded extensions
+    window.addEventListener('message', handleExtMessage);
+    
+    // 4. Persistence Interval to catch detection at any time
+    const interval = setInterval(checkExtensions, 1000);
+    
+    // 5. Ping
     window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
     
-    window.addEventListener('message', handleExtMessage);
-    return () => window.removeEventListener('message', handleExtMessage);
+    return () => {
+      window.removeEventListener('message', handleExtMessage);
+      clearInterval(interval);
+    };
   }, []);
 
   const getButtonId = (toolName: string) => {
@@ -195,28 +216,20 @@ const Dashboard: FunctionComponent = () => {
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
             const requiredExtensions = ['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2'];
-            function check() {
-                let msg = event.data;
-                if (typeof msg === 'string') {
-                    try { msg = JSON.parse(msg); } catch (e) {}
-                }
-                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.includes(msg.extensionName)) {
-                    window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
-                }
-            }
             window.addEventListener('message', function(event) {
                 let msg = event.data;
                 if (typeof msg === 'string') {
                     try { msg = JSON.parse(msg); } catch (e) {}
                 }
                 if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.includes(msg.extensionName)) {
+                    window.NT_EXT_DETECTED = true;
                     window.postMessage({ type: 'NT_NEW_EXT_DETECTED' }, "*");
                 }
             });
             // Immediate check and interval
-            window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-            setInterval(() => {
+            const pinger = setInterval(() => {
                 window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+                if(window.NT_EXT_DETECTED) clearInterval(pinger);
             }, 1000);
         })();
       ` }} />
