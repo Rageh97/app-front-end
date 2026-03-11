@@ -118,12 +118,24 @@ const Dashboard: FunctionComponent = () => {
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
         setIsLoaded(true);
         setIsOpenErrorEx(false);
+        
+        // Reset state after 3 seconds to clear icons and allow re-click
+        setTimeout(() => {
+            setIsLoaded(null);
+            setActiveApp(null);
+        }, 3000);
       }
     } catch (err) {
       console.error("Launch Error:", err);
       setErrorMessage("Something went wrong, Please try again later.");
       setIsOpenErrorModal(true);
       setIsLoaded(false);
+
+      // Also reset after error
+      setTimeout(() => {
+          setIsLoaded(null);
+          setActiveApp(null);
+      }, 3000);
     } finally {
       setIsLoading(false);
     }
