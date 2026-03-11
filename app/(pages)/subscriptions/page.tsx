@@ -82,47 +82,33 @@ const Dashboard: FunctionComponent = () => {
     The extension will handle the message once the session is retrieved.
     */
 
-    let data = {
-      appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
-      token: token,
-      toolId: tool_id,
-    };
-
-    await axios
-      .post("https://api.nexustoolz.com/api/user/get-session", data, {
-
-        // .post("http://localhost:4560/api/user/get-session", data, {
+    try {
+      const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
+        appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
+        token: token,
+        toolId: tool_id,
+      }, {
         headers: {
           "Content-Type": "application/json",
-          "User-Client": global.clientId1328, // Custom header for visitorId
+          "User-Client": (globalThis as any).clientId1328 || "",
         },
-      })
-      .then((res) => {
-        if (res?.status === 200) {
-          setIsLoaded(true);
-          global.isLoaded = true;
-          global.isLoading = false;
-
-          // setTimeout(() => {
-
-          // window.open("/newsession", "_blank")
-
-          // Set a custom ID for the new window
-          window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
-
-
-          // }, 500);
-        }
-      })
-      .catch((error) => {
-        setTimeout(() => {
-          setErrorMessage("Something went wrong, Please try again later.");
-          setIsOpenErrorModal(true);
-          setIsLoaded(false);
-          global.isLoaded = false;
-          global.isLoading = false;
-        }, 1000);
       });
+
+      if (res?.status === 200) {
+        setIsLoaded(true);
+        global.isLoaded = true;
+        global.isLoading = false;
+        window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
+      }
+    } catch (err) {
+      setTimeout(() => {
+        setErrorMessage("Something went wrong, Please try again later.");
+        setIsOpenErrorModal(true);
+        setIsLoaded(false);
+        global.isLoaded = false;
+        global.isLoading = false;
+      }, 1000);
+    }
   };
 
   // Helper function to render the appropriate card component
