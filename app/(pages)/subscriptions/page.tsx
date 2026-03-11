@@ -36,12 +36,12 @@ const Dashboard: FunctionComponent = () => {
       let msg = event.data;
       if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
       
-      const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
-      if (
-        (msg && msg.type === 'EXTENSION_CHECK' && (requiredExtensions.has(msg.extensionName) || msg.extensionName === "Free Tools")) ||
+      const isDetected = 
+        (msg && msg.type === 'EXTENSION_CHECK') ||
         (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
-        (msg?.type === 'NT_NEW_EXT_DETECTED')
-      ) {
+        (msg?.type === 'NT_NEW_EXT_DETECTED');
+
+      if (isDetected) {
         (globalThis as any).NT_EXT_DETECTED = true;
         setCanLaunch(true);
         setIsOpenErrorEx(false);
@@ -49,18 +49,13 @@ const Dashboard: FunctionComponent = () => {
     };
     
     window.addEventListener('message', handleExtMessage);
-    
-    // Check if already detected globally
-    if ((globalThis as any).NT_EXT_DETECTED) {
-        setCanLaunch(true);
-    }
+    if ((globalThis as any).NT_EXT_DETECTED) setCanLaunch(true);
 
-    // Interval pulse to keep extension awake/detected
     const interval = setInterval(() => {
         if (!(globalThis as any).NT_EXT_DETECTED) {
             window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
         }
-    }, 1000);
+    }, 1500);
 
     return () => {
       window.removeEventListener('message', handleExtMessage);
@@ -78,30 +73,26 @@ const Dashboard: FunctionComponent = () => {
 
   const launchApp = async (toolId: number) => {
     if (isLoading) return;
+    
     setActiveApp(toolId);
     setIsLoaded(null);
-    setIsOpenErrorModal(false);
     setIsOpenErrorEx(false);
+    setIsOpenErrorModal(false);
     setErrorMessage(null);
     setIsLoading(true);
 
     const token = localStorage.getItem("a");
-
     if (!token) {
       window.location.href = "/signin";
       return;
     }
 
-    /* 
-    Final check before API call.
-    Wait for background listener to confirm extension first.
-    */
-    if (!(globalThis as any).NT_EXT_DETECTED) {
+    // Persistent check: wait up to 2 seconds for detection
+    if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
         window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-        // Wait up to 1.2s, but check every 100ms to be faster
-        for (let i = 0; i < 12; i++) {
-            if ((globalThis as any).NT_EXT_DETECTED) break;
-            await new Promise(resolve => setTimeout(resolve, 100));
+        for (let i = 0; i < 20; i++) {
+            if ((globalThis as any).NT_EXT_DETECTED || canLaunch) break;
+            await new Promise(r => setTimeout(r, 100));
         }
     }
 
@@ -124,10 +115,10 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
+        setIsOpenErrorEx(false);
         window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
         setIsLoaded(true);
         setIsLoading(false);
-        setIsOpenErrorEx(false);
       }
     } catch (err) {
       setErrorMessage("Something went wrong, Please try again later.");
@@ -187,12 +178,14 @@ const Dashboard: FunctionComponent = () => {
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
             const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
-            const detectedExtensions = new Set();
-
             window.addEventListener('message', (event) => {
-                console.log('Message Received In Subscriptions Script:', event.data);
-                if (event.data && event.data.type === 'EXTENSION_CHECK' && requiredExtensions.has(event.data.extensionName)) {
-                    detectedExtensions.add(event.data.extensionName);
+                let msg = event.data;
+                if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
+                if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
+                    window.NT_EXT_DETECTED = true;
+                }
+                if (msg && (msg.type === 'NT_NEW_EXT_DETECTED' || (msg.type === 'FROM_EXTENSION' && msg.data && msg.data.m === "Hello from the extension!"))) {
+                    window.NT_EXT_DETECTED = true;
                 }
             });
         })();
