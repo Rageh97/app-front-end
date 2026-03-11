@@ -31,39 +31,8 @@ const Dashboard: FunctionComponent = () => {
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
-  useEffect(() => {
-    const handleExtMessage = (event: MessageEvent) => {
-      let msg = event.data;
-      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
-      
-      const requiredExtensions = new Set(['Nexus Toolz Extension 1', 'Nexus Toolz Extension 2']);
-      if (
-        (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) ||
-        (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
-        (msg?.type === 'NT_NEW_EXT_DETECTED')
-      ) {
-        setCanLaunch(true);
-        (window as any).NT_EXT_DETECTED = true;
-        setIsOpenErrorEx(false);
-      }
-    };
-    
-    window.addEventListener('message', handleExtMessage);
-    
-    // Check if orleady detected globally
-    if ((window as any).NT_EXT_DETECTED) setCanLaunch(true);
-
-    // Initial and periodic check
-    window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    const interval = setInterval(() => {
-        window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
-    }, 2000);
-
-    return () => {
-      window.removeEventListener('message', handleExtMessage);
-      clearInterval(interval);
-    };
-  }, []);
+  // Removed passive listeners to prevent unexpected modal triggers.
+  // We will check for extension directly in the launch flow.
 
   const getButtonId = (toolName: string) => {
     if (!toolName) return undefined;
@@ -86,14 +55,32 @@ const Dashboard: FunctionComponent = () => {
     }
 
     /* 
-    Check if extension is detected. If not, show the required modal.
-    We add a small delay to ensure detection has time to propagate.
+    Active Extension Check:
+    We send a ping and wait for a very brief moment to see if someone answers.
     */
-    if (!canLaunch && !(window as any).NT_EXT_DETECTED) {
-      await new Promise(resolve => setTimeout(resolve, 300));
+    if (!(window as any).NT_EXT_DETECTED) {
+        window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
+        
+        // Wait up to 500ms for a response
+        await new Promise((resolve) => {
+            const check = (event: MessageEvent) => {
+                let msg = event.data;
+                if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
+                if (msg?.type === 'EXTENSION_CHECK' || msg?.type === 'NT_NEW_EXT_DETECTED' || (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!")) {
+                    (window as any).NT_EXT_DETECTED = true;
+                    window.removeEventListener('message', check);
+                    resolve(true);
+                }
+            };
+            window.addEventListener('message', check);
+            setTimeout(() => {
+                window.removeEventListener('message', check);
+                resolve(false);
+            }, 500);
+        });
     }
 
-    if (!canLaunch && !(window as any).NT_EXT_DETECTED) {
+    if (!(window as any).NT_EXT_DETECTED) {
       setIsOpenErrorEx(true);
       setIsLoading(false);
       return;
