@@ -286,39 +286,49 @@ const Dashboard: FunctionComponent = () => {
       {(() => {
         if (!data?.toolsData) return null;
 
-        // 1. Identify all Tool Names the user has access to
+        // Step 1: Find the names of tools the user has actual access to
+        // (by direct purchase OR by plan level)
         const userPlanLevels = data?.userPlansData?.map((p: any) => p.plan_name) || [];
-        const individualToolIds = data?.userToolsData?.map((ut: any) => ut.tool_id) || [];
+        const individualToolIds = data?.userToolsData?.map((ut: any) => Number(ut.tool_id)) || [];
         
         const accessibleNames = new Set<string>();
         
+        // A tool is "accessible by the user" if they bought it or their plan covers it
         data.toolsData.forEach((t: any) => {
-            let hasAccess = individualToolIds.includes(t.tool_id);
+            let hasAccess = individualToolIds.includes(Number(t.tool_id));
             if (!hasAccess) {
                 if (userPlanLevels.includes("vip")) hasAccess = true;
                 else if (userPlanLevels.includes("premium")) hasAccess = (t.tool_plan === "standard" || t.tool_plan === "premium");
                 else if (userPlanLevels.includes("standard")) hasAccess = (t.tool_plan === "standard");
             }
-
             if (hasAccess) {
                 accessibleNames.add(t.tool_name.trim().toLowerCase());
             }
         });
 
-        // 2. For each accessible name, find ALL matching tools in the system
+        // Step 2: For each accessible NAME, grab ALL tools in the system with that name
+        // (even clones/duplicates the user is not directly subscribed to)
+        const processedNames = new Set<string>();
         const finalGroupedTools: any[] = [];
+        
         accessibleNames.forEach(name => {
-            const allMatchingTools = data.toolsData.filter((t: any) => t.tool_name.trim().toLowerCase() === name);
+            if (processedNames.has(name)) return;
+            processedNames.add(name);
+            
+            // Find ALL tools in the entire system with this same name
+            const allMatchingTools = data.toolsData.filter(
+                (t: any) => t.tool_name.trim().toLowerCase() === name
+            );
             
             if (allMatchingTools.length > 1) {
-                // It's a Multi-Account Tool
+                // Multiple tools with the same name = Multi-Account
                 finalGroupedTools.push({
                     ...allMatchingTools[0],
                     isGroup: true,
                     accounts: allMatchingTools
                 });
             } else if (allMatchingTools.length === 1) {
-                // Single Account
+                // Only one tool with this name = single account
                 finalGroupedTools.push({
                     ...allMatchingTools[0],
                     isGroup: false
