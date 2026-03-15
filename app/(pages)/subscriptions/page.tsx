@@ -443,12 +443,29 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "premium")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+                {(() => {
+                    const planTools = [
+                        ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
+                        ...(toolsData?.filter((item: any) => item.tool_plan === "premium") || [])
+                    ];
+                    
+                    const groups = new Map();
+                    planTools.forEach(tool => {
+                        const groupName = tool.tool_name.trim().toLowerCase();
+                        if (!groups.has(groupName)) {
+                            groups.set(groupName, { ...tool, accounts: [tool] });
+                        } else {
+                            groups.get(groupName).accounts.push(tool);
+                        }
+                    });
+
+                    return Array.from(groups.values()).map((group: any) => {
+                        if (group.accounts.length > 1) {
+                            return renderToolCard({ ...group, isGroup: true });
+                        }
+                        return renderToolCard(group.accounts[0]);
+                    });
+                })()}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -469,9 +486,28 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+                {(() => {
+                    const planTools = [
+                        ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || [])
+                    ];
+                    
+                    const groups = new Map();
+                    planTools.forEach(tool => {
+                        const groupName = tool.tool_name.trim().toLowerCase();
+                        if (!groups.has(groupName)) {
+                            groups.set(groupName, { ...tool, accounts: [tool] });
+                        } else {
+                            groups.get(groupName).accounts.push(tool);
+                        }
+                    });
+
+                    return Array.from(groups.values()).map((group: any) => {
+                        if (group.accounts.length > 1) {
+                            return renderToolCard({ ...group, isGroup: true });
+                        }
+                        return renderToolCard(group.accounts[0]);
+                    });
+                })()}
           </div>
         </Panel>
       ) : (
