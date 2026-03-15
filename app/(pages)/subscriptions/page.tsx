@@ -75,6 +75,26 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
+  const groupTools = (toolsArray: any[]) => {
+    const groups = new Map();
+    toolsArray.forEach(tool => {
+        if (!tool) return;
+        const groupName = tool.tool_name.trim().toLowerCase();
+        if (!groups.has(groupName)) {
+            groups.set(groupName, { ...tool, accounts: [tool] });
+        } else {
+            groups.get(groupName).accounts.push(tool);
+        }
+    });
+
+    return Array.from(groups.values()).map((group: any) => {
+        if (group.accounts.length > 1) {
+            return { ...group, isGroup: true };
+        }
+        return { ...group.accounts[0], isGroup: false };
+    });
+  };
+
   const launchApp = async (toolId: number) => {
     if (isLoading) return;
     
@@ -270,31 +290,18 @@ const Dashboard: FunctionComponent = () => {
 
       {/* <DataStatsThree /> */}
 
-      {/* Individual Tools Section - Deduplicated */}
+      {/* Individual Tools Section - Grouped */}
       {(() => {
-        const toolGroups = new Map();
-        data?.userToolsData?.forEach((userTool: any) => {
+        const individualTools = data?.userToolsData?.map((userTool: any) => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
-          if (!tool) return;
-          
-          const groupName = tool.tool_name.trim().toLowerCase();
-          if (!toolGroups.has(groupName)) {
-            toolGroups.set(groupName, { ...tool, accounts: [{...tool, endedAt: userTool.endedAt}] });
-          } else {
-            toolGroups.get(groupName).accounts.push({ ...tool, endedAt: userTool.endedAt });
-          }
-        });
+          return tool ? { ...tool, endedAt: userTool.endedAt } : null;
+        }).filter(Boolean);
 
-        const deduplicatedTools = Array.from(toolGroups.values()).map(group => {
-            if (group.accounts.length > 1) {
-                return { ...group, isGroup: true };
-            }
-            return { ...group.accounts[0], isGroup: false };
-        });
+        const grouped = groupTools(individualTools || []);
 
-        return deduplicatedTools.length !== 0 && (
+        return grouped.length !== 0 && (
           <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {deduplicatedTools.map((tool: any) => renderToolCard(tool))}
+            {grouped.map((tool: any) => renderToolCard(tool))}
           </div>
         );
       })()}
@@ -403,27 +410,12 @@ const Dashboard: FunctionComponent = () => {
                 {(() => {
                     const planTools = [
                         ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
-                        ...(data?.userPlansData?.some((p: any) => p.plan_name === "premium" || p.plan_name === "vip") ? toolsData?.filter((item: any) => item.tool_plan === "premium") : []),
-                        ...(data?.userPlansData?.some((p: any) => p.plan_name === "vip") ? toolsData?.filter((item: any) => item.tool_plan === "vip") : [])
+                        ...(toolsData?.filter((item: any) => item.tool_plan === "premium") || []),
+                        ...(toolsData?.filter((item: any) => item.tool_plan === "vip") || [])
                     ];
-                    
-                    const groups = new Map();
-                    planTools.forEach(tool => {
-                        if (!groups.has(tool.tool_name)) {
-                            groups.set(tool.tool_name, { ...tool, accounts: [tool] });
-                        } else {
-                            groups.get(tool.tool_name).accounts.push(tool);
-                        }
-                    });
-
-                    return Array.from(groups.values()).map(group => {
-                        if (group.accounts.length > 1) {
-                            return renderToolCard({ ...group, isGroup: true });
-                        }
-                        return renderToolCard(group.accounts[0]);
-                    });
+                    return groupTools(planTools).map((tool: any) => renderToolCard(tool));
                 })()}
-              </div>
+          </div>
         </Panel>
       ) : data?.userPlansData?.filter(
         (item: any) => item.plan_name === "premium"
@@ -448,23 +440,7 @@ const Dashboard: FunctionComponent = () => {
                         ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
                         ...(toolsData?.filter((item: any) => item.tool_plan === "premium") || [])
                     ];
-                    
-                    const groups = new Map();
-                    planTools.forEach(tool => {
-                        const groupName = tool.tool_name.trim().toLowerCase();
-                        if (!groups.has(groupName)) {
-                            groups.set(groupName, { ...tool, accounts: [tool] });
-                        } else {
-                            groups.get(groupName).accounts.push(tool);
-                        }
-                    });
-
-                    return Array.from(groups.values()).map((group: any) => {
-                        if (group.accounts.length > 1) {
-                            return renderToolCard({ ...group, isGroup: true });
-                        }
-                        return renderToolCard(group.accounts[0]);
-                    });
+                    return groupTools(planTools).map((tool: any) => renderToolCard(tool));
                 })()}
           </div>
         </Panel>
@@ -487,26 +463,8 @@ const Dashboard: FunctionComponent = () => {
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
                 {(() => {
-                    const planTools = [
-                        ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || [])
-                    ];
-                    
-                    const groups = new Map();
-                    planTools.forEach(tool => {
-                        const groupName = tool.tool_name.trim().toLowerCase();
-                        if (!groups.has(groupName)) {
-                            groups.set(groupName, { ...tool, accounts: [tool] });
-                        } else {
-                            groups.get(groupName).accounts.push(tool);
-                        }
-                    });
-
-                    return Array.from(groups.values()).map((group: any) => {
-                        if (group.accounts.length > 1) {
-                            return renderToolCard({ ...group, isGroup: true });
-                        }
-                        return renderToolCard(group.accounts[0]);
-                    });
+                    const planTools = toolsData?.filter((item: any) => item.tool_plan === "standard") || [];
+                    return groupTools(planTools).map((tool: any) => renderToolCard(tool));
                 })()}
           </div>
         </Panel>
