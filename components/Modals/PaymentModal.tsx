@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 
 type Period = "month" | "year" | "day";
 
@@ -54,10 +55,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         }
       );
       setModalOpen(false);
-      window.location.reload();
+      toast.success("تم تفعيل الاشتراك بنجاح! ", {
+        duration: 3000,
+        position: "top-center",
+        style: {
+          background: "#1a1129",
+          color: "#fff",
+          border: "1px solid rgba(255,255,255,0.1)",
+        },
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.error("Failed to activate", error);
-      alert("Activation failed, please try again.");
+      toast.error("فشل التفعيل، حاول تاني يا هندسة.");
     } finally {
       setIsActivating(false);
     }
@@ -175,7 +187,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         </p>
                       </div>
 
-                      {isAdmin && (productType === "tool" || productType === "pack") && (
+                      {isAdmin && (productType === "tool" || productType === "pack" || productType === "credits") && (
                         <div className="mt-4 flex flex-col items-center">
                           <button
                             onClick={handleAdminActivation}

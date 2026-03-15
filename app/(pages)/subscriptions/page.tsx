@@ -8,6 +8,7 @@ import ToolErrorModal from "@/components/Modals/ToolErrorModal";
 import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
 import Panel from "@/components/Panel";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
+import MultiAccountModal from "@/components/Modals/MultiAccountModal";
 import { useModal } from "@/components/providers/ModalProvider";
 import { getDangerActionConfirmationModal } from "@/components/Modals/DangerActionConfirmation";
 import DataStatsThree from "@/components/DataStats/DataStatsThree";
@@ -30,6 +31,10 @@ const Dashboard: FunctionComponent = () => {
 
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
+
+  // Multi-Account States
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [selectedToolGroup, setSelectedToolGroup] = useState<{name: string, accounts: any[]}>({name: "", accounts: []});
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -141,15 +146,23 @@ const Dashboard: FunctionComponent = () => {
     }
   };
 
-  const renderToolCard = (item: any) => {
+  const renderToolCard = (item: any, forceToolId?: number) => {
     return (
       <LaunchCard
-        buttonId={item.buttonId}
+        buttonId={item.buttonId || getButtonId(item.tool_name)}
         content={item.tool_content}
-        onClick={() => launchApp(item.tool_id)}
+        onClick={() => {
+            // Check if this item is actually a group from our new logic
+            if (item.isGroup) {
+                setSelectedToolGroup({ name: item.tool_name, accounts: item.accounts });
+                setIsAccountModalOpen(true);
+            } else {
+                launchApp(forceToolId || item.tool_id);
+            }
+        }}
         activeApp={activeApp}
         isLoaded={isLoaded}
-        key={item.tool_id}
+        key={forceToolId || item.tool_id}
         toolData={item}
         endedAt={item.endedAt}
       />
@@ -259,32 +272,28 @@ const Dashboard: FunctionComponent = () => {
 
       {/* Individual Tools Section - Deduplicated */}
       {(() => {
-        const uniqueTools = new Map();
-        data?.userToolsData?.forEach((tool: any) => {
-          const existing = uniqueTools.get(tool.tool_id);
-          if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
-            uniqueTools.set(tool.tool_id, tool);
+        const toolGroups = new Map();
+        data?.userToolsData?.forEach((userTool: any) => {
+          const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
+          if (!tool) return;
+          
+          if (!toolGroups.has(tool.tool_name)) {
+            toolGroups.set(tool.tool_name, { ...tool, accounts: [{...tool, endedAt: userTool.endedAt}] });
+          } else {
+            toolGroups.get(tool.tool_name).accounts.push({ ...tool, endedAt: userTool.endedAt });
           }
         });
-        const deduplicatedTools = Array.from(uniqueTools.values());
+
+        const deduplicatedTools = Array.from(toolGroups.values()).map(group => {
+            if (group.accounts.length > 1) {
+                return { ...group, isGroup: true };
+            }
+            return { ...group.accounts[0], isGroup: false };
+        });
 
         return deduplicatedTools.length !== 0 && (
           <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-        {deduplicatedTools.map((userTool: any) => {
-          const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
-          if (!tool) return null;
-          return (
-            <LaunchCard
-              buttonId={getButtonId(tool.tool_name)}
-              onClick={() => launchApp(tool.tool_id)}
-              activeApp={activeApp}
-              isLoaded={isLoaded}
-              key={userTool?.users_tools_id}
-              toolData={tool}
-              endedAt={userTool.endedAt}
-            />
-          );
-        })}
+            {deduplicatedTools.map((tool: any) => renderToolCard(tool))}
           </div>
         );
       })()}
@@ -315,22 +324,27 @@ const Dashboard: FunctionComponent = () => {
               containerClassName="py-9 inner-shadow rounded-xl"
             >
               <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-                {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((toolId: number) => {
-                  const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
-                  if (!tool) return null;
-                  return (
-                    <LaunchCard
-                      buttonId={getButtonId(tool.tool_name)}
-                      content={tool.tool_content}
-                      onClick={() => launchApp(tool.tool_id)}
-                      activeApp={activeApp}
-                      isLoaded={isLoaded}
-                      key={tool.tool_id}
-                      toolData={tool}
-                      endedAt={tool.endedAt}
-                    />
-                  );
-                })}
+                {(() => {
+                    const packTools = JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]') as number[];
+                    const groups = new Map();
+                    
+                    packTools.forEach(toolId => {
+                        const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
+                        if (!tool) return;
+                        if (!groups.has(tool.tool_name)) {
+                            groups.set(tool.tool_name, { ...tool, accounts: [tool] });
+                        } else {
+                            groups.get(tool.tool_name).accounts.push(tool);
+                        }
+                    });
+
+                    return Array.from(groups.values()).map(group => {
+                        if (group.accounts.length > 1) {
+                            return renderToolCard({ ...group, isGroup: true });
+                        }
+                        return renderToolCard(group.accounts[0]);
+                    });
+                })()}
               </div>
             </Panel>
           </div>
@@ -384,16 +398,30 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "premium")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "vip")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
-          </div>
+                {(() => {
+                    const planTools = [
+                        ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
+                        ...(data?.userPlansData?.some((p: any) => p.plan_name === "premium" || p.plan_name === "vip") ? toolsData?.filter((item: any) => item.tool_plan === "premium") : []),
+                        ...(data?.userPlansData?.some((p: any) => p.plan_name === "vip") ? toolsData?.filter((item: any) => item.tool_plan === "vip") : [])
+                    ];
+                    
+                    const groups = new Map();
+                    planTools.forEach(tool => {
+                        if (!groups.has(tool.tool_name)) {
+                            groups.set(tool.tool_name, { ...tool, accounts: [tool] });
+                        } else {
+                            groups.get(tool.tool_name).accounts.push(tool);
+                        }
+                    });
+
+                    return Array.from(groups.values()).map(group => {
+                        if (group.accounts.length > 1) {
+                            return renderToolCard({ ...group, isGroup: true });
+                        }
+                        return renderToolCard(group.accounts[0]);
+                    });
+                })()}
+              </div>
         </Panel>
       ) : data?.userPlansData?.filter(
         (item: any) => item.plan_name === "premium"
@@ -456,6 +484,14 @@ const Dashboard: FunctionComponent = () => {
         message={errorMessage}
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
+      />
+
+      <MultiAccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        toolName={selectedToolGroup.name}
+        accounts={selectedToolGroup.accounts}
+        onSelect={(toolId) => launchApp(toolId)}
       />
     </>
   );
