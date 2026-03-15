@@ -171,7 +171,7 @@ const Dashboard: FunctionComponent = () => {
 
   useEffect(() => {
     document.title = 'Subscriptions';
-    if (!toolsData) {
+    if (data?.toolsData && toolsData.length === 0) {
       let dataTools = [...data.toolsData];
       setToolsData(
         dataTools.sort((a, b) => {
@@ -179,7 +179,7 @@ const Dashboard: FunctionComponent = () => {
         })
       );
     }
-  }, []);
+  }, [data]);
 
   const { open: openNewUpdate } = useModal(
     getDangerActionConfirmationModal({
@@ -277,10 +277,11 @@ const Dashboard: FunctionComponent = () => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
           if (!tool) return;
           
-          if (!toolGroups.has(tool.tool_name)) {
-            toolGroups.set(tool.tool_name, { ...tool, accounts: [{...tool, endedAt: userTool.endedAt}] });
+          const groupName = tool.tool_name.trim().toLowerCase();
+          if (!toolGroups.has(groupName)) {
+            toolGroups.set(groupName, { ...tool, accounts: [{...tool, endedAt: userTool.endedAt}] });
           } else {
-            toolGroups.get(tool.tool_name).accounts.push({ ...tool, endedAt: userTool.endedAt });
+            toolGroups.get(groupName).accounts.push({ ...tool, endedAt: userTool.endedAt });
           }
         });
 
@@ -325,20 +326,21 @@ const Dashboard: FunctionComponent = () => {
             >
               <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
                 {(() => {
-                    const packTools = JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]') as number[];
+                    const packToolsData = JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]') as number[];
                     const groups = new Map();
                     
-                    packTools.forEach(toolId => {
+                    packToolsData.forEach(toolId => {
                         const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
                         if (!tool) return;
-                        if (!groups.has(tool.tool_name)) {
-                            groups.set(tool.tool_name, { ...tool, accounts: [tool] });
+                        const groupName = tool.tool_name.trim().toLowerCase();
+                        if (!groups.has(groupName)) {
+                            groups.set(groupName, { ...tool, accounts: [tool] });
                         } else {
-                            groups.get(tool.tool_name).accounts.push(tool);
+                            groups.get(groupName).accounts.push(tool);
                         }
                     });
 
-                    return Array.from(groups.values()).map(group => {
+                    return Array.from(groups.values()).map((group: any) => {
                         if (group.accounts.length > 1) {
                             return renderToolCard({ ...group, isGroup: true });
                         }
