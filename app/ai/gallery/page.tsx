@@ -6,7 +6,7 @@ import {
   ArrowRight, Sparkles, Filter, LayoutGrid, PlayCircle, 
   Image as ImageIcon, Search, Download, ExternalLink,
   ChevronLeft, ChevronRight, User, Calendar, Info, X,
-  Maximize2, Copy
+  Maximize2, Copy, ChevronDown
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 import { BorderBeam } from "@/components/ui/border-beam";
@@ -20,29 +20,53 @@ export default function ProfessionalGalleryPage() {
     const [page, setPage] = useState(1);
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
+    const [hasMore, setHasMore] = useState(true);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+
     const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
 
-    const fetchGallery = async () => {
-        if (!apiBase) return;
-        setLoading(true);
+    const fetchGallery = async (targetPage: number, reset: boolean = false) => {
+        if (!apiBase || (!hasMore && !reset)) return;
+        
+        if (reset) {
+            setLoading(true);
+        } else {
+            setIsFetchingMore(true);
+        }
+
         try {
-            const res = await fetch(`${apiBase}/api/ai/gallery?type=${filterType}&page=${page}&limit=100`);
+            const limit = 20;
+            const res = await fetch(`${apiBase}/api/ai/gallery?type=${filterType}&page=${targetPage}&limit=${limit}`);
             if (res.status === 200) {
                 const data = await res.json();
                 if (data.success) {
-                    setGallery(data.gallery);
+                    if (reset) {
+                        setGallery(data.gallery);
+                    } else {
+                        setGallery(prev => [...prev, ...data.gallery]);
+                    }
+                    setHasMore(data.gallery.length === limit);
                 }
             }
         } catch (error) {
             console.error("Failed to fetch gallery", error);
         } finally {
             setLoading(false);
+            setIsFetchingMore(false);
         }
     };
 
     useEffect(() => {
-        fetchGallery();
-    }, [filterType, page]);
+        setPage(1);
+        setHasMore(true);
+        fetchGallery(1, true);
+    }, [filterType]);
+
+    useEffect(() => {
+        if (page > 1) {
+            fetchGallery(page, false);
+        }
+    }, [page]);
 
     const downloadMedia = async (item: any) => {
         const url = item.cloudinary_url || item.image_url || item.video_url;
@@ -130,22 +154,22 @@ export default function ProfessionalGalleryPage() {
                     </div>
                 ) : (
                     <div className="columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6">
-                        {gallery.map((item) => (
+                        {gallery.map((item, index) => (
                             <div 
-                                key={item.id || item.image_id || item.video_id}
+                                key={`${item.id || item.image_id || item.video_id}-${index}`}
                                 onClick={() => setSelectedItem(item)}
                                 className="break-inside-avoid group relative rounded-[2rem] overflow-hidden bg-[#0c0c0c] border border-white/5 hover:border-purple-500/30 transition-all duration-500 cursor-pointer shadow-2xl hover:translate-y-[-8px]"
                             >
                                 {/* Media Content */}
                                 {item.media_type === 'video' ? (
-                                    <div className="relative w-full flex items-center justify-center bg-black">
+                                    <div className="relative w-full flex items-center justify-center bg-black aspect-[9/16] md:aspect-auto">
                                        <video 
                                             src={(item.cloudinary_url || item.video_url) + "#t=1"} 
                                             className="w-full h-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" 
                                             muted 
                                             preload="metadata"
                                             onMouseOver={e => (e.target as HTMLVideoElement).play()}
-                                            onMouseOut={e => { (e.target as HTMLVideoElement).pause(); (e.target as HTMLVideoElement).currentTime = 0; }}
+                                            onMouseOut={e => { (e.target as HTMLVideoElement).pause(); (e.target as HTMLVideoElement).currentTime = 1; }}
                                        />
                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                             <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
@@ -156,9 +180,14 @@ export default function ProfessionalGalleryPage() {
                                 ) : (
                                     <div className="relative w-full overflow-hidden bg-black">
                                         <img 
-                                            src={item.cloudinary_url || item.image_url} 
+                                            src={
+                                                (item.cloudinary_url && item.cloudinary_url.includes('upload')) 
+                                                ? item.cloudinary_url.replace('/upload/', '/upload/f_auto,q_auto,w_600/') 
+                                                : (item.cloudinary_url || item.image_url)
+                                            } 
                                             className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-110" 
                                             alt={item.prompt} 
+                                            loading="lazy"
                                         />
                                     </div>
                                 )}
@@ -167,25 +196,25 @@ export default function ProfessionalGalleryPage() {
                     </div>
                 )}
 
-                {/* Pagination */}
-                {(gallery.length >= 100 || page > 1) && (
-                    <div className="mt-20 flex justify-center items-center gap-8">
+                {/* Infinite Scroll / Load More */}
+                {hasMore && (
+                    <div className="mt-20 flex justify-center pb-20">
                         <button 
-                            disabled={page === 1}
-                            onClick={() => setPage(page - 1)}
-                            className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-20 transition-all font-bold"
+                            onClick={() => setPage(prev => prev + 1)}
+                            disabled={isFetchingMore}
+                            className="px-8 py-4 bg-white/5 rounded-2xl border border-white/10 text-white hover:bg-white/10 transition-all font-black flex items-center gap-3 disabled:opacity-50"
                         >
-                            <ArrowRight size={20} />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-white">الصفحة {page}</span>
-                        </div>
-                        <button 
-                            onClick={() => setPage(page + 1)}
-                            disabled={gallery.length < 100}
-                            className="p-3 bg-white/5 rounded-2xl border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white disabled:opacity-20 transition-all font-bold"
-                        >
-                            <ArrowLeft size={20} />
+                            {isFetchingMore ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                    جاري التحميل...
+                                </>
+                            ) : (
+                                <>
+                                    مشاهدة المزيد الإبداعات
+                                    <ChevronDown size={20} />
+                                </>
+                            )}
                         </button>
                     </div>
                 )}

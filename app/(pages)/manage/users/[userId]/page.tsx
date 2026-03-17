@@ -29,6 +29,8 @@ import { useUpdateUserPlanExpiry } from "@/utils/user-plan/updateUserPlanExpiry"
 import { useUpdateUserPackExpiry } from "@/utils/user-pack/updateUserPackExpiry";
 import { getEditExpiryModal } from "@/components/Modals/EditExpiryModal";
 import PencilSquare from "@/components/icons/PencilSquare";
+import { useImpersonateUser } from "@/utils/users/impersonateUser";
+import { toast } from "react-hot-toast";
 
 type Props = {
   params: { userId: string };
@@ -124,6 +126,8 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
   const { mutate: updateUserToolExpiry, isLoading: isUpdatingUserToolExpiry } = useUpdateUserToolExpiry();
   const { mutate: updateUserPlanExpiry, isLoading: isUpdatingUserPlanExpiry } = useUpdateUserPlanExpiry();
   const { mutate: updateUserPackExpiry, isLoading: isUpdatingUserPackExpiry } = useUpdateUserPackExpiry();
+
+  const { mutate: impersonate, isLoading: isImpersonating } = useImpersonateUser();
 
   useEffect(() => {
     refetchUser();
@@ -252,6 +256,29 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                     <XMarkIcon className="w-5 h-5" />
                   </IconButton>
                 )}
+                <IconButton
+                  buttonType="Primary"
+                  onClick={() => {
+                    impersonate(parseInt(userId), {
+                      onSuccess: (data) => {
+                        localStorage.setItem("a", data.token);
+                        localStorage.setItem("clientId1328", data.userClient);
+                        toast.success("Logging in as " + data.user.first_name);
+                        setTimeout(() => {
+                           window.location.href = "/";
+                        }, 500);
+                      },
+                      onError: () => {
+                        toast.error("Failed to impersonate user");
+                      }
+                    });
+                  }}
+                  disabled={isImpersonating}
+                  isLoading={isImpersonating}
+                  title="Login as User"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                </IconButton>
               </div>
             }
           >
