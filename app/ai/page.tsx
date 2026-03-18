@@ -34,15 +34,16 @@ import Image from "next/image";
 import { BorderBeam } from "@/components/ui/border-beam";
 
 const AI_TOOLS = [
+  
   {
-    id: 'image',
-    title: 'انشاء صور احترافية',
-    description: 'أنشئ صوراً مذهلة من النصوص باستخدام Imagen 4.0',
-    icon: ImageIcon,
+    id: 'nano',
+    title: 'نانو بنانا',
+    description: 'توليد صور فائق السرعة وبجودة عالية',
+    icon: Zap,
     category: 'image',
-    gradient: 'from-violet-600/80 to-indigo-600/80',
-    image: '/images/انشاء الصور.png',
-    href: '/ai/image',
+    gradient: 'from-yellow-500/80 to-amber-600/80',
+    image: '/images/Whisk_d2a441bc8622fa5b2774cf54a715f70feg.png',
+    href: '/ai/nano',
     featured: true
   },
   {
@@ -78,6 +79,16 @@ const AI_TOOLS = [
     href: '/ai/image-to-text'
   },
   {
+    id: 'image',
+    title: 'انشاء صور سينمائية',
+    description: 'أنشئ صوراً مذهلة من النصوص باستخدام Imagen 4.0',
+    icon: ImageIcon,
+    category: 'image',
+    gradient: 'from-violet-600/80 to-indigo-600/80',
+    image: '/images/انشاء الصور.png',
+    href: '/ai/image'
+  },
+  {
     id: 'bg-remove',
     title: 'حذف الخلفية',
     description: 'إزالة خلفية الصور بضغطة زر واحدة',
@@ -107,16 +118,7 @@ const AI_TOOLS = [
     image: '/images/انشاء افاتار.png',
     href: '/ai/avatar'
   },
-  {
-    id: 'nano',
-    title: 'نانو بانانا برو',
-    description: 'توليد صور فائق السرعة وبجودة عالية',
-    icon: Zap,
-    category: 'image',
-    gradient: 'from-yellow-500/80 to-amber-600/80',
-    image: '/images/Whisk_d2a441bc8622fa5b2774cf54a715f70feg.png',
-    href: '/ai/nano'
-  },
+  
   {
     id: 'product',
     title: 'نماذج لمنتجك',
