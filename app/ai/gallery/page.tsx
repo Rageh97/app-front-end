@@ -211,7 +211,7 @@ export default function ProfessionalGalleryPage() {
                                 </>
                             ) : (
                                 <>
-                                    مشاهدة المزيد الإبداعات
+                                    مشاهدة المزيد 
                                     <ChevronDown size={20} />
                                 </>
                             )}
