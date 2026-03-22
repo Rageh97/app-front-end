@@ -5,6 +5,7 @@ export interface PayTabsPaymentPayload {
   productType: "tool" | "pack" | "credits";
   productId: number;
   customerPhone?: string;
+  couponCode?: string;
 }
 
 export interface PayTabsPaymentResponse {

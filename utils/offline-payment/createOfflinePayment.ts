@@ -23,6 +23,9 @@ export async function createPayment(data: NewOfflinePayment, file?: File) {
     if (data.isToolDevice !== undefined) {
       formData.append('isToolDevice', data.isToolDevice.toString());
     }
+    if (data.couponCode) {
+      formData.append('couponCode', data.couponCode);
+    }
 
     const response = await api.post("/api/payment/offline-payment", formData, {
       headers: {

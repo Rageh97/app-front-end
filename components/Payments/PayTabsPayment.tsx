@@ -4,7 +4,9 @@ import { useState } from "react";
 import { initiatePayTabsPayment } from "@/utils/paytabs/initiatePayTabsPayment";
 import ProductDetail from "@/components/ProductDetail";
 import ToolErrorModal from "@/components/Modals/ToolErrorModal";
-import { ShieldCheck, CreditCard, Loader2 } from "lucide-react";
+import { ShieldCheck, CreditCard, Loader2, Tag, CheckCircle2, X } from "lucide-react";
+import toast from "react-hot-toast";
+import axios from "@/utils/api";
 
 interface PayTabsPaymentProps {
   period: "day" | "month" | "year";
@@ -38,42 +40,46 @@ const PayTabsPayment: React.FC<PayTabsPaymentProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [openErrorModal, setOpenErrorModal] = useState(false);
 
-  // ── Validation logic ──────────────────────────────────────────
+  // ── Coupon state ─────────────────────────────────────────────
+  const [couponCode, setCouponCode] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    coupon_id: number;
+    coupon_code: string;
+    coupon_type: string;
+    discount_percentage: number | null;
+    extra_days: number | null;
+  } | null>(null);
+  const [couponPricing, setCouponPricing] = useState<{
+    originalPrice: number;
+    finalPrice: number;
+    extraDays: number;
+    freeDays: number;
+    savedAmount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
   const validatePhone = (number: string, country: typeof countries[0]): string | null => {
     if (!number) return "رقم الهاتف مطلوب.";
-
     if (country.iso === "OTHER") {
       const cleaned = number.replace(/\s/g, "");
-      if (!/^\+?[0-9]{7,15}$/.test(cleaned))
-        return "أدخل رقماً دولياً صحيحاً (مثال: +9647700000000)";
+      if (!/^\+?[0-9]{7,15}$/.test(cleaned)) return "أدخل رقماً دولياً صحيحاً (مثال: +9647700000000)";
       return null;
     }
-
     const digits = number.replace(/\D/g, "");
     const normalized = digits.startsWith("0") ? digits.substring(1) : digits;
-
-    if (normalized.length < country.minLen)
-      return `الرقم أقصر من اللازم — يجب أن يكون ${country.minLen} رقماً (مثال: ${country.example})`;
-
-    if (normalized.length > country.maxLen)
-      return `الرقم أطول من اللازم — يجب أن يكون ${country.maxLen} رقماً`;
-
+    if (normalized.length < country.minLen) return `الرقم أقصر من اللازم (مثال: ${country.example})`;
+    if (normalized.length > country.maxLen) return `الرقم أطول من اللازم`;
     return null;
   };
 
-  const phoneValidationError = validatePhone(phoneNumber, selectedCountry);
-  const isPhoneValid = phoneValidationError === null;
+  const isPhoneValid = validatePhone(phoneNumber, selectedCountry) === null;
 
-  // ── Handlers ─────────────────────────────────────────────────
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
-    if (selectedCountry.iso !== "OTHER") {
-      val = val.replace(/[^\d]/g, "");
-    }
+    if (selectedCountry.iso !== "OTHER") val = val.replace(/[^\d]/g, "");
     setPhoneNumber(val);
-    if (phoneTouched) {
-      setPhoneError(validatePhone(val, selectedCountry));
-    }
+    if (phoneTouched) setPhoneError(validatePhone(val, selectedCountry));
   };
 
   const handlePhoneBlur = () => {
@@ -90,205 +96,240 @@ const PayTabsPayment: React.FC<PayTabsPaymentProps> = ({
   };
 
   const handlePay = async () => {
-    setPhoneTouched(true);
-    const err = validatePhone(phoneNumber, selectedCountry);
-    if (err) {
-      setPhoneError(err);
-      return;
+    // Explicit safety for finalPrice to avoid null reading errors
+    const currentPricing = couponPricing;
+    const isFree = !!currentPricing && typeof currentPricing === 'object' && currentPricing.finalPrice === 0;
+    let fullPhone = "FREE_ACCOUNT";
+    
+    if (!isFree) {
+      setPhoneTouched(true);
+      const err = validatePhone(phoneNumber, selectedCountry);
+      if (err) {
+        setPhoneError(err);
+        return;
+      }
+      let digits = phoneNumber.replace(/\D/g, "");
+      fullPhone = selectedCountry.iso === "OTHER" ? (phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber}`) : `${selectedCountry.code}${digits.startsWith("0") ? digits.substring(1) : digits}`;
     }
-
-    let digits = phoneNumber.replace(/\D/g, "");
-    const fullPhone =
-      selectedCountry.iso === "OTHER"
-        ? phoneNumber.startsWith("+") ? phoneNumber : `+${phoneNumber}`
-        : `${selectedCountry.code}${digits.startsWith("0") ? digits.substring(1) : digits}`;
 
     setIsPaying(true);
     try {
-      const result = await initiatePayTabsPayment({
-        period,
-        productType,
-        productId,
-        customerPhone: fullPhone,
-      });
+      if (isFree) {
+        // IMPORTANT: Must use FormData because the offline-payment endpoint uses multer middleware
+        // which only parses multipart/form-data requests, not plain JSON.
+        // NOTE: axios instance from @/utils/api already has baseURL set, so use relative path only.
+        const formData = new FormData();
+        formData.append("userFullName", "Free Activation");
+        formData.append("period", period);
+        formData.append("productType", productType);
+        formData.append("productId", String(productId));
+        formData.append("paymentMethod", "Zain");
+        if (appliedCoupon?.coupon_code) {
+          formData.append("couponCode", appliedCoupon.coupon_code);
+        }
 
-      if (result.redirect_url) {
-        window.location.href = result.redirect_url;
+        // axios interceptor from @/utils/api automatically adds Authorization & User-Client headers
+        const response = await axios.post("/api/payment/offline-payment", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        // Check the response — backend sends "Subscription activated successfully."
+        if (response.status === 200) {
+          toast.success("تم تفعيل الاشتراك بنجاح! 🎉");
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          throw new Error("لم يتم تفعيل الاشتراك، حاول مرة أخرى.");
+        }
       } else {
-        throw new Error("لم يتم استلام رابط الدفع من PayTabs.");
+        const result = await initiatePayTabsPayment({ period, productType, productId, customerPhone: fullPhone, couponCode: appliedCoupon ? appliedCoupon.coupon_code : undefined });
+        if (result.redirect_url) window.location.href = result.redirect_url;
+        else throw new Error("لم يتم استلام رابط الدفع.");
       }
     } catch (error: any) {
-      const msg =
-        error?.response?.data?.error ||
-        error?.message ||
-        "حدث خطأ أثناء تحضير الفاتورة. يرجى المحاولة مرة أخرى.";
-      setErrorMessage(msg);
+      setErrorMessage(error?.response?.data?.error || error?.message || "حدث خطأ أثناء تحضير الفاتورة.");
       setOpenErrorModal(true);
     } finally {
       setIsPaying(false);
     }
   };
 
-  // ── Border colour based on validation state ───────────────────
-  const inputBorder = !phoneTouched
-    ? "border-white/5 focus:border-[#00c48c]"
-    : isPhoneValid
-    ? "border-[#00c48c]/70 focus:border-[#00c48c]"
-    : "border-red-500/70 focus:border-red-500";
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    try {
+      const token = localStorage.getItem("a") || "";
+      const clientId = (global as any).clientId1328 || "";
+      const res = await axios.post("api/coupons/validate", { couponCode: couponCode.trim(), productType, productId, period }, { headers: { Authorization: token, "User-Client": clientId } });
+      if (res.data.success) {
+        setAppliedCoupon(res.data.coupon);
+        setCouponPricing(res.data.pricing);
+        toast.success("تم تطبيق الكوبون بنجاح! 🎫");
+      }
+    } catch (err: any) {
+      setCouponError(err?.response?.data?.message || "الكوبون غير صالح.");
+      setAppliedCoupon(null);
+      setCouponPricing(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponPricing(null);
+    setCouponCode("");
+    setCouponError(null);
+  };
+
+  const inputBorder = !phoneTouched ? "border-white/5 focus:border-[#00c48c]" : isPhoneValid ? "border-[#00c48c]/70 focus:border-[#00c48c]" : "border-red-500/70 focus:border-red-500";
 
   return (
     <>
-      <div className="w-full flex flex-col gap-6">
-        {/* Security Banner */}
-        <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-lg px-4 py-3 shadow-inner">
-          <div className="bg-[#00c48c]/20 p-1.5 rounded-lg">
-            <ShieldCheck size={20} className="text-[#00c48c]" />
+      <div className="w-full flex flex-col gap-3 px-1">
+        {/* Security Banner - Hide if free */}
+        {(couponPricing?.finalPrice ?? -1) !== 0 && (
+          <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2 animate-in fade-in duration-300">
+            <ShieldCheck size={16} className="text-[#00c48c] shrink-0" />
+            <p className="text-white/60 text-[10px] font-medium leading-tight">
+              بوابة دفع مشفرة بالكامل ومعتمدة عالمياً لتأمين بياناتك المالية.
+            </p>
           </div>
-          <p className="text-white text-xs font-medium text-right leading-relaxed">
-            بوابة دفع مشفرة بالكامل ومعتمدة عالمياً لتأمين بياناتك المالية.
-          </p>
-        </div>
+        )}
+
+        {/* Success Message for Free Coupon */}
+        {couponPricing?.finalPrice === 0 && (
+          <div className="bg-[#00c48c]/10 border border-[#00c48c]/20 p-3 rounded-lg flex items-center gap-3 animate-in slide-in-from-top-2 duration-500">
+            <div className="p-1.5 rounded-full bg-[#00c48c]/20">
+              <CheckCircle2 size={20} className="text-[#00c48c]" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-[11px]">كوبون أيام مجانية!</p>
+              <p className="text-[#00c48c] text-[9px]">تم تصفير المبلغ. يمكنك التفعيل الآن مجاناً.</p>
+            </div>
+          </div>
+        )}
 
         {/* Product Summary */}
-        <div className="bg-black/20 rounded-xl p-4 border border-white/10">
-          <ProductDetail
-            productType={productType}
-            productData={productData}
-            period={period}
-            currency="IQD"
-          />
-        </div>
+        {(() => {
+          const hasPricing = couponPricing && typeof couponPricing === 'object' && couponPricing.finalPrice !== undefined;
+          return (
+            <ProductDetail
+              productType={productType}
+              productData={hasPricing ? { 
+                ...productData, 
+                monthly_price: period === "month" ? couponPricing.finalPrice : productData?.monthly_price, 
+                yearly_price: period === "year" ? couponPricing.finalPrice : productData?.yearly_price, 
+                tool_month_price: period === "month" ? couponPricing.finalPrice : productData?.tool_month_price, 
+                tool_year_price: period === "year" ? couponPricing.finalPrice : productData?.tool_year_price, 
+                tool_day_price: period === "day" ? couponPricing.finalPrice : productData?.tool_day_price 
+              } : productData}
+              period={period}
+              currency="IQD"
+              originalPrice={couponPricing?.originalPrice}
+            />
+          );
+        })()}
 
-        {/* Phone Input Section */}
-        <div className="flex flex-col gap-2">
-          <label htmlFor="phone" className="text-white/60 text-xs font-bold text-right">
-           أدخل رقم الهاتف 
-          </label>
-          <div className="relative flex gap-2">
-            {/* Country Selector */}
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowCountries(!showCountries)}
-                className="h-full flex items-center gap-2 bg-white/10 border-2 border-white/5 hover:border-white/20 px-4 rounded-lg text-white transition-all outline-none"
-              >
-                <span className="text-xl">{selectedCountry.flag}</span>
-                <span className="text-sm font-bold font-mono">{selectedCountry.code}</span>
-              </button>
-
-              {showCountries && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setShowCountries(false)}
-                  />
-                  <div className="absolute top-full right-0 mt-2 w-52 bg-[#1a1129] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="max-h-60 overflow-y-auto scrollbar-hide">
-                      {countries.map((c) => (
-                        <button
-                          key={c.iso}
-                          type="button"
-                          onClick={() => handleCountryChange(c)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-colors ${
-                            selectedCountry.iso === c.iso ? 'bg-[#00c48c]/20 text-[#00c48c]' : 'text-white/80'
-                          }`}
-                        >
-                          <span className="text-lg">{c.flag}</span>
-                          <span className="flex-1 text-sm font-bold">{c.name}</span>
-                          <span className="text-[10px] font-mono opacity-50">{c.code}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
+        {/* Coupon Code Input - Hide if it's an individual tool */}
+        {productType !== 'tool' && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-white/40 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                <Tag size={10} className="text-[#00c48c]" />
+                كوبون الخصم
+              </label>
+              {appliedCoupon && (
+                <button onClick={handleRemoveCoupon} className="text-red-400 text-[9px] font-bold hover:underline">إزالة</button>
               )}
             </div>
-
-            {/* Input Field */}
-            <div className="relative flex-1">
-              <input
-                type="tel"
-                id="phone"
-                value={phoneNumber}
-                onChange={handlePhoneChange}
-                onBlur={handlePhoneBlur}
-                maxLength={selectedCountry.iso === "OTHER" ? 16 : selectedCountry.maxLen + 1}
-                placeholder={selectedCountry.example}
-                className={`w-full bg-white/5 border-2 ${inputBorder} text-white rounded-lg py-4 pr-1 pl-10 text-left font-mono tracking-widest outline-none transition-all placeholder:text-white/20`}
-              />
-              {/* Valid checkmark */}
-              {phoneTouched && isPhoneValid && (
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#00c48c] text-lg select-none">✓</span>
-              )}
-              {/* Invalid X */}
-              {phoneTouched && !isPhoneValid && (
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-400 text-lg select-none">✕</span>
-              )}
-            </div>
-          </div>
-
-          {/* Inline error / hint */}
-          <div className="min-h-[16px] text-right mr-1">
-            {phoneTouched && phoneError ? (
-              <p className="text-[10px] text-red-400 font-medium animate-in fade-in duration-200">
-                ⚠ {phoneError}
-              </p>
+            {!appliedCoupon ? (
+              <div className="flex gap-2">
+                <input type="text" value={couponCode} onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }} onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()} placeholder="أدخل كود الخصم..." className="flex-1 bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-xs font-mono tracking-widest outline-none focus:border-[#00c48c]/50 placeholder:text-white/10" />
+                <button type="button" onClick={handleApplyCoupon} disabled={couponLoading || !couponCode.trim()} className="px-4 py-2 rounded-lg bg-[#00c48c] hover:bg-[#00c48c]/90 text-white font-bold text-[11px] disabled:opacity-40">
+                  {couponLoading ? <Loader2 size={12} className="animate-spin" /> : "تطبيق"}
+                </button>
+              </div>
             ) : (
-              <p className="text-[10px] text-white/30 italic">
-                {selectedCountry.iso === "OTHER"
-                  ? "* أدخل الرقم كاملاً مع كود الدولة"
-                  : `* بدون كود الدولة — ${selectedCountry.minLen} أرقام (مثال: ${selectedCountry.example})`}
-              </p>
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#00c48c]/10 border border-[#00c48c]/30">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#00c48c] font-mono font-bold text-xs tracking-widest">{appliedCoupon.coupon_code}</span>
+                  <CheckCircle2 size={12} className="text-[#00c48c]" />
+                </div>
+                <div className="flex gap-2">
+                  {(couponPricing?.savedAmount ?? 0) > 0 && <span className="bg-[#00c48c]/20 text-[#00c48c] text-[9px] px-1.5 py-0.5 rounded font-bold">وفّر {couponPricing?.savedAmount?.toLocaleString()} IQD</span>}
+                  {(couponPricing?.extraDays ?? 0) > 0 && <span className="bg-blue-500/20 text-blue-400 text-[9px] px-1.5 py-0.5 rounded font-bold">{couponPricing?.extraDays} أيام إضافية</span>}
+                </div>
+              </div>
             )}
+            {couponError && <p className="text-[9px] text-red-400 font-bold bg-red-500/10 p-1 px-2 rounded border border-red-500/20">{couponError}</p>}
           </div>
-        </div>
+        )}
+
+        {/* Phone Input Section - Hide if free */}
+        {(couponPricing?.finalPrice ?? -1) !== 0 && (
+          <div className="flex flex-col gap-1.5 animate-in fade-in duration-300">
+            <label htmlFor="phone" className="text-white/40 text-[10px] font-bold uppercase tracking-wider">أدخل رقم الهاتف</label>
+            <div className="flex gap-2">
+              <div className="relative shrink-0">
+                <button type="button" onClick={() => setShowCountries(!showCountries)} className="h-full flex items-center gap-2 bg-white/10 border border-white/20 px-3 rounded-lg text-white transition-all outline-none">
+                  <span className="text-sm">{selectedCountry.flag}</span>
+                  <span className="text-xs font-bold font-mono">{selectedCountry.code}</span>
+                </button>
+                {showCountries && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowCountries(false)} />
+                    <div className="absolute top-full right-0 mt-1 w-44 bg-[#1a1129] border border-white/10 rounded-lg shadow-xl overflow-hidden z-20">
+                      <div className="max-h-48 overflow-y-auto">
+                        {countries.map((c) => (
+                          <button key={c.iso} type="button" onClick={() => handleCountryChange(c)} className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-white/5 ${selectedCountry.iso === c.iso ? 'bg-[#00c48c]/20 text-[#00c48c]' : 'text-white/80'}`}>
+                            <span className="text-sm">{c.flag}</span>
+                            <span className="text-[10px] font-bold">{c.name}</span>
+                            <span className="text-[9px] font-mono opacity-50 ml-auto">{c.code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="relative flex-1">
+                <input type="tel" id="phone" value={phoneNumber} onChange={handlePhoneChange} onBlur={handlePhoneBlur} maxLength={selectedCountry.maxLen + 1} placeholder={selectedCountry.example} className={`w-full bg-white/5 border ${inputBorder} text-white rounded-lg py-2.5 px-3 text-sm font-mono tracking-widest outline-none transition-all placeholder:text-white/10`} />
+                {phoneTouched && (isPhoneValid ? <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#00c48c] text-xs">✓</span> : <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-red-400 text-xs text-right">✕</span>)}
+              </div>
+            </div>
+            <p className="text-[9px] text-white/30 italic">
+              {selectedCountry.iso === "OTHER" ? "* أدخل الرقم كاملاً مع كود الدولة" : `* بدون كود الدولة (مثال: ${selectedCountry.example})`}
+            </p>
+            {phoneTouched && phoneError && <p className="text-[9px] text-red-400 font-bold bg-red-500/10 p-1 px-2 rounded border border-red-500/20">{phoneError}</p>}
+          </div>
+        )}
 
         {/* Pay Button */}
-        <button
-          id="paytabs-pay-btn"
-          onClick={handlePay}
-          disabled={isPaying}
-          className={`w-full group relative flex items-center justify-center gap-3 py-4.5 rounded-xl font-black text-white text-lg overflow-hidden transition-all duration-500 ${
-            isPaying
-              ? "bg-[#00c48c]/40 cursor-not-allowed"
-              : "bg-[#00c48c]"
-          }`}
-        >
-          {/* Animated background on hover */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:animate-shimmer" />
-          
+        <button id="paytabs-pay-btn" onClick={handlePay} disabled={isPaying || (couponPricing && typeof couponPricing === 'object' ? couponPricing.finalPrice !== 0 && !isPhoneValid : !isPhoneValid)} className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-white text-sm transition-all shadow-lg ${isPaying ? "bg-[#00c48c]/40 cursor-not-allowed" : "bg-gradient-to-r from-[#00c48c] to-[#00a87a] hover:brightness-110 shadow-[#00c48c]/20"}`}>
           {isPaying ? (
             <>
-              <Loader2 size={10} className="animate-spin" />
-              <span className="animate-pulse">جاري التحويل...</span>
+              <Loader2 size={14} className="animate-spin" />
+              <span className="animate-pulse">جاري التفعيل...</span>
             </>
           ) : (
             <>
-              <CreditCard size={22} className="group-hover:rotate-12 transition-transform" />
-              تأكيد الدفع والاشتراك
+              {(couponPricing?.finalPrice ?? -1) === 0 ? <CheckCircle2 size={18} /> : <CreditCard size={18} />}
+              {(couponPricing?.finalPrice ?? -1) === 0 ? "تفعيل الاشتراك مجاناً" : "تأكيد الدفع والاشتراك"}
             </>
           )}
         </button>
 
-        {/* Accepted logos */}
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest px-2 py-1 bg-white/5 rounded-md border border-white/5">مدفوعات آمنة بواسطة</p>
-          <div className="flex items-center justify-center transition-all duration-300">
-            <img
-              src="/images/visa-master.png"
-              alt="Visa and Mastercard"
-              className="h-10 object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.2)]"
-            />
+        {/* Security Logos - Hide if free */}
+        {(couponPricing?.finalPrice ?? -1) !== 0 && (
+          <div className="flex items-center justify-center gap-4 py-2 border-t border-white/5 mt-1 animate-in fade-in duration-300">
+             <img src="/images/visa-master.png" alt="Visa Mastercard" className="h-6  transition-all" />
+             <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest">SECURE PAYMENT</p>
           </div>
-        </div>
+        )}
       </div>
 
-      <ToolErrorModal
-        title="فشل الدفع"
-        message={errorMessage}
-        modalOpen={openErrorModal}
-        setModalOpen={setOpenErrorModal}
-      />
+      <ToolErrorModal title="فشل الدفع" message={errorMessage} modalOpen={openErrorModal} setModalOpen={setOpenErrorModal} />
     </>
   );
 };

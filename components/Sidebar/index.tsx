@@ -29,7 +29,7 @@ import * as consts from "@/consts";
 import SignOutIcon from "../svg/SignOutIcon";
 import AffiliateIcon from "../svg/AffiliateIcon";
 import RocketIcon from "../svg/RocketIcon";
-import { Crown, Download, House, ListOrdered, LogOut, ShieldCheck, ShieldUser, ShoppingBag, ShoppingCart, UsersRound, Vibrate, Video, Bell, User, MessageCircleMore, ImageDown, TypeOutline } from "lucide-react";
+import { Crown, Download, House, ListOrdered, LogOut, ShieldCheck, ShieldUser, ShoppingBag, ShoppingCart, UsersRound, Vibrate, Video, Bell, User, MessageCircleMore, ImageDown, TypeOutline, Brain } from "lucide-react";
 import axios from "@/utils/api";
 import { useGetDevices } from "@/hooks/useGetDevices";
 import { useTranslation } from 'react-i18next';
@@ -295,20 +295,20 @@ const GlobalMenu: FunctionComponent = () => {
           {
             completeHref: "/ai",
             name: "Nexus Ai",
-            icon: "Ai",
+            icon: <Brain size={24} />,
             children: "",
             permission: isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },
             {
             completeHref: "/media-hub",
-            name: "مكتبة الميديا",
+            name: t('dashboard.media'),
             icon: <Video size={24} />,
             children: "",
             permission: isMediaHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },
             {
               completeHref: "/fonts",
-              name: "مكتبة الخطوط ",
+              name: t('dashboard.fontsLibrary'),
               icon: <TypeOutline   size={24} />,
               children: "",
               permission: isFontsHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
@@ -359,7 +359,7 @@ const GlobalMenu: FunctionComponent = () => {
           },
           {
             completeHref: "/profile",
-            name: "الملف الشخصي",
+            name: t('dashboard.profileUser'),
             icon: <User size={24} />,
             children: "",
             permission: true,

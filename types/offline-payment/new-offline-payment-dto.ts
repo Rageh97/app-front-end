@@ -9,4 +9,5 @@ export type NewOfflinePayment = {
   deviceName?: string;
   quantity?: number;
   isToolDevice?: boolean;
+  couponCode?: string;
 };

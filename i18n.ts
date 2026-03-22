@@ -51,6 +51,9 @@ const resources = {
         Logout:"Logout",
         previous: "Previous",
         next: "Next",
+        media:"Media Library",
+        fontsLibrary:"Fonts Library",
+        profileUser:"Profile",
         
 
         
@@ -972,6 +975,9 @@ isInStable:"Unstable"
         Logout:"تسجيل الخروج",
         previous: "السابق",
         next: "التالي",
+        media:"مكتبة الميديا",
+        fontsLibrary:"مكتبة الخطوط",
+        profileUser:"الملف الشخصي",
         
       },
       chat:{

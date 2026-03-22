@@ -52,7 +52,7 @@ axiosInstance.interceptors.request.use(authRequestInterceptor, (error) => {
 });
 
 function authErrorInterceptor(error: any) {
-  if (error?.response?.status === 401 || error?.response?.status === 400 || error?.response?.status === 403) {
+  if (error?.response?.status === 401 || error?.response?.status === 403) {
     localStorage.removeItem("a");
     window.location.href = "/signin";
   }

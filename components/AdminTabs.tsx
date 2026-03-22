@@ -84,6 +84,10 @@ const AdminTabs: FunctionComponent = () => {
           label: t('admin.Media'),
           href: `/admin/media`,
         },
+        {
+          label: 'الكوبونات',
+          href: `/admin/coupons`,
+        },
       ];
     }
     
@@ -147,6 +151,10 @@ const AdminTabs: FunctionComponent = () => {
           label: t('fonts.adminTab'),
           href: `/admin/fonts`,
         },
+        {
+          label: 'الكوبونات',
+          href: `/admin/coupons`,
+        },
       ];
     }
     
@@ -197,6 +205,10 @@ const AdminTabs: FunctionComponent = () => {
          {
           label: t('admin.Media'),
           href: `/admin/media`,
+        },
+        {
+          label: 'الكوبونات',
+          href: `/admin/coupons`,
         },
         // {
         //   label: t('admin.issues'),
