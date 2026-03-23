@@ -517,11 +517,41 @@ const Dashboard: FunctionComponent = () => {
         accounts={accountModalAccounts}
         onSelectAccount={(toolId, accountId) => {
           setAccountModalOpen(false);
+          
+          // Trigger the resident hidden button that the extension already saw on page load
+          if (accountId) {
+             const hiddenBtn = document.getElementById(accountId.toString());
+             if (hiddenBtn) {
+               // Give React a tiny bit of time to close the modal before the click
+               setTimeout(() => {
+                 hiddenBtn.click();
+               }, 50);
+             }
+          }
+
           launchApp(toolId, accountId);
         }}
         activeApp={activeApp}
         isLoaded={isLoaded}
       />
+
+      {/* Resident Hidden Buttons: These exist from page load so the extension finds them immediately */}
+      <div style={{ display: 'none' }} aria-hidden="true">
+        {data?.userToolsData?.map((tool: any) => {
+          let toolExtIds: string[] = [];
+          try {
+            const blockedArr = JSON.parse(tool.tool_blocked_elements);
+            if (Array.isArray(blockedArr) && blockedArr[0]) {
+              const blockedStr = String(blockedArr[0]);
+              toolExtIds = blockedStr.split(',').map((id: string) => id.trim()).filter(id => id);
+            }
+          } catch (e) {}
+
+          return toolExtIds.map(extId => (
+            <button key={`resident-${extId}`} id={extId} type="button" />
+          ));
+        })}
+      </div>
 
     </>
   );

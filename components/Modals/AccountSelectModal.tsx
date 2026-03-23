@@ -97,7 +97,6 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
               return (
                 <button
                   key={account.users_tools_id || `${account.tool_id}-${index}`}
-                  id={accButtonId}
                   onClick={() => onSelectAccount(account.parent_tool_id || account.tool_id, account.tool_id)}
                   disabled={isActive}
                   className={`
