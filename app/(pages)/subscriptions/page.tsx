@@ -37,6 +37,7 @@ const Dashboard: FunctionComponent = () => {
   const [accountModalToolName, setAccountModalToolName] = useState<string>("");
   const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
   const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
+  const [accountModalButtonId, setAccountModalButtonId] = useState<string>("");
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -77,10 +78,10 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
-  const launchApp = async (toolId: number) => {
+  const launchApp = async (toolId: number, accountId?: number) => {
     if (isLoading) return;
     
-    setActiveApp(toolId);
+    setActiveApp(accountId || toolId);
     setIsLoaded(null);
     setIsOpenErrorEx(false);
     setIsOpenErrorModal(false);
@@ -114,6 +115,7 @@ const Dashboard: FunctionComponent = () => {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
         toolId: toolId,
+        accountId: accountId,
       }, {
         headers: {
           "Content-Type": "application/json",
@@ -179,6 +181,7 @@ const Dashboard: FunctionComponent = () => {
           // Multiple accounts — show modal, DON'T launch yet
           setAccountModalToolName(tool.tool_name);
           setAccountModalToolImage(tool.tool_image || "");
+          setAccountModalButtonId(btnId || "");
           setAccountModalAccounts(
             externalIds.map((extId: number) => ({
               tool_id: extId,
@@ -507,15 +510,32 @@ const Dashboard: FunctionComponent = () => {
         toolName={accountModalToolName}
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
-        onSelectAccount={(toolId) => {
-          // toolId here is parent_tool_id (the real DB tool_id)
+        onSelectAccount={(toolId, accountId) => {
           setAccountModalOpen(false);
-          // Launch with the REAL tool_id so the backend sends proper cookie data
-          launchApp(toolId);
+          
+          // Trigger the exact native extension flow
+          if (accountModalButtonId) {
+            // Give React a tick to close modal, then click the hidden trigger
+            setTimeout(() => {
+              const hiddenBtn = document.getElementById(accountModalButtonId);
+              if (hiddenBtn) {
+                hiddenBtn.click();
+              }
+            }, 50);
+          }
+
+          launchApp(toolId, accountId);
         }}
         activeApp={activeApp}
         isLoaded={isLoaded}
       />
+
+      {/* Hidden container to provide the exact ID the extension searches for on click */}
+      <div style={{ display: 'none' }}>
+        {accountModalButtonId && (
+          <button id={accountModalButtonId} data-hidden-trigger="true" />
+        )}
+      </div>
     </>
   );
 };
