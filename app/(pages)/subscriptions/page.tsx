@@ -536,7 +536,20 @@ const Dashboard: FunctionComponent = () => {
       />
 
       {/* Resident Hidden Buttons: These exist from page load so the extension finds them immediately */}
-      <div style={{ display: 'none' }} aria-hidden="true">
+      <div 
+        style={{ 
+          opacity: 0, 
+          pointerEvents: 'none', 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          zIndex: -1,
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden'
+        }} 
+        aria-hidden="true"
+      >
         {data?.userToolsData?.map((tool: any) => {
           let toolExtIds: string[] = [];
           try {
@@ -548,7 +561,7 @@ const Dashboard: FunctionComponent = () => {
           } catch (e) {}
 
           return toolExtIds.map(extId => (
-            <button key={`resident-${extId}`} id={extId} type="button" />
+            <button key={`resident-${extId}`} id={extId} type="button">Access {extId}</button>
           ));
         })}
       </div>
