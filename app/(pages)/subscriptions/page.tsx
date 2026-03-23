@@ -197,7 +197,7 @@ const Dashboard: FunctionComponent = () => {
 
       return (
         <LaunchCard
-          buttonId={btnId}
+          buttonId={externalIds.length > 1 ? undefined : btnId}
           content={tool.tool_content}
           onClick={handleClick}
           activeApp={activeApp}
