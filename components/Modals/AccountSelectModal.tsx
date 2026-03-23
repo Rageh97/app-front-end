@@ -37,6 +37,7 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
+      unmount={false}
       className="fixed inset-0 z-[999999] flex items-center justify-center"
     >
       {/* Backdrop */}
@@ -97,6 +98,7 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
               return (
                 <button
                   key={account.users_tools_id || `${account.tool_id}-${index}`}
+                  id={accButtonId}
                   onClick={() => onSelectAccount(account.parent_tool_id || account.tool_id, account.tool_id)}
                   disabled={isActive}
                   className={`
