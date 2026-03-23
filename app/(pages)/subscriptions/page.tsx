@@ -510,32 +510,15 @@ const Dashboard: FunctionComponent = () => {
         toolName={accountModalToolName}
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
+        buttonId={accountModalButtonId}
         onSelectAccount={(toolId, accountId) => {
           setAccountModalOpen(false);
-          
-          // Trigger the exact native extension flow
-          if (accountModalButtonId) {
-            // Give React a tick to close modal, then click the hidden trigger
-            setTimeout(() => {
-              const hiddenBtn = document.getElementById(accountModalButtonId);
-              if (hiddenBtn) {
-                hiddenBtn.click();
-              }
-            }, 50);
-          }
-
           launchApp(toolId, accountId);
         }}
         activeApp={activeApp}
         isLoaded={isLoaded}
       />
 
-      {/* Hidden container to provide the exact ID the extension searches for on click */}
-      <div style={{ display: 'none' }}>
-        {accountModalButtonId && (
-          <button id={accountModalButtonId} data-hidden-trigger="true" />
-        )}
-      </div>
     </>
   );
 };

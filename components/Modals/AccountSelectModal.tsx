@@ -21,6 +21,7 @@ interface AccountSelectModalProps {
   onSelectAccount: (toolId: number, accountId?: number) => void;
   activeApp: number | null;
   isLoaded: boolean | null;
+  buttonId?: string;
 }
 
 const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
@@ -32,6 +33,7 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
   onSelectAccount,
   activeApp,
   isLoaded,
+  buttonId,
 }) => {
   return (
     <Dialog
@@ -95,6 +97,7 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
               return (
                 <button
                   key={account.users_tools_id || `${account.tool_id}-${index}`}
+                  id={buttonId}
                   onClick={() => onSelectAccount(account.parent_tool_id || account.tool_id, account.tool_id)}
                   disabled={isActive}
                   className={`
