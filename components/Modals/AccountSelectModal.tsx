@@ -87,6 +87,7 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
           {/* Account buttons */}
           <div className="p-6 pt-4 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
             {accounts.map((account, index) => {
+              // The account button should show loading if its specific ID is active
               const isActive = activeApp === account.tool_id && isLoaded === null;
               const isSuccess = activeApp === account.tool_id && isLoaded === true;
               const isFailed = activeApp === account.tool_id && isLoaded === false;

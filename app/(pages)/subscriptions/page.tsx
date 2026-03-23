@@ -194,6 +194,9 @@ const Dashboard: FunctionComponent = () => {
         }
       };
 
+      // Representative ID for the card's loading state
+      const displayId = externalIds.length > 0 ? externalIds[0] : tool.tool_id;
+
       return (
         <LaunchCard
           buttonId={externalIds.length > 1 ? undefined : getButtonId(tool.tool_name)}
@@ -201,8 +204,8 @@ const Dashboard: FunctionComponent = () => {
           onClick={handleClick}
           activeApp={activeApp}
           isLoaded={isLoaded}
-          key={`grouped-${tool.tool_id}`}
-          toolData={tool}
+          key={`grouped-${tool.tool_id}-${displayId}`}
+          toolData={{ ...tool, tool_id: displayId }}
           endedAt={endedAt}
         />
       );
