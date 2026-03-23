@@ -6,7 +6,6 @@ import CloudLaunchCard from "@/components/CloudLaunchCard";
 import axios from "axios";
 import ToolErrorModal from "@/components/Modals/ToolErrorModal";
 import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
-import AccountSelectModal from "@/components/Modals/AccountSelectModal";
 import Panel from "@/components/Panel";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useModal } from "@/components/providers/ModalProvider";
@@ -29,12 +28,8 @@ const Dashboard: FunctionComponent = () => {
   const [openErrorModal, setIsOpenErrorModal] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>(null);
 
-  const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
-  // Multi-account modal state
-  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
-  const [accountModalTool, setAccountModalTool] = useState<{ toolId: number; toolName: string } | null>(null);
-  const [accountModalList, setAccountModalList] = useState<{ users_tools_id: number; endedAt: string; accountIndex: number }[]>([]);
+  const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -75,7 +70,7 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
-  const launchApp = async (toolId: number, accountIndex?: number) => {
+  const launchApp = async (toolId: number) => {
     if (isLoading) return;
     
     setActiveApp(toolId);
@@ -112,7 +107,7 @@ const Dashboard: FunctionComponent = () => {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
         toolId: toolId,
-        ...(accountIndex !== undefined ? { accountIndex } : {}),
+      }, {
         headers: {
           "Content-Type": "application/json",
           "User-Client": (globalThis as any).clientId1328 || "",
@@ -146,42 +141,24 @@ const Dashboard: FunctionComponent = () => {
     }
   };
 
-  const handleToolClick = (toolData: any, toolId: number, toolName: string) => {
-    const accCount = toolData?.accountsCount || 1;
-    if (accCount > 1) {
-      const accounts = Array.from({ length: accCount }).map((_, idx) => ({
-        users_tools_id: toolId, // Not strictly used, kept for mapping key
-        endedAt: toolData?.endedAt || new Date().toISOString(),
-        accountIndex: idx + 1,
-      }));
-      setAccountModalTool({ toolId, toolName });
-      setAccountModalList(accounts as any);
-      setAccountModalOpen(true);
-    } else {
-      launchApp(toolId);
-    }
-  };
-
   const renderToolCard = (item: any) => {
     return (
       <LaunchCard
-        buttonId={getButtonId(item.tool_name)}
+        buttonId={item.buttonId}
         content={item.tool_content}
-        onClick={() => handleToolClick(item, item.tool_id, item.tool_name)}
+        onClick={() => launchApp(item.tool_id)}
         activeApp={activeApp}
         isLoaded={isLoaded}
         key={item.tool_id}
-        toolData={{ ...item, accountCount: item.accountsCount || 1 }}
+        toolData={item}
         endedAt={item.endedAt}
       />
     );
   };
 
-
-
   useEffect(() => {
     document.title = 'Subscriptions';
-    if (data?.toolsData && toolsData.length === 0) {
+    if (!toolsData) {
       let dataTools = [...data.toolsData];
       setToolsData(
         dataTools.sort((a, b) => {
@@ -189,7 +166,7 @@ const Dashboard: FunctionComponent = () => {
         })
       );
     }
-  }, [data]);
+  }, []);
 
   const { open: openNewUpdate } = useModal(
     getDangerActionConfirmationModal({
@@ -280,17 +257,34 @@ const Dashboard: FunctionComponent = () => {
 
       {/* <DataStatsThree /> */}
 
-      {/* Individual Tools Section */}
+      {/* Individual Tools Section - Deduplicated */}
       {(() => {
-        if (!data?.userToolsData) return null;
-        const individualTools = data.userToolsData.map((ut: any) => {
-            const t = data?.toolsData?.find((d: any) => d.tool_id === ut.tool_id);
-            return t ? { ...t, endedAt: ut.endedAt } : null;
-        }).filter(Boolean);
+        const uniqueTools = new Map();
+        data?.userToolsData?.forEach((tool: any) => {
+          const existing = uniqueTools.get(tool.tool_id);
+          if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
+            uniqueTools.set(tool.tool_id, tool);
+          }
+        });
+        const deduplicatedTools = Array.from(uniqueTools.values());
 
-        return individualTools.length !== 0 && (
-          <div className="grid w-full mb-9 px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {individualTools.map((t: any) => renderToolCard(t))}
+        return deduplicatedTools.length !== 0 && (
+          <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
+        {deduplicatedTools.map((userTool: any) => {
+          const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
+          if (!tool) return null;
+          return (
+            <LaunchCard
+              buttonId={getButtonId(tool.tool_name)}
+              onClick={() => launchApp(tool.tool_id)}
+              activeApp={activeApp}
+              isLoaded={isLoaded}
+              key={userTool?.users_tools_id}
+              toolData={tool}
+              endedAt={userTool.endedAt}
+            />
+          );
+        })}
           </div>
         );
       })()}
@@ -321,14 +315,22 @@ const Dashboard: FunctionComponent = () => {
               containerClassName="py-9 inner-shadow rounded-xl"
             >
               <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-                {(() => {
-                  const packToolsIds = JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]');
-                  const packTools = packToolsIds.map((id: number) => {
-                    const t = data?.toolsData.find((d: any) => d.tool_id === id);
-                    return t ? { ...t, endedAt: a.endedAt } : null;
-                  }).filter(Boolean);
-                  return packTools.map((t: any) => renderToolCard(t));
-                })()}
+                {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((toolId: number) => {
+                  const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
+                  if (!tool) return null;
+                  return (
+                    <LaunchCard
+                      buttonId={getButtonId(tool.tool_name)}
+                      content={tool.tool_content}
+                      onClick={() => launchApp(tool.tool_id)}
+                      activeApp={activeApp}
+                      isLoaded={isLoaded}
+                      key={tool.tool_id}
+                      toolData={tool}
+                      endedAt={tool.endedAt}
+                    />
+                  );
+                })}
               </div>
             </Panel>
           </div>
@@ -382,8 +384,15 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData?.filter((item: any) => ["standard", "premium", "vip"].includes(item.tool_plan))
-                      .map((item: any) => renderToolCard(item))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "standard")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "premium")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "vip")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -404,8 +413,12 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData?.filter((item: any) => ["standard", "premium"].includes(item.tool_plan))
-                      .map((item: any) => renderToolCard(item))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "standard")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "premium")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -426,8 +439,9 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData?.filter((item: any) => item.tool_plan === "standard")
-                      .map((item: any) => renderToolCard(item))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "standard")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : (
@@ -442,17 +456,6 @@ const Dashboard: FunctionComponent = () => {
         message={errorMessage}
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
-      />
-
-      {/* Multi-Account Selection Modal */}
-      <AccountSelectModal
-        isOpen={accountModalOpen}
-        onClose={() => setAccountModalOpen(false)}
-        toolName={accountModalTool?.toolName || ""}
-        accounts={accountModalList}
-        onSelect={(account) => {
-          launchApp(accountModalTool!.toolId, account.accountIndex);
-        }}
       />
     </>
   );
