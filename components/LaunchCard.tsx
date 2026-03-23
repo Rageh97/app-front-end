@@ -4,6 +4,7 @@ import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { checkIfImageUrl } from "@/utils/imageValidator";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import { Users } from "lucide-react";
 
 interface LaunchCardProps {
   onClick: Function;
@@ -29,6 +30,8 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
   const { t } = useTranslation();
   const isFree = !!toolData?.isFree;
   const isStable = toolData?.isStable !== false;
+  const isMultiAccount = !!(toolData as any)?._multiAccount;
+  const accountCount = (toolData as any)?._accountCount || 1;
 
   const maintenanceOverlay = !isStable && (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-md transition-all duration-500 rounded-[21px] pointer-events-none">
@@ -123,6 +126,12 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
           >
             {isFree ? t("dashboard.free") : t("dashboard.pro")}
           </div>
+          {isMultiAccount && (
+            <div className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shadow bg-purple-600/90 text-white border border-purple-400/30 pointer-events-none">
+              <Users size={12} />
+              <span>{accountCount}</span>
+            </div>
+          )}
         </div>
 
         <div className="px-4 -mt-3 h-full rounded-b-3xl shadow-t-xl py-3 w-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c,_#190237)] mt-auto flex flex-col justify-between">

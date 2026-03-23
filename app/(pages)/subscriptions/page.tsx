@@ -6,6 +6,7 @@ import CloudLaunchCard from "@/components/CloudLaunchCard";
 import axios from "axios";
 import ToolErrorModal from "@/components/Modals/ToolErrorModal";
 import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
+import AccountSelectionModal from "@/components/Modals/AccountSelectionModal";
 import Panel from "@/components/Panel";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useModal } from "@/components/providers/ModalProvider";
@@ -30,6 +31,12 @@ const Dashboard: FunctionComponent = () => {
 
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
+
+  // Multi-account modal state
+  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
+  const [accountModalToolName, setAccountModalToolName] = useState<string>("");
+  const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
+  const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -138,6 +145,40 @@ const Dashboard: FunctionComponent = () => {
       }, 3000);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper: given a list of tools, group by tool_name and return groups
+  const groupToolsByName = (tools: any[]) => {
+    const groups = new Map<string, any[]>();
+    tools.forEach((tool: any) => {
+      const name = tool.tool_name;
+      if (!groups.has(name)) {
+        groups.set(name, []);
+      }
+      groups.get(name)!.push(tool);
+    });
+    return groups;
+  };
+
+  // Handle click on a tool card: if multiple accounts, show modal; otherwise launch directly
+  const handleToolClick = (toolName: string, toolImage: string, toolIds: { tool_id: number; endedAt?: string }[]) => {
+    if (toolIds.length === 1) {
+      // Single account - launch directly
+      launchApp(toolIds[0].tool_id);
+    } else {
+      // Multiple accounts - show selection modal
+      const accounts = toolIds.map((t, idx) => ({
+        tool_id: t.tool_id,
+        tool_name: toolName,
+        tool_image: toolImage,
+        endedAt: t.endedAt,
+        accountIndex: idx + 1,
+      }));
+      setAccountModalToolName(toolName);
+      setAccountModalToolImage(toolImage);
+      setAccountModalAccounts(accounts);
+      setAccountModalOpen(true);
     }
   };
 
@@ -257,8 +298,9 @@ const Dashboard: FunctionComponent = () => {
 
       {/* <DataStatsThree /> */}
 
-      {/* Individual Tools Section - Deduplicated */}
+      {/* Individual Tools Section - Grouped by tool_name for multi-account support */}
       {(() => {
+        // First deduplicate by tool_id (keep latest endedAt)
         const uniqueTools = new Map();
         data?.userToolsData?.forEach((tool: any) => {
           const existing = uniqueTools.get(tool.tool_id);
@@ -268,23 +310,43 @@ const Dashboard: FunctionComponent = () => {
         });
         const deduplicatedTools = Array.from(uniqueTools.values());
 
-        return deduplicatedTools.length !== 0 && (
-          <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-        {deduplicatedTools.map((userTool: any) => {
+        // Now group by tool_name: tools with the same name = multiple accounts
+        const toolsByName = new Map<string, any[]>();
+        deduplicatedTools.forEach((userTool: any) => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
-          if (!tool) return null;
-          return (
-            <LaunchCard
-              buttonId={getButtonId(tool.tool_name)}
-              onClick={() => launchApp(tool.tool_id)}
-              activeApp={activeApp}
-              isLoaded={isLoaded}
-              key={userTool?.users_tools_id}
-              toolData={tool}
-              endedAt={userTool.endedAt}
-            />
-          );
-        })}
+          if (!tool) return;
+          const name = tool.tool_name;
+          if (!toolsByName.has(name)) {
+            toolsByName.set(name, []);
+          }
+          toolsByName.get(name)!.push({ ...tool, endedAt: userTool.endedAt, users_tools_id: userTool.users_tools_id });
+        });
+        const groupedEntries = Array.from(toolsByName.entries());
+
+        return groupedEntries.length !== 0 && (
+          <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
+            {groupedEntries.map(([toolName, tools]) => {
+              // Use the first tool's data for the card display
+              const displayTool = tools[0];
+              // Find the latest endedAt across all accounts
+              const latestEndedAt = tools.reduce((latest: string, t: any) => {
+                return new Date(t.endedAt) > new Date(latest) ? t.endedAt : latest;
+              }, tools[0].endedAt);
+
+              const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+
+              return (
+                <LaunchCard
+                  buttonId={getButtonId(displayTool.tool_name)}
+                  onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
+                  activeApp={activeApp}
+                  isLoaded={isLoaded}
+                  key={toolName}
+                  toolData={{ ...displayTool, _multiAccount: tools.length > 1, _accountCount: tools.length }}
+                  endedAt={latestEndedAt}
+                />
+              );
+            })}
           </div>
         );
       })()}
@@ -315,22 +377,38 @@ const Dashboard: FunctionComponent = () => {
               containerClassName="py-9 inner-shadow rounded-xl"
             >
               <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-                {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((toolId: number) => {
-                  const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
-                  if (!tool) return null;
-                  return (
-                    <LaunchCard
-                      buttonId={getButtonId(tool.tool_name)}
-                      content={tool.tool_content}
-                      onClick={() => launchApp(tool.tool_id)}
-                      activeApp={activeApp}
-                      isLoaded={isLoaded}
-                      key={tool.tool_id}
-                      toolData={tool}
-                      endedAt={tool.endedAt}
-                    />
-                  );
-                })}
+                {(() => {
+                  const packToolIds: number[] = JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]');
+                  // Group pack tools by name for multi-account support
+                  const packToolsByName = new Map<string, any[]>();
+                  packToolIds.forEach((toolId: number) => {
+                    const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
+                    if (!tool) return;
+                    const name = tool.tool_name;
+                    if (!packToolsByName.has(name)) {
+                      packToolsByName.set(name, []);
+                    }
+                    packToolsByName.get(name)!.push(tool);
+                  });
+
+                  return Array.from(packToolsByName.entries()).map(([toolName, tools]) => {
+                    const displayTool = tools[0];
+                    const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+
+                    return (
+                      <LaunchCard
+                        buttonId={getButtonId(displayTool.tool_name)}
+                        content={displayTool.tool_content}
+                        onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
+                        activeApp={activeApp}
+                        isLoaded={isLoaded}
+                        key={toolName}
+                        toolData={{ ...displayTool, _multiAccount: tools.length > 1, _accountCount: tools.length }}
+                        endedAt={displayTool.endedAt}
+                      />
+                    );
+                  });
+                })()}
               </div>
             </Panel>
           </div>
@@ -384,15 +462,40 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "premium")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "vip")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {(() => {
+              const planTools = [
+                ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
+                ...(toolsData?.filter((item: any) => item.tool_plan === "premium") || []),
+                ...(toolsData?.filter((item: any) => item.tool_plan === "vip") || []),
+              ];
+              const planToolsByName = new Map<string, any[]>();
+              planTools.forEach((tool: any) => {
+                const name = tool.tool_name;
+                if (!planToolsByName.has(name)) {
+                  planToolsByName.set(name, []);
+                }
+                planToolsByName.get(name)!.push(tool);
+              });
+              return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
+                const displayTool = tools[0];
+                if (tools.length === 1) {
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
+                }
+                const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                return (
+                  <LaunchCard
+                    buttonId={getButtonId(displayTool.tool_name)}
+                    content={displayTool.tool_content}
+                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
+                    activeApp={activeApp}
+                    isLoaded={isLoaded}
+                    key={toolName}
+                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                    endedAt={displayTool.endedAt}
+                  />
+                );
+              });
+            })()}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -413,12 +516,39 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "premium")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {(() => {
+              const planTools = [
+                ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
+                ...(toolsData?.filter((item: any) => item.tool_plan === "premium") || []),
+              ];
+              const planToolsByName = new Map<string, any[]>();
+              planTools.forEach((tool: any) => {
+                const name = tool.tool_name;
+                if (!planToolsByName.has(name)) {
+                  planToolsByName.set(name, []);
+                }
+                planToolsByName.get(name)!.push(tool);
+              });
+              return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
+                const displayTool = tools[0];
+                if (tools.length === 1) {
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
+                }
+                const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                return (
+                  <LaunchCard
+                    buttonId={getButtonId(displayTool.tool_name)}
+                    content={displayTool.tool_content}
+                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
+                    activeApp={activeApp}
+                    isLoaded={isLoaded}
+                    key={toolName}
+                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                    endedAt={displayTool.endedAt}
+                  />
+                );
+              });
+            })()}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -439,9 +569,36 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {toolsData
-              ?.filter((item: any) => item.tool_plan === "standard")
-              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {(() => {
+              const planTools = toolsData?.filter((item: any) => item.tool_plan === "standard") || [];
+              const planToolsByName = new Map<string, any[]>();
+              planTools.forEach((tool: any) => {
+                const name = tool.tool_name;
+                if (!planToolsByName.has(name)) {
+                  planToolsByName.set(name, []);
+                }
+                planToolsByName.get(name)!.push(tool);
+              });
+              return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
+                const displayTool = tools[0];
+                if (tools.length === 1) {
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
+                }
+                const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                return (
+                  <LaunchCard
+                    buttonId={getButtonId(displayTool.tool_name)}
+                    content={displayTool.tool_content}
+                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
+                    activeApp={activeApp}
+                    isLoaded={isLoaded}
+                    key={toolName}
+                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                    endedAt={displayTool.endedAt}
+                  />
+                );
+              });
+            })()}
           </div>
         </Panel>
       ) : (
@@ -456,6 +613,17 @@ const Dashboard: FunctionComponent = () => {
         message={errorMessage}
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
+      />
+
+      {/* Multi-Account Selection Modal */}
+      <AccountSelectionModal
+        isOpen={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        toolName={accountModalToolName}
+        toolImage={accountModalToolImage}
+        accounts={accountModalAccounts}
+        onSelectAccount={(toolId) => launchApp(toolId)}
+        isLoading={isLoading}
       />
     </>
   );
