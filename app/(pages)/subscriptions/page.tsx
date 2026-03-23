@@ -6,6 +6,7 @@ import CloudLaunchCard from "@/components/CloudLaunchCard";
 import axios from "axios";
 import ToolErrorModal from "@/components/Modals/ToolErrorModal";
 import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
+import AccountSelectModal from "@/components/Modals/AccountSelectModal";
 import Panel from "@/components/Panel";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useModal } from "@/components/providers/ModalProvider";
@@ -30,6 +31,12 @@ const Dashboard: FunctionComponent = () => {
 
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
+
+  // Multi-account modal state
+  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
+  const [accountModalToolName, setAccountModalToolName] = useState<string>("");
+  const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
+  const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -257,34 +264,65 @@ const Dashboard: FunctionComponent = () => {
 
       {/* <DataStatsThree /> */}
 
-      {/* Individual Tools Section - Deduplicated */}
+      {/* Individual Tools Section - Grouped by tool_name for multi-account support */}
       {(() => {
-        const uniqueTools = new Map();
-        data?.userToolsData?.forEach((tool: any) => {
-          const existing = uniqueTools.get(tool.tool_id);
-          if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
-            uniqueTools.set(tool.tool_id, tool);
-          }
-        });
-        const deduplicatedTools = Array.from(uniqueTools.values());
-
-        return deduplicatedTools.length !== 0 && (
-          <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-        {deduplicatedTools.map((userTool: any) => {
+        // Group userToolsData by tool_name (from toolsData lookup)
+        const toolsByName = new Map<string, any[]>();
+        data?.userToolsData?.forEach((userTool: any) => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
-          if (!tool) return null;
-          return (
-            <LaunchCard
-              buttonId={getButtonId(tool.tool_name)}
-              onClick={() => launchApp(tool.tool_id)}
-              activeApp={activeApp}
-              isLoaded={isLoaded}
-              key={userTool?.users_tools_id}
-              toolData={tool}
-              endedAt={userTool.endedAt}
-            />
-          );
-        })}
+          if (!tool) return;
+          const toolName = tool.tool_name;
+          if (!toolsByName.has(toolName)) {
+            toolsByName.set(toolName, []);
+          }
+          toolsByName.get(toolName)!.push({ ...userTool, _toolData: tool });
+        });
+
+        const groupedTools = Array.from(toolsByName.entries());
+
+        return groupedTools.length !== 0 && (
+          <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
+            {groupedTools.map(([toolName, accounts]) => {
+              // Pick the first account's tool data for display
+              const firstAccount = accounts[0];
+              const tool = firstAccount._toolData;
+              // Pick the latest endedAt for display
+              const latestEndedAt = accounts.reduce((latest: string, acc: any) =>
+                new Date(acc.endedAt) > new Date(latest) ? acc.endedAt : latest
+              , accounts[0].endedAt);
+
+              const handleClick = () => {
+                if (accounts.length === 1) {
+                  // Single account — launch directly
+                  launchApp(tool.tool_id);
+                } else {
+                  // Multiple accounts — show modal
+                  setAccountModalToolName(toolName);
+                  setAccountModalToolImage(tool.tool_image || "");
+                  setAccountModalAccounts(
+                    accounts.map((acc: any) => ({
+                      tool_id: acc.tool_id,
+                      tool_name: acc._toolData.tool_name,
+                      endedAt: acc.endedAt,
+                      users_tools_id: acc.users_tools_id,
+                    }))
+                  );
+                  setAccountModalOpen(true);
+                }
+              };
+
+              return (
+                <LaunchCard
+                  buttonId={getButtonId(tool.tool_name)}
+                  onClick={handleClick}
+                  activeApp={activeApp}
+                  isLoaded={isLoaded}
+                  key={`grouped-${toolName}`}
+                  toolData={tool}
+                  endedAt={latestEndedAt}
+                />
+              );
+            })}
           </div>
         );
       })()}
@@ -456,6 +494,21 @@ const Dashboard: FunctionComponent = () => {
         message={errorMessage}
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
+      />
+
+      {/* Multi-Account Selection Modal */}
+      <AccountSelectModal
+        open={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        toolName={accountModalToolName}
+        toolImage={accountModalToolImage}
+        accounts={accountModalAccounts}
+        onSelectAccount={(toolId) => {
+          setAccountModalOpen(false);
+          launchApp(toolId);
+        }}
+        activeApp={activeApp}
+        isLoaded={isLoaded}
       />
     </>
   );
