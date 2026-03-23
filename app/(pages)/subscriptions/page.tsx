@@ -37,7 +37,6 @@ const Dashboard: FunctionComponent = () => {
   const [accountModalToolName, setAccountModalToolName] = useState<string>("");
   const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
   const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
-  const [accountModalButtonId, setAccountModalButtonId] = useState<string>("");
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -161,13 +160,15 @@ const Dashboard: FunctionComponent = () => {
       const endedAt = endedAtOverride || tool.endedAt;
       
       // Parse Blocked Element 1 for comma separated external account IDs
-      let externalIds: number[] = [];
+      let externalIds: string[] = [];
       try {
         const blockedArr = JSON.parse(tool.tool_blocked_elements);
         if (Array.isArray(blockedArr) && blockedArr[0]) {
           const blockedStr = String(blockedArr[0]);
-          if (/^(\d+,\s*)*\d+$/.test(blockedStr.trim())) {
-            externalIds = blockedStr.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+          if (blockedStr.includes(',')) {
+            externalIds = blockedStr.split(',').map((id: string) => id.trim()).filter(id => id);
+          } else if (blockedStr.trim() !== '') {
+            externalIds = [blockedStr.trim()];
           }
         }
       } catch (e) {
@@ -181,9 +182,8 @@ const Dashboard: FunctionComponent = () => {
           // Multiple accounts — show modal, DON'T launch yet
           setAccountModalToolName(tool.tool_name);
           setAccountModalToolImage(tool.tool_image || "");
-          setAccountModalButtonId(btnId || "");
           setAccountModalAccounts(
-            externalIds.map((extId: number) => ({
+            externalIds.map((extId: string) => ({
               tool_id: extId,
               tool_name: tool.tool_name,
               endedAt: endedAt,
@@ -510,7 +510,6 @@ const Dashboard: FunctionComponent = () => {
         toolName={accountModalToolName}
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
-        buttonId={accountModalButtonId}
         onSelectAccount={(toolId, accountId) => {
           setAccountModalOpen(false);
           launchApp(toolId, accountId);
