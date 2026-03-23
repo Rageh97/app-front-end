@@ -18,7 +18,7 @@ interface AccountSelectModalProps {
   toolName: string;
   toolImage?: string;
   accounts: AccountEntry[];
-  onSelectAccount: (toolId: number) => void;
+  onSelectAccount: (toolId: number, accountId?: number) => void;
   activeApp: number | null;
   isLoaded: boolean | null;
 }
@@ -94,7 +94,7 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
               return (
                 <button
                   key={account.users_tools_id || `${account.tool_id}-${index}`}
-                  onClick={() => onSelectAccount(account.tool_id)}
+                  onClick={() => onSelectAccount(account.parent_tool_id || account.tool_id, account.tool_id)}
                   disabled={isActive}
                   className={`
                     group w-full flex items-center gap-4 p-4 rounded-xl

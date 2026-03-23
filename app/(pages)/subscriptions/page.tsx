@@ -77,10 +77,10 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
-  const launchApp = async (toolId: number) => {
+  const launchApp = async (toolId: number, accountId?: number) => {
     if (isLoading) return;
     
-    setActiveApp(toolId);
+    setActiveApp(accountId || toolId);
     setIsLoaded(null);
     setIsOpenErrorEx(false);
     setIsOpenErrorModal(false);
@@ -110,10 +110,15 @@ const Dashboard: FunctionComponent = () => {
       }
 
       // API call to get session
+      const getSessionUrl = process.env.NODE_ENV === "development" 
+        ? "http://localhost:4560/api/user/get-session" 
+        : "https://api.nexustoolz.com/api/user/get-session"; // Fallback to local for testing if needed, though previously hardcoded
+
       const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
         toolId: toolId,
+        accountId: accountId, // sending the specific external ID
       }, {
         headers: {
           "Content-Type": "application/json",
@@ -149,50 +154,52 @@ const Dashboard: FunctionComponent = () => {
   };
 
   // Helper: group tools by tool_name, render one card per name.
-  // If a name has multiple tool_ids => click opens account-select modal.
-  // If a name has only one tool_id => click launches directly.
-  const renderToolsGrouped = (tools: any[], endedAtOverride?: string) => {
-    if (!tools || tools.length === 0) return null;
+  const renderToolsGrouped = (baseTools: any[], endedAtOverride?: string) => {
+    if (!baseTools || baseTools.length === 0) return null;
 
-    // Group by tool_name
-    const byName = new Map<string, any[]>();
-    tools.forEach((tool: any) => {
-      const name = tool.tool_name;
-      if (!byName.has(name)) byName.set(name, []);
-      byName.get(name)!.push(tool);
-    });
+    // Remove duplicates from base tools (we only need 1 card per tool)
+    const uniqueTools = Array.from(new Map(baseTools.map(t => [t.tool_id, t])).values());
 
-    return Array.from(byName.entries()).map(([toolName, group]) => {
-      const displayTool = group[0];
-      const endedAt = endedAtOverride || displayTool.endedAt;
+    return uniqueTools.map((tool: any) => {
+      const endedAt = endedAtOverride || tool.endedAt;
+      
+      // Parse Blocked Element 1 for comma separated external account IDs
+      let externalIds: number[] = [];
+      const blockedStr = tool.tool_blocked_elements || "";
+      if (blockedStr && /^(\d+,\s*)*\d+$/.test(blockedStr.trim())) {
+        externalIds = blockedStr.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+      }
 
       const handleClick = () => {
-        if (group.length === 1) {
-          launchApp(displayTool.tool_id);
-        } else {
-          setAccountModalToolName(toolName);
-          setAccountModalToolImage(displayTool.tool_image || "");
+        if (externalIds.length > 1) {
+          // Multiple accounts — show modal using parsed external IDs
+          setAccountModalToolName(tool.tool_name);
+          setAccountModalToolImage(tool.tool_image || "");
           setAccountModalAccounts(
-            group.map((t: any) => ({
-              tool_id: t.tool_id,
-              tool_name: t.tool_name,
+            externalIds.map((extId: number) => ({
+              tool_id: extId,
+              tool_name: tool.tool_name,
               endedAt: endedAt,
-              users_tools_id: `account-${t.tool_id}`,
+              users_tools_id: `account-${extId}`,
+              parent_tool_id: tool.tool_id // The main DB tool_id
             }))
           );
           setAccountModalOpen(true);
+        } else {
+          // Single account — launch directly
+          launchApp(tool.tool_id, externalIds[0]); // Send first ID if available, otherwise undefined
         }
       };
 
       return (
         <LaunchCard
-          buttonId={getButtonId(displayTool.tool_name)}
-          content={displayTool.tool_content}
+          buttonId={getButtonId(tool.tool_name)}
+          content={tool.tool_content}
           onClick={handleClick}
           activeApp={activeApp}
           isLoaded={isLoaded}
-          key={`grouped-${toolName}`}
-          toolData={displayTool}
+          key={`grouped-${tool.tool_id}`}
+          toolData={tool}
           endedAt={endedAt}
         />
       );
@@ -496,9 +503,9 @@ const Dashboard: FunctionComponent = () => {
         toolName={accountModalToolName}
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
-        onSelectAccount={(toolId) => {
+        onSelectAccount={(toolId, accountId) => {
           setAccountModalOpen(false);
-          launchApp(toolId);
+          launchApp(toolId, accountId);
         }}
         activeApp={activeApp}
         isLoaded={isLoaded}
