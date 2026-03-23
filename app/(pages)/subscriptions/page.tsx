@@ -6,7 +6,6 @@ import CloudLaunchCard from "@/components/CloudLaunchCard";
 import axios from "axios";
 import ToolErrorModal from "@/components/Modals/ToolErrorModal";
 import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
-import AccountSelectModal from "@/components/Modals/AccountSelectModal";
 import Panel from "@/components/Panel";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useModal } from "@/components/providers/ModalProvider";
@@ -31,12 +30,6 @@ const Dashboard: FunctionComponent = () => {
 
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
-
-  // Multi-account modal state
-  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
-  const [accountModalToolName, setAccountModalToolName] = useState<string>("");
-  const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
-  const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -77,10 +70,10 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
-  const launchApp = async (toolId: number, accountId?: number) => {
+  const launchApp = async (toolId: number) => {
     if (isLoading) return;
     
-    setActiveApp(accountId || toolId);
+    setActiveApp(toolId);
     setIsLoaded(null);
     setIsOpenErrorEx(false);
     setIsOpenErrorModal(false);
@@ -114,7 +107,6 @@ const Dashboard: FunctionComponent = () => {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
         toolId: toolId,
-        accountId: accountId,
       }, {
         headers: {
           "Content-Type": "application/json",
@@ -123,12 +115,7 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
-        // Only send the message if it's NOT a multi-account launch
-        // Because for multi-account, the extension fetches from the external panel natively via the Click
-        if (!accountId) {
-          window.postMessage({ type: 'FROM_NT_APP', text: res.data }, "*");
-        }
-        
+        window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
         setIsLoaded(true);
         setIsOpenErrorEx(false);
         
@@ -154,81 +141,32 @@ const Dashboard: FunctionComponent = () => {
     }
   };
 
-  // Helper: group tools by tool_name, render one card per name.
-  const renderToolsGrouped = (baseTools: any[], endedAtOverride?: string) => {
-    if (!baseTools || baseTools.length === 0) return null;
-
-    // Remove duplicates from base tools (we only need 1 card per tool)
-    const uniqueTools = Array.from(new Map(baseTools.map(t => [t.tool_id, t])).values());
-
-    return uniqueTools.map((tool: any) => {
-      const endedAt = endedAtOverride || tool.endedAt;
-      
-      // Parse Blocked Element 1 for comma separated external account IDs
-      let externalIds: string[] = [];
-      try {
-        const blockedArr = JSON.parse(tool.tool_blocked_elements);
-        if (Array.isArray(blockedArr) && blockedArr[0]) {
-          const blockedStr = String(blockedArr[0]);
-          if (blockedStr.includes(',')) {
-            externalIds = blockedStr.split(',').map((id: string) => id.trim()).filter(id => id);
-          } else if (blockedStr.trim() !== '') {
-            externalIds = [blockedStr.trim()];
-          }
-        }
-      } catch (e) {
-        // Not a JSON string or couldn't parse
-      }
-
-      const btnId = getButtonId(tool.tool_name);
-
-      const handleClick = () => {
-        if (externalIds.length > 1) {
-          // Multiple accounts — show modal, DON'T launch yet
-          setAccountModalToolName(tool.tool_name);
-          setAccountModalToolImage(tool.tool_image || "");
-          setAccountModalAccounts(
-            externalIds.map((extId: string) => ({
-              tool_id: extId,
-              tool_name: tool.tool_name,
-              endedAt: endedAt,
-              users_tools_id: `account-${extId}`,
-              parent_tool_id: tool.tool_id // The main DB tool_id
-            }))
-          );
-          setAccountModalOpen(true);
-        } else {
-          // Single or no external accounts — launch directly
-          launchApp(tool.tool_id);
-        }
-      };
-
-      return (
-        <LaunchCard
-          buttonId={externalIds.length > 1 ? undefined : btnId}
-          content={tool.tool_content}
-          onClick={handleClick}
-          activeApp={activeApp}
-          isLoaded={isLoaded}
-          key={`grouped-${tool.tool_id}`}
-          toolData={tool}
-          endedAt={endedAt}
-        />
-      );
-    });
+  const renderToolCard = (item: any) => {
+    return (
+      <LaunchCard
+        buttonId={item.buttonId}
+        content={item.tool_content}
+        onClick={() => launchApp(item.tool_id)}
+        activeApp={activeApp}
+        isLoaded={isLoaded}
+        key={item.tool_id}
+        toolData={item}
+        endedAt={item.endedAt}
+      />
+    );
   };
 
   useEffect(() => {
     document.title = 'Subscriptions';
-    if (!toolsData || toolsData.length === 0) {
-      let dataTools = [...(data?.toolsData || [])];
+    if (!toolsData) {
+      let dataTools = [...data.toolsData];
       setToolsData(
         dataTools.sort((a, b) => {
           return a.tool_name.localeCompare(b.tool_name);
         })
       );
     }
-  }, [data?.toolsData]);
+  }, []);
 
   const { open: openNewUpdate } = useModal(
     getDangerActionConfirmationModal({
@@ -319,37 +257,34 @@ const Dashboard: FunctionComponent = () => {
 
       {/* <DataStatsThree /> */}
 
-      {/* Individual Tools Section - Grouped by tool_name for multi-account support */}
+      {/* Individual Tools Section - Deduplicated */}
       {(() => {
-        // Find which tool_names the user is subscribed to
-        const subscribedToolNames = new Set<string>();
-        const subscriptionEndDates = new Map<string, string>();
-        
-        data?.userToolsData?.forEach((userTool: any) => {
-          const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
-          if (!tool) return;
-          subscribedToolNames.add(tool.tool_name);
-          const existing = subscriptionEndDates.get(tool.tool_name);
-          if (!existing || new Date(userTool.endedAt) > new Date(existing)) {
-            subscriptionEndDates.set(tool.tool_name, userTool.endedAt);
+        const uniqueTools = new Map();
+        data?.userToolsData?.forEach((tool: any) => {
+          const existing = uniqueTools.get(tool.tool_id);
+          if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
+            uniqueTools.set(tool.tool_id, tool);
           }
         });
+        const deduplicatedTools = Array.from(uniqueTools.values());
 
-        // For each subscribed tool_name, find ALL tools from toolsData with that name
-        const toolsToRender: any[] = [];
-        const addedNames = new Set<string>();
-        data?.toolsData?.forEach((tool: any) => {
-          if (subscribedToolNames.has(tool.tool_name) && !addedNames.has(tool.tool_name)) {
-            // Get ALL tools with this name
-            const allWithName = data?.toolsData?.filter((t: any) => t.tool_name === tool.tool_name) || [];
-            allWithName.forEach((t: any) => toolsToRender.push({ ...t, endedAt: subscriptionEndDates.get(t.tool_name) }));
-            addedNames.add(tool.tool_name);
-          }
-        });
-
-        return toolsToRender.length !== 0 && (
+        return deduplicatedTools.length !== 0 && (
           <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {renderToolsGrouped(toolsToRender)}
+        {deduplicatedTools.map((userTool: any) => {
+          const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
+          if (!tool) return null;
+          return (
+            <LaunchCard
+              buttonId={getButtonId(tool.tool_name)}
+              onClick={() => launchApp(tool.tool_id)}
+              activeApp={activeApp}
+              isLoaded={isLoaded}
+              key={userTool?.users_tools_id}
+              toolData={tool}
+              endedAt={userTool.endedAt}
+            />
+          );
+        })}
           </div>
         );
       })()}
@@ -380,13 +315,22 @@ const Dashboard: FunctionComponent = () => {
               containerClassName="py-9 inner-shadow rounded-xl"
             >
               <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-                {(() => {
-                  const packToolIds: number[] = JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]');
-                  const packTools = packToolIds
-                    .map((toolId: number) => data?.toolsData.find((d: any) => d.tool_id === toolId))
-                    .filter(Boolean);
-                  return renderToolsGrouped(packTools, a.endedAt);
-                })()}
+                {JSON.parse(data?.packsData?.find((b: any) => b.pack_id === a.pack_id)?.pack_tools || '[]').map((toolId: number) => {
+                  const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
+                  if (!tool) return null;
+                  return (
+                    <LaunchCard
+                      buttonId={getButtonId(tool.tool_name)}
+                      content={tool.tool_content}
+                      onClick={() => launchApp(tool.tool_id)}
+                      activeApp={activeApp}
+                      isLoaded={isLoaded}
+                      key={tool.tool_id}
+                      toolData={tool}
+                      endedAt={tool.endedAt}
+                    />
+                  );
+                })}
               </div>
             </Panel>
           </div>
@@ -440,11 +384,15 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {renderToolsGrouped([
-              ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
-              ...(toolsData?.filter((item: any) => item.tool_plan === "premium") || []),
-              ...(toolsData?.filter((item: any) => item.tool_plan === "vip") || []),
-            ])}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "standard")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "premium")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "vip")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -465,10 +413,12 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {renderToolsGrouped([
-              ...(toolsData?.filter((item: any) => item.tool_plan === "standard") || []),
-              ...(toolsData?.filter((item: any) => item.tool_plan === "premium") || []),
-            ])}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "standard")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "premium")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : data?.userPlansData?.filter(
@@ -489,9 +439,9 @@ const Dashboard: FunctionComponent = () => {
           containerClassName="py-9"
         >
           <div className="grid w-full px-10 gap-8 justify-center" style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {renderToolsGrouped(
-              toolsData?.filter((item: any) => item.tool_plan === "standard") || []
-            )}
+            {toolsData
+              ?.filter((item: any) => item.tool_plan === "standard")
+              .map((item: any) => renderToolCard({ ...item, buttonId: getButtonId(item.tool_name) }))}
           </div>
         </Panel>
       ) : (
@@ -507,65 +457,6 @@ const Dashboard: FunctionComponent = () => {
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
       />
-
-      {/* Multi-Account Selection Modal */}
-      <AccountSelectModal
-        open={accountModalOpen}
-        onClose={() => setAccountModalOpen(false)}
-        toolName={accountModalToolName}
-        toolImage={accountModalToolImage}
-        accounts={accountModalAccounts}
-        onSelectAccount={(toolId, accountId) => {
-          setAccountModalOpen(false);
-          
-          // Trigger the resident hidden button that the extension already saw on page load
-          if (accountId) {
-             const hiddenBtn = document.getElementById(accountId.toString());
-             if (hiddenBtn) {
-               // Give React a tiny bit of time to close the modal before the click
-               setTimeout(() => {
-                 hiddenBtn.click();
-               }, 50);
-             }
-          }
-
-          launchApp(toolId, accountId);
-        }}
-        activeApp={activeApp}
-        isLoaded={isLoaded}
-      />
-
-      {/* Resident Hidden Buttons: These exist from page load so the extension finds them immediately */}
-      <div 
-        style={{ 
-          opacity: 0, 
-          pointerEvents: 'none', 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          zIndex: -1,
-          width: '1px',
-          height: '1px',
-          overflow: 'hidden'
-        }} 
-        aria-hidden="true"
-      >
-        {data?.userToolsData?.map((tool: any) => {
-          let toolExtIds: string[] = [];
-          try {
-            const blockedArr = JSON.parse(tool.tool_blocked_elements);
-            if (Array.isArray(blockedArr) && blockedArr[0]) {
-              const blockedStr = String(blockedArr[0]);
-              toolExtIds = blockedStr.split(',').map((id: string) => id.trim()).filter(id => id);
-            }
-          } catch (e) {}
-
-          return toolExtIds.map(extId => (
-            <button key={`resident-${extId}`} id={extId} type="button">Access {extId}</button>
-          ));
-        })}
-      </div>
-
     </>
   );
 };
