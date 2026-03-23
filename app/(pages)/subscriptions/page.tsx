@@ -122,7 +122,7 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
-        window.postMessage({ type: 'FROM_NT_APP', text: JSON.stringify(res.data) }, "*");
+        window.postMessage({ type: 'FROM_NT_APP', text: res.data }, "*");
         setIsLoaded(true);
         setIsOpenErrorEx(false);
         
