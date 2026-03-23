@@ -110,10 +110,6 @@ const Dashboard: FunctionComponent = () => {
       }
 
       // API call to get session
-      const getSessionUrl = process.env.NODE_ENV === "development" 
-        ? "http://localhost:4560/api/user/get-session" 
-        : "https://api.nexustoolz.com/api/user/get-session"; // Fallback to local for testing if needed, though previously hardcoded
-
       const res = await axios.post("https://api.nexustoolz.com/api/user/get-session", {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
