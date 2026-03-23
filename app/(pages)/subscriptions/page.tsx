@@ -266,45 +266,58 @@ const Dashboard: FunctionComponent = () => {
 
       {/* Individual Tools Section - Grouped by tool_name for multi-account support */}
       {(() => {
-        // Group userToolsData by tool_name (from toolsData lookup)
-        const toolsByName = new Map<string, any[]>();
+        // Step 1: Find which tool_names the user is subscribed to
+        const subscribedToolNames = new Set<string>();
+        const subscriptionEndDates = new Map<string, string>(); // toolName -> latest endedAt
+        
         data?.userToolsData?.forEach((userTool: any) => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
           if (!tool) return;
           const toolName = tool.tool_name;
-          if (!toolsByName.has(toolName)) {
-            toolsByName.set(toolName, []);
+          subscribedToolNames.add(toolName);
+          
+          // Track the latest endedAt for each tool name
+          const existing = subscriptionEndDates.get(toolName);
+          if (!existing || new Date(userTool.endedAt) > new Date(existing)) {
+            subscriptionEndDates.set(toolName, userTool.endedAt);
           }
-          toolsByName.get(toolName)!.push({ ...userTool, _toolData: tool });
         });
 
-        const groupedTools = Array.from(toolsByName.entries());
+        // Step 2: For each subscribed tool_name, find ALL tools from toolsData with that name
+        const toolGroupsByName = new Map<string, any[]>();
+        data?.toolsData?.forEach((tool: any) => {
+          if (subscribedToolNames.has(tool.tool_name)) {
+            if (!toolGroupsByName.has(tool.tool_name)) {
+              toolGroupsByName.set(tool.tool_name, []);
+            }
+            toolGroupsByName.get(tool.tool_name)!.push(tool);
+          }
+        });
+
+        const groupedTools = Array.from(toolGroupsByName.entries());
 
         return groupedTools.length !== 0 && (
           <div className="grid w-full mb-9 px-10 gap-8 justify-center " style={{ gridTemplateColumns: "repeat(auto-fit, 330px)" }}>
-            {groupedTools.map(([toolName, accounts]) => {
-              // Pick the first account's tool data for display
-              const firstAccount = accounts[0];
-              const tool = firstAccount._toolData;
-              // Pick the latest endedAt for display
-              const latestEndedAt = accounts.reduce((latest: string, acc: any) =>
-                new Date(acc.endedAt) > new Date(latest) ? acc.endedAt : latest
-              , accounts[0].endedAt);
+            {groupedTools.map(([toolName, toolsWithSameName]) => {
+              // Use the first tool for display (card image, etc.)
+              const displayTool = toolsWithSameName[0];
+              // Use the latest endedAt from subscriptions
+              const latestEndedAt = subscriptionEndDates.get(toolName) || displayTool.endedAt;
 
               const handleClick = () => {
-                if (accounts.length === 1) {
+                if (toolsWithSameName.length === 1) {
                   // Single account — launch directly
-                  launchApp(tool.tool_id);
+                  launchApp(displayTool.tool_id);
                 } else {
                   // Multiple accounts — show modal
                   setAccountModalToolName(toolName);
-                  setAccountModalToolImage(tool.tool_image || "");
+                  setAccountModalToolImage(displayTool.tool_image || "");
                   setAccountModalAccounts(
-                    accounts.map((acc: any) => ({
-                      tool_id: acc.tool_id,
-                      tool_name: acc._toolData.tool_name,
-                      endedAt: acc.endedAt,
-                      users_tools_id: acc.users_tools_id,
+                    toolsWithSameName.map((t: any, idx: number) => ({
+                      tool_id: t.tool_id,
+                      tool_name: t.tool_name,
+                      endedAt: latestEndedAt,
+                      users_tools_id: `account-${t.tool_id}`,
                     }))
                   );
                   setAccountModalOpen(true);
@@ -313,12 +326,12 @@ const Dashboard: FunctionComponent = () => {
 
               return (
                 <LaunchCard
-                  buttonId={getButtonId(tool.tool_name)}
+                  buttonId={getButtonId(displayTool.tool_name)}
                   onClick={handleClick}
                   activeApp={activeApp}
                   isLoaded={isLoaded}
                   key={`grouped-${toolName}`}
-                  toolData={tool}
+                  toolData={displayTool}
                   endedAt={latestEndedAt}
                 />
               );
