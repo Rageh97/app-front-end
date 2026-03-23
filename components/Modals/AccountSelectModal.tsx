@@ -87,12 +87,12 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
           {/* Account buttons */}
           <div className="p-6 pt-4 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
             {accounts.map((account, index) => {
-              // The account button should show loading if its specific ID is active
               const isActive = activeApp === account.tool_id && isLoaded === null;
               const isSuccess = activeApp === account.tool_id && isLoaded === true;
               const isFailed = activeApp === account.tool_id && isLoaded === false;
 
-              const accButtonId = account.tool_id.toString().replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
+              // Use EXACTLY what the user typed in the input as the button ID
+              const accButtonId = account.tool_id.toString();
 
               return (
                 <button
@@ -137,7 +137,7 @@ const AccountSelectModal: FunctionComponent<AccountSelectModalProps> = ({
                   {/* Account info */}
                   <div className="flex-1 text-start">
                     <p className="text-white font-bold text-base">
-                      Access Account {index + 1}
+                      Access Account {account.tool_id}
                     </p>
                     <p className="text-white/40 text-xs mt-0.5">
                       Expires: {fullDateTimeFormat(account.endedAt)}
