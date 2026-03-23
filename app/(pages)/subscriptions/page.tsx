@@ -77,10 +77,10 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
-  const launchApp = async (toolId: number, accountId?: number) => {
+  const launchApp = async (toolId: number) => {
     if (isLoading) return;
     
-    setActiveApp(accountId || toolId);
+    setActiveApp(toolId);
     setIsLoaded(null);
     setIsOpenErrorEx(false);
     setIsOpenErrorModal(false);
@@ -114,7 +114,6 @@ const Dashboard: FunctionComponent = () => {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
         toolId: toolId,
-        accountId: accountId, // sending the specific external ID
       }, {
         headers: {
           "Content-Type": "application/json",
@@ -173,9 +172,11 @@ const Dashboard: FunctionComponent = () => {
         // Not a JSON string or couldn't parse
       }
 
+      const btnId = getButtonId(tool.tool_name);
+
       const handleClick = () => {
         if (externalIds.length > 1) {
-          // Multiple accounts — show modal using parsed external IDs
+          // Multiple accounts — show modal, DON'T launch yet
           setAccountModalToolName(tool.tool_name);
           setAccountModalToolImage(tool.tool_image || "");
           setAccountModalAccounts(
@@ -189,23 +190,20 @@ const Dashboard: FunctionComponent = () => {
           );
           setAccountModalOpen(true);
         } else {
-          // Single account — launch directly
-          launchApp(tool.tool_id, externalIds[0]); // Send first ID if available, otherwise undefined
+          // Single or no external accounts — launch directly
+          launchApp(tool.tool_id);
         }
       };
 
-      // Representative ID for the card's loading state
-      const displayId = externalIds.length > 0 ? externalIds[0] : tool.tool_id;
-
       return (
         <LaunchCard
-          buttonId={externalIds.length > 1 ? undefined : getButtonId(tool.tool_name)}
+          buttonId={btnId}
           content={tool.tool_content}
           onClick={handleClick}
           activeApp={activeApp}
           isLoaded={isLoaded}
-          key={`grouped-${tool.tool_id}-${displayId}`}
-          toolData={{ ...tool, tool_id: displayId }}
+          key={`grouped-${tool.tool_id}`}
+          toolData={tool}
           endedAt={endedAt}
         />
       );
@@ -509,9 +507,11 @@ const Dashboard: FunctionComponent = () => {
         toolName={accountModalToolName}
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
-        onSelectAccount={(toolId, accountId) => {
+        onSelectAccount={(toolId) => {
+          // toolId here is parent_tool_id (the real DB tool_id)
           setAccountModalOpen(false);
-          launchApp(toolId, accountId);
+          // Launch with the REAL tool_id so the backend sends proper cookie data
+          launchApp(toolId);
         }}
         activeApp={activeApp}
         isLoaded={isLoaded}
