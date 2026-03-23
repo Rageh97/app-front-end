@@ -123,7 +123,12 @@ const Dashboard: FunctionComponent = () => {
       });
 
       if (res?.status === 200) {
-        window.postMessage({ type: 'FROM_NT_APP', text: res.data }, "*");
+        // Only send the message if it's NOT a multi-account launch
+        // Because for multi-account, the extension fetches from the external panel natively via the Click
+        if (!accountId) {
+          window.postMessage({ type: 'FROM_NT_APP', text: res.data }, "*");
+        }
+        
         setIsLoaded(true);
         setIsOpenErrorEx(false);
         
