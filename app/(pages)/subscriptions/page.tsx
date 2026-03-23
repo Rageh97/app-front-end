@@ -165,9 +165,16 @@ const Dashboard: FunctionComponent = () => {
       
       // Parse Blocked Element 1 for comma separated external account IDs
       let externalIds: number[] = [];
-      const blockedStr = tool.tool_blocked_elements || "";
-      if (blockedStr && /^(\d+,\s*)*\d+$/.test(blockedStr.trim())) {
-        externalIds = blockedStr.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+      try {
+        const blockedArr = JSON.parse(tool.tool_blocked_elements);
+        if (Array.isArray(blockedArr) && blockedArr[0]) {
+          const blockedStr = String(blockedArr[0]);
+          if (/^(\d+,\s*)*\d+$/.test(blockedStr.trim())) {
+            externalIds = blockedStr.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+          }
+        }
+      } catch (e) {
+        // Not a JSON string or couldn't parse
       }
 
       const handleClick = () => {
