@@ -321,7 +321,7 @@ const Dashboard: FunctionComponent = () => {
         deduplicatedTools.forEach((userTool: any) => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
           if (!tool) return;
-          const name = tool.tool_name.trim();
+          const name = tool.tool_name;
           if (!toolsByName.has(name)) {
             toolsByName.set(name, []);
           }
@@ -345,8 +345,8 @@ const Dashboard: FunctionComponent = () => {
 
               return (
                 <LaunchCard
-                  buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name.trim())}
-                  onClick={() => handleToolClick(displayTool.tool_name.trim(), displayTool.tool_image, accountIds)}
+                  buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name)}
+                  onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                   activeApp={activeApp}
                   isLoaded={isLoaded}
                   key={toolName}
@@ -392,7 +392,7 @@ const Dashboard: FunctionComponent = () => {
                   packToolIds.forEach((toolId: number) => {
                     const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
                     if (!tool) return;
-                    const name = tool.tool_name.trim();
+                    const name = tool.tool_name;
                     if (!packToolsByName.has(name)) {
                       packToolsByName.set(name, []);
                     }
@@ -406,9 +406,9 @@ const Dashboard: FunctionComponent = () => {
 
                     return (
                       <LaunchCard
-                        buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name.trim())}
+                        buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name)}
                         content={displayTool.tool_content}
-                        onClick={() => handleToolClick(displayTool.tool_name.trim(), displayTool.tool_image, accountIds)}
+                        onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                         activeApp={activeApp}
                         isLoaded={isLoaded}
                         key={toolName}
@@ -479,7 +479,7 @@ const Dashboard: FunctionComponent = () => {
               ];
               const planToolsByName = new Map<string, any[]>();
               planTools.forEach((tool: any) => {
-                const name = tool.tool_name.trim();
+                const name = tool.tool_name;
                 if (!planToolsByName.has(name)) {
                   planToolsByName.set(name, []);
                 }
@@ -488,14 +488,14 @@ const Dashboard: FunctionComponent = () => {
               return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
                 const displayTool = tools[0];
                 if (tools.length === 1) {
-                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name.trim()) });
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
                 }
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
                 return (
                   <LaunchCard
                     buttonId={undefined}
                     content={displayTool.tool_content}
-                    onClick={() => handleToolClick(displayTool.tool_name.trim(), displayTool.tool_image, accountIds)}
+                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                     activeApp={activeApp}
                     isLoaded={isLoaded}
                     key={toolName}
@@ -532,7 +532,7 @@ const Dashboard: FunctionComponent = () => {
               ];
               const planToolsByName = new Map<string, any[]>();
               planTools.forEach((tool: any) => {
-                const name = tool.tool_name.trim();
+                const name = tool.tool_name;
                 if (!planToolsByName.has(name)) {
                   planToolsByName.set(name, []);
                 }
@@ -541,14 +541,14 @@ const Dashboard: FunctionComponent = () => {
               return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
                 const displayTool = tools[0];
                 if (tools.length === 1) {
-                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name.trim()) });
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
                 }
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
                 return (
                   <LaunchCard
                     buttonId={undefined}
                     content={displayTool.tool_content}
-                    onClick={() => handleToolClick(displayTool.tool_name.trim(), displayTool.tool_image, accountIds)}
+                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                     activeApp={activeApp}
                     isLoaded={isLoaded}
                     key={toolName}
@@ -582,7 +582,7 @@ const Dashboard: FunctionComponent = () => {
               const planTools = toolsData?.filter((item: any) => item.tool_plan === "standard") || [];
               const planToolsByName = new Map<string, any[]>();
               planTools.forEach((tool: any) => {
-                const name = tool.tool_name.trim();
+                const name = tool.tool_name;
                 if (!planToolsByName.has(name)) {
                   planToolsByName.set(name, []);
                 }
@@ -591,14 +591,14 @@ const Dashboard: FunctionComponent = () => {
               return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
                 const displayTool = tools[0];
                 if (tools.length === 1) {
-                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name.trim()) });
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
                 }
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
                 return (
                   <LaunchCard
                     buttonId={undefined}
                     content={displayTool.tool_content}
-                    onClick={() => handleToolClick(displayTool.tool_name.trim(), displayTool.tool_image, accountIds)}
+                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                     activeApp={activeApp}
                     isLoaded={isLoaded}
                     key={toolName}
