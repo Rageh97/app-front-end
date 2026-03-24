@@ -456,7 +456,7 @@ export default function TestToolPage() {
           tool_image: acc.tool_image,
           accountIndex: index + 1,
           tag: acc.parsedTag,
-          buttonId: `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`
+          buttonId: `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}_x_${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`
         })) || []}
         onSelectAccount={(toolId) => {
           setIsModalOpen(false);
