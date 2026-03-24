@@ -73,7 +73,7 @@ const AccountSelectionModal: React.FC<AccountSelectionModalProps> = ({
                 </button>
 
                 {/* Tool Image */}
-                {toolImage && checkIfImageUrl(toolImage) && (
+                {/* {toolImage && checkIfImageUrl(toolImage) && (
                   <div className="mx-auto w-16 h-16 rounded-2xl overflow-hidden border-2 border-purple-500/30 shadow-[0_0_20px_rgba(147,51,234,0.2)] mb-4">
                     <img
                       src={toolImage}
@@ -81,7 +81,7 @@ const AccountSelectionModal: React.FC<AccountSelectionModalProps> = ({
                       className="w-full h-full object-cover"
                     />
                   </div>
-                )}
+                )} */}
 
                 {/* Icon */}
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-purple-500/10 border border-purple-500/20 mb-5">

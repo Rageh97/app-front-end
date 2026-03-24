@@ -72,9 +72,13 @@ const Dashboard: FunctionComponent = () => {
   // Removed passive listeners to prevent unexpected modal triggers.
   // We will check for extension directly in the launch flow.
 
-  const getButtonId = (toolName: string) => {
+  const getButtonId = (toolName: string, idx?: number) => {
     if (!toolName) return undefined;
-    return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
+    const clean = toolName.replace(/[^a-zA-Z0-9]/g, '');
+    // idx 0 or undefined = first/only account: CanvaCookies
+    // idx 1 = second account: Canva2Cookies, etc.
+    if (idx === undefined || idx === 0) return clean + 'Cookies';
+    return clean + (idx + 1) + 'Cookies';
   };
 
   const launchApp = async (toolId: number) => {
@@ -164,16 +168,18 @@ const Dashboard: FunctionComponent = () => {
   // Handle click on a tool card: if multiple accounts, show modal; otherwise launch directly
   const handleToolClick = (toolName: string, toolImage: string, toolIds: { tool_id: number; endedAt?: string }[]) => {
     if (toolIds.length === 1) {
-      // Single account - launch directly
+      // Single account - launch directly (extension handles it via the card's buttonId)
       launchApp(toolIds[0].tool_id);
     } else {
-      // Multiple accounts - show selection modal
+      // Multiple accounts - show selection modal with numbered buttonIds
       const accounts = toolIds.map((t, idx) => ({
         tool_id: t.tool_id,
         tool_name: toolName,
         tool_image: toolImage,
         endedAt: t.endedAt,
         accountIndex: idx + 1,
+        tag: `Account ${idx + 1}`,
+        buttonId: getButtonId(toolName, idx),
       }));
       setAccountModalToolName(toolName);
       setAccountModalToolImage(toolImage);
@@ -335,14 +341,16 @@ const Dashboard: FunctionComponent = () => {
 
               const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
 
+              const hasMultiple = tools.length > 1;
+
               return (
                 <LaunchCard
-                  buttonId={getButtonId(displayTool.tool_name)}
+                  buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name)}
                   onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                   activeApp={activeApp}
                   isLoaded={isLoaded}
                   key={toolName}
-                  toolData={{ ...displayTool, _multiAccount: tools.length > 1, _accountCount: tools.length }}
+                  toolData={{ ...displayTool, _multiAccount: hasMultiple, _accountCount: tools.length }}
                   endedAt={latestEndedAt}
                 />
               );
@@ -394,16 +402,17 @@ const Dashboard: FunctionComponent = () => {
                   return Array.from(packToolsByName.entries()).map(([toolName, tools]) => {
                     const displayTool = tools[0];
                     const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                    const hasMultiple = tools.length > 1;
 
                     return (
                       <LaunchCard
-                        buttonId={getButtonId(displayTool.tool_name)}
+                        buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name)}
                         content={displayTool.tool_content}
                         onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                         activeApp={activeApp}
                         isLoaded={isLoaded}
                         key={toolName}
-                        toolData={{ ...displayTool, _multiAccount: tools.length > 1, _accountCount: tools.length }}
+                        toolData={{ ...displayTool, _multiAccount: hasMultiple, _accountCount: tools.length }}
                         endedAt={displayTool.endedAt}
                       />
                     );
@@ -484,7 +493,7 @@ const Dashboard: FunctionComponent = () => {
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
                 return (
                   <LaunchCard
-                    buttonId={getButtonId(displayTool.tool_name)}
+                    buttonId={undefined}
                     content={displayTool.tool_content}
                     onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                     activeApp={activeApp}
@@ -537,7 +546,7 @@ const Dashboard: FunctionComponent = () => {
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
                 return (
                   <LaunchCard
-                    buttonId={getButtonId(displayTool.tool_name)}
+                    buttonId={undefined}
                     content={displayTool.tool_content}
                     onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                     activeApp={activeApp}
@@ -587,7 +596,7 @@ const Dashboard: FunctionComponent = () => {
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
                 return (
                   <LaunchCard
-                    buttonId={getButtonId(displayTool.tool_name)}
+                    buttonId={undefined}
                     content={displayTool.tool_content}
                     onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
                     activeApp={activeApp}
@@ -622,9 +631,59 @@ const Dashboard: FunctionComponent = () => {
         toolName={accountModalToolName}
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
-        onSelectAccount={(toolId) => launchApp(toolId)}
+        onSelectAccount={(toolId) => {
+          setAccountModalOpen(false);
+          // Find the account to get its buttonId, then click the hidden button
+          const acc = accountModalAccounts.find((a: any) => a.tool_id === toolId);
+          if (acc?.buttonId) {
+            const hiddenBtn = document.getElementById(acc.buttonId);
+            if (hiddenBtn) {
+              hiddenBtn.click();
+              return;
+            }
+          }
+          // Fallback: direct API launch
+          launchApp(toolId);
+        }}
         isLoading={isLoading}
       />
+
+      {/* Hidden buttons for extension to register at page load */}
+      <div style={{ display: 'none' }} aria-hidden="true">
+        {(() => {
+          const allGroups: any[] = [];
+          // Collect individual tools
+          const uniqueTools = new Map();
+          data?.userToolsData?.forEach((tool: any) => {
+            const existing = uniqueTools.get(tool.tool_id);
+            if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
+              uniqueTools.set(tool.tool_id, tool);
+            }
+          });
+          const toolsByName = new Map<string, any[]>();
+          Array.from(uniqueTools.values()).forEach((ut: any) => {
+            const tool = data?.toolsData?.find((t: any) => t.tool_id == ut.tool_id);
+            if (!tool) return;
+            const name = tool.tool_name;
+            if (!toolsByName.has(name)) toolsByName.set(name, []);
+            toolsByName.get(name)!.push({ ...tool, endedAt: ut.endedAt });
+          });
+          toolsByName.forEach((tools, name) => { if (tools.length > 1) allGroups.push({ name, tools }); });
+
+          return allGroups.map((group) =>
+            group.tools.map((tool: any, idx: number) => (
+              <button
+                key={`hidden-${tool.tool_id}`}
+                id={getButtonId(group.name, idx)}
+                type="button"
+                onClick={() => launchApp(tool.tool_id)}
+              >
+                {group.name} {idx + 1}
+              </button>
+            ))
+          );
+        })()}
+      </div>
     </>
   );
 };
