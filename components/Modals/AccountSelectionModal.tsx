@@ -17,7 +17,7 @@ interface AccountSelectionModalProps {
   toolName: string;
   toolImage?: string;
   accounts: AccountInfo[];
-  onSelectAccount: (toolId: number, accountIndex: number) => void;
+  onSelectAccount: (toolId: number) => void;
   isLoading?: boolean;
 }
 
@@ -99,9 +99,9 @@ const AccountSelectionModal: React.FC<AccountSelectionModalProps> = ({
                 <div className="flex flex-col gap-3">
                   {accounts.map((account) => (
                     <button
-                      key={`${account.tool_id}-${account.accountIndex}`}
+                      key={account.tool_id}
                       onClick={() => {
-                        onSelectAccount(account.tool_id, account.accountIndex);
+                        onSelectAccount(account.tool_id);
                         onClose();
                       }}
                       disabled={isLoading}
