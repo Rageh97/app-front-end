@@ -399,7 +399,9 @@ export default function TestToolPage() {
                     </div>
                     {group.accounts.map((acc: any, idx: number) => {
                       const tag = acc.parsedTag || `Account ${idx + 1}`;
-                      const btnId = `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${tag.replace(/[^a-zA-Z0-9]/g, '')}Cookies`;
+                      const cleanName = acc.tool_name.replace(/[^a-zA-Z0-9]/g, '');
+                      // First account: CanvaCookies, Second: Canva2Cookies, Third: Canva3Cookies
+                      const btnId = idx === 0 ? `${cleanName}Cookies` : `${cleanName}${idx + 1}Cookies`;
                       return (
                         <button
                           key={btnId}
