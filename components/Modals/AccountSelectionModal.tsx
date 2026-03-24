@@ -10,6 +10,7 @@ interface AccountInfo {
   endedAt?: string;
   accountIndex: number; // 1-based index
   tag?: string;
+  buttonId?: string;
 }
 
 interface AccountSelectionModalProps {
@@ -101,6 +102,7 @@ const AccountSelectionModal: React.FC<AccountSelectionModalProps> = ({
                   {accounts.map((account) => (
                     <button
                       key={account.tool_id}
+                      id={account.buttonId}
                       onClick={() => {
                         onSelectAccount(account.tool_id);
                         onClose();

@@ -69,17 +69,21 @@ export default function TestToolPage() {
     
     data?.toolsData?.forEach((t: any) => {
       if (authorizedToolIds.has(Number(t.tool_id))) {
-        const name = t.tool_name.trim();
-        if (!toolsMap.has(name)) {
-          toolsMap.set(name, []);
+        let groupName = t.tool_name.trim();
+        let tag = t.tool_tag || t.tag || `Account ${toolsMap.get(groupName)?.length ? toolsMap.get(groupName).length + 1 : 1}`;
+        
+        if (!toolsMap.has(groupName)) {
+          toolsMap.set(groupName, []);
         }
-        toolsMap.get(name)?.push(t);
+        
+        let accountObj = { ...t, parsedTag: tag };
+        toolsMap.get(groupName)?.push(accountObj);
       }
     });
 
-    const result = Array.from(toolsMap.entries()).map(([name, accounts]) => {
+    const result = Array.from(toolsMap.entries()).map(([groupName, accounts]) => {
       return {
-        group_name: name,
+        group_name: groupName,
         accounts: accounts,
         main_tool: accounts[0]
       };
@@ -377,9 +381,9 @@ export default function TestToolPage() {
 
                 return (
                   <button 
-                    key={`group-${tool.tool_name}`}
+                    key={`group-${group.group_name}`}
                     className="tool-btn" 
-                    id={buttonId}
+                    id={hasMultiple ? undefined : buttonId}
                     disabled={isLoading}
                     onClick={() => {
                       if (hasMultiple) {
@@ -390,7 +394,7 @@ export default function TestToolPage() {
                       }
                     }}
                   >
-                    {isLoading && isGroupLoading ? '⏳' : tool.tool_name}
+                    {isLoading && isGroupLoading ? '⏳' : group.group_name}
                     {hasMultiple && ` (${group.accounts.length})`}
                   </button>
                 );
@@ -451,7 +455,8 @@ export default function TestToolPage() {
           tool_name: acc.tool_name,
           tool_image: acc.tool_image,
           accountIndex: index + 1,
-          tag: acc.tool_tag || acc.tag
+          tag: acc.parsedTag,
+          buttonId: `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`
         })) || []}
         onSelectAccount={(toolId) => {
           setIsModalOpen(false);
