@@ -38,6 +38,11 @@ const Dashboard: FunctionComponent = () => {
   const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
   const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
 
+  // When you add multiple cookie accounts for the same tool in the Update Panel,
+  // the modal should be driven by the number of cookie sets inside tool_data (not userToolsData rows).
+  const [isCheckingToolAccounts, setIsCheckingToolAccounts] = useState<boolean>(false);
+  const [toolAccountsCountCache, setToolAccountsCountCache] = useState<Record<number, number>>({});
+
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
       let msg = event.data;
@@ -77,7 +82,7 @@ const Dashboard: FunctionComponent = () => {
     return toolName.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
   };
 
-  const launchApp = async (toolId: number) => {
+  const launchApp = async (toolId: number, accountIndex: number = 1) => {
     if (isLoading) return;
     
     setActiveApp(toolId);
@@ -114,6 +119,7 @@ const Dashboard: FunctionComponent = () => {
         appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
         token: token,
         toolId: toolId,
+        accountIndex: accountIndex,
       }, {
         headers: {
           "Content-Type": "application/json",
@@ -161,25 +167,75 @@ const Dashboard: FunctionComponent = () => {
     return groups;
   };
 
-  // Handle click on a tool card: if multiple accounts, show modal; otherwise launch directly
-  const handleToolClick = (toolName: string, toolImage: string, toolIds: { tool_id: number; endedAt?: string }[]) => {
-    if (toolIds.length === 1) {
-      // Single account - launch directly
-      launchApp(toolIds[0].tool_id);
-    } else {
-      // Multiple accounts - show selection modal
-      const accounts = toolIds.map((t, idx) => ({
-        tool_id: t.tool_id,
-        tool_name: toolName,
-        tool_image: toolImage,
-        endedAt: t.endedAt,
-        accountIndex: idx + 1,
-      }));
-      setAccountModalToolName(toolName);
-      setAccountModalToolImage(toolImage);
-      setAccountModalAccounts(accounts);
-      setAccountModalOpen(true);
+  const getToolCookieAccountsCount = async (toolId: number) => {
+    if (toolAccountsCountCache[toolId]) return toolAccountsCountCache[toolId];
+
+    const token = localStorage.getItem("a");
+    if (!token) {
+      window.location.href = "/signin";
+      return 1;
     }
+
+    try {
+      setIsCheckingToolAccounts(true);
+      const res = await axios.post(
+        "https://api.nexustoolz.com/api/user/get-tool-accounts",
+        {
+          appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
+          token,
+          toolId,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "User-Client": (globalThis as any).clientId1328 || "",
+          },
+        }
+      );
+
+      const accountsCount = res?.data?.accountsCount;
+      const count =
+        typeof accountsCount === "number" && Number.isFinite(accountsCount) && accountsCount >= 1
+          ? Math.floor(accountsCount)
+          : 1;
+
+      setToolAccountsCountCache((prev) => ({ ...prev, [toolId]: count }));
+      return count;
+    } catch (e) {
+      console.error("Failed to get tool cookie accounts count:", e);
+      return 1;
+    } finally {
+      setIsCheckingToolAccounts(false);
+    }
+  };
+
+  // Handle click on a tool card: if multiple accounts, show modal; otherwise launch directly
+  const handleToolClick = async (
+    toolName: string,
+    toolImage: string,
+    toolIds: { tool_id: number; endedAt?: string }[]
+  ) => {
+    const toolId = toolIds?.[0]?.tool_id;
+    if (!toolId) return;
+
+    const cookieAccountsCount = await getToolCookieAccountsCount(toolId);
+
+    if (cookieAccountsCount <= 1) {
+      launchApp(toolId, 1);
+      return;
+    }
+
+    const accounts = Array.from({ length: cookieAccountsCount }, (_, idx) => ({
+      tool_id: toolId,
+      tool_name: toolName,
+      tool_image: toolImage,
+      accountIndex: idx + 1,
+    }));
+
+    setAccountModalToolName(toolName);
+    setAccountModalToolImage(toolImage);
+    setAccountModalAccounts(accounts);
+    setAccountModalOpen(true);
   };
 
   const renderToolCard = (item: any) => {
@@ -187,7 +243,11 @@ const Dashboard: FunctionComponent = () => {
       <LaunchCard
         buttonId={item.buttonId}
         content={item.tool_content}
-        onClick={() => launchApp(item.tool_id)}
+        onClick={() =>
+          handleToolClick(item.tool_name, item.tool_image, [
+            { tool_id: item.tool_id, endedAt: item.endedAt },
+          ])
+        }
         activeApp={activeApp}
         isLoaded={isLoaded}
         key={item.tool_id}
@@ -301,7 +361,7 @@ const Dashboard: FunctionComponent = () => {
       {/* Individual Tools Section - Grouped by tool_name for multi-account support */}
       {(() => {
         // First deduplicate by tool_id (keep latest endedAt)
-        const uniqueTools = new Map();
+        const uniqueTools = new Map<number, any>();
         data?.userToolsData?.forEach((tool: any) => {
           const existing = uniqueTools.get(tool.tool_id);
           if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
@@ -310,7 +370,7 @@ const Dashboard: FunctionComponent = () => {
         });
         const deduplicatedTools = Array.from(uniqueTools.values());
 
-        // Now group by tool_name: tools with the same name = multiple accounts
+        // Now group by tool_name: tools with the same name = multiple tool variants
         const toolsByName = new Map<string, any[]>();
         deduplicatedTools.forEach((userTool: any) => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
@@ -319,7 +379,11 @@ const Dashboard: FunctionComponent = () => {
           if (!toolsByName.has(name)) {
             toolsByName.set(name, []);
           }
-          toolsByName.get(name)!.push({ ...tool, endedAt: userTool.endedAt, users_tools_id: userTool.users_tools_id });
+          toolsByName.get(name)!.push({
+            ...tool,
+            endedAt: userTool.endedAt,
+            users_tools_id: userTool.users_tools_id,
+          });
         });
         const groupedEntries = Array.from(toolsByName.entries());
 
@@ -622,8 +686,8 @@ const Dashboard: FunctionComponent = () => {
         toolName={accountModalToolName}
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
-        onSelectAccount={(toolId) => launchApp(toolId)}
-        isLoading={isLoading}
+        onSelectAccount={(toolId, accountIndex) => launchApp(toolId, accountIndex)}
+        isLoading={isLoading || isCheckingToolAccounts}
       />
     </>
   );
