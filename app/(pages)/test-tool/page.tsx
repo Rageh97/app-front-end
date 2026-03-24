@@ -3,14 +3,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
-import AccountSelectionModal from "@/components/Modals/AccountSelectionModal";
 
 export default function TestToolPage() {
   const { data } = useMyInfo();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [selectedToolGroup, setSelectedToolGroup] = useState<any>(null);
 
   const handleToolClick = async (toolId: number) => {
     setActiveServer(toolId);
@@ -95,28 +92,6 @@ export default function TestToolPage() {
 
     return result.sort((a, b) => a.group_name.localeCompare(b.group_name));
   }, [data]);
-
-  // When user picks an account from modal, click the pre-registered hidden button
-  const handleAccountSelect = (toolId: number) => {
-    setIsModalOpen(false);
-    
-    // Find the account in the grouped tools
-    for (const group of groupedTools) {
-      const acc = group.accounts.find((a: any) => a.tool_id === toolId);
-      if (acc) {
-        const hiddenBtnId = `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`;
-        const hiddenBtn = document.getElementById(hiddenBtnId);
-        if (hiddenBtn) {
-          hiddenBtn.click();
-        } else {
-          // Fallback: use the API approach
-          handleToolClick(toolId);
-        }
-        return;
-      }
-    }
-    handleToolClick(toolId);
-  };
 
   return (
     <>
@@ -444,25 +419,6 @@ export default function TestToolPage() {
             </div>
           </div>
           <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
-
-          {/* Hidden buttons - registered at page load so extension can intercept them */}
-          <div style={{ display: 'none' }} aria-hidden="true">
-            {groupedTools.map((group: any) =>
-              group.accounts.length > 1 && group.accounts.map((acc: any) => {
-                const hiddenId = `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`;
-                return (
-                  <button
-                    key={hiddenId}
-                    id={hiddenId}
-                    type="button"
-                    onClick={() => handleToolClick(acc.tool_id)}
-                  >
-                    {hiddenId}
-                  </button>
-                );
-              })
-            )}
-          </div>
         </div>
 
         {/* Extension Required Section - Start with display: none to match dev's HTML behavior */}
@@ -505,22 +461,7 @@ export default function TestToolPage() {
         </div>
       </div>
 
-      <AccountSelectionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        toolName={selectedToolGroup?.group_name || ""}
-        toolImage={selectedToolGroup?.main_tool?.tool_image}
-        isLoading={isLoading}
-        accounts={selectedToolGroup?.accounts?.map((acc: any, index: number) => ({
-          tool_id: acc.tool_id,
-          tool_name: acc.tool_name,
-          tool_image: acc.tool_image,
-          accountIndex: index + 1,
-          tag: acc.parsedTag,
-          buttonId: `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`
-        })) || []}
-        onSelectAccount={handleAccountSelect}
-      />
+
     </>
   );
 }
