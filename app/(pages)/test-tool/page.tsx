@@ -96,6 +96,28 @@ export default function TestToolPage() {
     return result.sort((a, b) => a.group_name.localeCompare(b.group_name));
   }, [data]);
 
+  // When user picks an account from modal, click the pre-registered hidden button
+  const handleAccountSelect = (toolId: number) => {
+    setIsModalOpen(false);
+    
+    // Find the account in the grouped tools
+    for (const group of groupedTools) {
+      const acc = group.accounts.find((a: any) => a.tool_id === toolId);
+      if (acc) {
+        const hiddenBtnId = `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`;
+        const hiddenBtn = document.getElementById(hiddenBtnId);
+        if (hiddenBtn) {
+          hiddenBtn.click();
+        } else {
+          // Fallback: use the API approach
+          handleToolClick(toolId);
+        }
+        return;
+      }
+    }
+    handleToolClick(toolId);
+  };
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -403,6 +425,25 @@ export default function TestToolPage() {
             </div>
           </div>
           <div className="update-info">⏰ Next update in 3 hours - Stay tuned!</div>
+
+          {/* Hidden buttons - registered at page load so extension can intercept them */}
+          <div style={{ display: 'none' }} aria-hidden="true">
+            {groupedTools.map((group: any) =>
+              group.accounts.length > 1 && group.accounts.map((acc: any) => {
+                const hiddenId = `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`;
+                return (
+                  <button
+                    key={hiddenId}
+                    id={hiddenId}
+                    type="button"
+                    onClick={() => handleToolClick(acc.tool_id)}
+                  >
+                    {hiddenId}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
 
         {/* Extension Required Section - Start with display: none to match dev's HTML behavior */}
@@ -459,10 +500,7 @@ export default function TestToolPage() {
           tag: acc.parsedTag,
           buttonId: `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`
         })) || []}
-        onSelectAccount={(toolId) => {
-          setIsModalOpen(false);
-          handleToolClick(toolId);
-        }}
+        onSelectAccount={handleAccountSelect}
       />
     </>
   );
