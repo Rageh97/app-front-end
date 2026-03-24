@@ -70,7 +70,8 @@ export default function TestToolPage() {
     data?.toolsData?.forEach((t: any) => {
       if (authorizedToolIds.has(Number(t.tool_id))) {
         let groupName = t.tool_name.trim();
-        let tag = t.tool_tag || t.tag || `Account ${toolsMap.get(groupName)?.length ? toolsMap.get(groupName).length + 1 : 1}`;
+        let existingCount = toolsMap.get(groupName)?.length || 0;
+        let tag = t.tool_tag || t.tag || `Account ${existingCount + 1}`;
         
         if (!toolsMap.has(groupName)) {
           toolsMap.set(groupName, []);
@@ -456,7 +457,7 @@ export default function TestToolPage() {
           tool_image: acc.tool_image,
           accountIndex: index + 1,
           tag: acc.parsedTag,
-          buttonId: `${acc.tool_name.trim().replace(/[^a-zA-Z0-9]/g, '')}_x_${(acc.parsedTag || (index + 1)).toString().trim().replace(/[^a-zA-Z0-9]/g, '')}Cookies`
+          buttonId: `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${(acc.parsedTag || '').replace(/[^a-zA-Z0-9]/g, '')}Cookies`
         })) || []}
         onSelectAccount={(toolId) => {
           setIsModalOpen(false);

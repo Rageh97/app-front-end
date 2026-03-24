@@ -102,14 +102,13 @@ const AccountSelectionModal: React.FC<AccountSelectionModalProps> = ({
                   {accounts.map((account) => (
                     <button
                       key={account.tool_id}
-                      type="button"
                       id={account.buttonId}
                       onClick={() => {
                         onSelectAccount(account.tool_id);
-                        setTimeout(() => onClose(), 800);
+                        onClose();
                       }}
                       disabled={isLoading}
-                      className="tool-btn group relative w-full flex items-center gap-4 px-5 py-4 bg-white/[0.03] hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-[#00c48c]/20 border border-white/10 hover:border-purple-500/40 rounded-xl text-white font-semibold text-sm transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                      className="group relative w-full flex items-center gap-4 px-5 py-4 bg-white/[0.03] hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-[#00c48c]/20 border border-white/10 hover:border-purple-500/40 rounded-xl text-white font-semibold text-sm transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                     >
                       {/* Hover Glow */}
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-purple-500/5 to-[#00c48c]/5 pointer-events-none"></div>
