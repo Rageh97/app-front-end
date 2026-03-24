@@ -9,6 +9,7 @@ interface AccountInfo {
   tool_image?: string;
   endedAt?: string;
   accountIndex: number; // 1-based index
+  tag?: string;
 }
 
 interface AccountSelectionModalProps {
@@ -118,7 +119,7 @@ const AccountSelectionModal: React.FC<AccountSelectionModalProps> = ({
                       {/* Account Label */}
                       <div className="relative flex-1 text-left">
                         <span className="text-white font-bold text-base">
-                          Access Account {account.accountIndex}
+                          {account.tag ? account.tag : `Access Account ${account.accountIndex}`}
                         </span>
                       </div>
 

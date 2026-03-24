@@ -3,11 +3,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
+import AccountSelectionModal from "@/components/Modals/AccountSelectionModal";
 
 export default function TestToolPage() {
   const { data } = useMyInfo();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [activeServer, setActiveServer] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedToolGroup, setSelectedToolGroup] = useState<any>(null);
 
   const handleToolClick = async (toolId: number) => {
     setActiveServer(toolId);
@@ -41,26 +44,48 @@ export default function TestToolPage() {
     }
   };
 
-  const deduplicatedTools = useMemo(() => {
-    const toolsMap = new Map();
+  const groupedTools = useMemo(() => {
+    if (!data?.toolsData) return [];
+
+    const authorizedToolIds = new Set<number>();
+    
     data?.userToolsData?.forEach((ut: any) => {
-      const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == ut.tool_id);
-      if (toolInfo) toolsMap.set(toolInfo.tool_id, toolInfo);
+      authorizedToolIds.add(Number(ut.tool_id));
     });
+    
     data?.userPacksData?.forEach((up: any) => {
       const pack = data?.packsData?.find((p: any) => p.pack_id === up.pack_id);
-      if (pack) {
+      if (pack && pack.pack_tools) {
         try {
-          const packToolIds = JSON.parse(pack.pack_tools || "[]");
+          const packToolIds = JSON.parse(pack.pack_tools);
           packToolIds.forEach((tid: number) => {
-            const toolInfo = data?.toolsData?.find((t: any) => t.tool_id == tid);
-            if (toolInfo) toolsMap.set(toolInfo.tool_id, toolInfo);
+            authorizedToolIds.add(Number(tid));
           });
         } catch (e) {}
       }
     });
 
-    return Array.from(toolsMap.values()).sort((a: any, b: any) => a.tool_name.localeCompare(b.tool_name));
+    const toolsMap = new Map<string, any[]>();
+    
+    data?.toolsData?.forEach((t: any) => {
+      if (authorizedToolIds.has(Number(t.tool_id))) {
+        const name = t.tool_name.trim();
+        if (!toolsMap.has(name)) {
+          toolsMap.set(name, []);
+        }
+        toolsMap.get(name)?.push(t);
+      }
+    });
+
+    const result = Array.from(toolsMap.entries()).map(([name, accounts]) => {
+      return {
+        group_name: name,
+        accounts: accounts,
+        main_tool: accounts[0]
+      };
+    });
+
+    return result.sort((a, b) => a.group_name.localeCompare(b.group_name));
   }, [data]);
 
   return (
@@ -341,17 +366,29 @@ export default function TestToolPage() {
             <h3>🚀 Premium Tools Access</h3>
             <p>Access all premium tools with unlimited usage</p>
             <div className="button-container">
-              {deduplicatedTools.map((tool: any) => {
+              {groupedTools.map((group: any) => {
+                const tool = group.main_tool;
                 const buttonId = tool.tool_name.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
+                const hasMultiple = group.accounts.length > 1;
+                const isGroupLoading = group.accounts.some((acc: any) => acc.tool_id === activeServer);
+
                 return (
                   <button 
-                    key={tool.tool_id}
+                    key={`group-${tool.tool_name}`}
                     className="tool-btn" 
                     id={buttonId}
                     disabled={isLoading}
-                    onClick={() => handleToolClick(tool.tool_id)}
+                    onClick={() => {
+                      if (hasMultiple) {
+                        setSelectedToolGroup(group);
+                        setIsModalOpen(true);
+                      } else {
+                        handleToolClick(tool.tool_id);
+                      }
+                    }}
                   >
-                    {isLoading && activeServer === tool.tool_id ? '⏳' : tool.tool_name}
+                    {isLoading && isGroupLoading ? '⏳' : tool.tool_name}
+                    {hasMultiple && ` (${group.accounts.length})`}
                   </button>
                 );
               })}
@@ -399,6 +436,25 @@ export default function TestToolPage() {
           </div>
         </div>
       </div>
+
+      <AccountSelectionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        toolName={selectedToolGroup?.group_name || ""}
+        toolImage={selectedToolGroup?.main_tool?.tool_image}
+        isLoading={isLoading}
+        accounts={selectedToolGroup?.accounts?.map((acc: any, index: number) => ({
+          tool_id: acc.tool_id,
+          tool_name: acc.tool_name,
+          tool_image: acc.tool_image,
+          accountIndex: index + 1,
+          tag: acc.tool_tag || acc.tag
+        })) || []}
+        onSelectAccount={(toolId) => {
+          setIsModalOpen(false);
+          handleToolClick(toolId);
+        }}
+      />
     </>
   );
 }
