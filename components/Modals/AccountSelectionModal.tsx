@@ -102,6 +102,7 @@ const AccountSelectionModal: React.FC<AccountSelectionModalProps> = ({
                   {accounts.map((account) => (
                     <button
                       key={account.tool_id}
+                      type="button"
                       id={account.buttonId}
                       onClick={() => {
                         onSelectAccount(account.tool_id);
