@@ -397,29 +397,48 @@ export default function TestToolPage() {
             <p>Access all premium tools with unlimited usage</p>
             <div className="button-container">
               {groupedTools.map((group: any) => {
-                const tool = group.main_tool;
-                const buttonId = tool.tool_name.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
                 const hasMultiple = group.accounts.length > 1;
-                const isGroupLoading = group.accounts.some((acc: any) => acc.tool_id === activeServer);
 
+                if (!hasMultiple) {
+                  // Single account: one normal button
+                  const tool = group.main_tool;
+                  const buttonId = tool.tool_name.replace(/[^a-zA-Z0-9]/g, '') + 'Cookies';
+                  return (
+                    <button
+                      key={`single-${group.group_name}`}
+                      className="tool-btn"
+                      id={buttonId}
+                      disabled={isLoading}
+                      onClick={() => handleToolClick(tool.tool_id)}
+                    >
+                      {group.group_name}
+                    </button>
+                  );
+                }
+
+                // Multi-account: show label + a button per account directly
                 return (
-                  <button 
-                    key={`group-${group.group_name}`}
-                    className="tool-btn" 
-                    id={hasMultiple ? undefined : buttonId}
-                    disabled={isLoading}
-                    onClick={() => {
-                      if (hasMultiple) {
-                        setSelectedToolGroup(group);
-                        setIsModalOpen(true);
-                      } else {
-                        handleToolClick(tool.tool_id);
-                      }
-                    }}
-                  >
-                    {isLoading && isGroupLoading ? '⏳' : group.group_name}
-                    {hasMultiple && ` (${group.accounts.length})`}
-                  </button>
+                  <div key={`multi-${group.group_name}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ color: '#790003', fontWeight: 700, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', textAlign: 'center', padding: '6px 0' }}>
+                      🔑 {group.group_name}
+                    </div>
+                    {group.accounts.map((acc: any, idx: number) => {
+                      const tag = acc.parsedTag || `Account ${idx + 1}`;
+                      const btnId = `${acc.tool_name.replace(/[^a-zA-Z0-9]/g, '')}---${tag.replace(/[^a-zA-Z0-9]/g, '')}Cookies`;
+                      return (
+                        <button
+                          key={btnId}
+                          id={btnId}
+                          className="tool-btn"
+                          disabled={isLoading}
+                          onClick={() => handleToolClick(acc.tool_id)}
+                          style={{ fontSize: '12px', padding: '10px 15px' }}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
                 );
               })}
             </div>
