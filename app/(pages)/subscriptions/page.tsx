@@ -6,7 +6,6 @@ import CloudLaunchCard from "@/components/CloudLaunchCard";
 import axios from "axios";
 import ToolErrorModal from "@/components/Modals/ToolErrorModal";
 import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
-import AccountSelectionModal from "@/components/Modals/AccountSelectionModal";
 import Panel from "@/components/Panel";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useModal } from "@/components/providers/ModalProvider";
@@ -32,11 +31,7 @@ const Dashboard: FunctionComponent = () => {
 
   const [canLaunch, setCanLaunch] = useState<boolean>(false);
 
-  // Multi-account modal state
-  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
-  const [accountModalToolName, setAccountModalToolName] = useState<string>("");
-  const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
-  const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
+
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -152,41 +147,7 @@ const Dashboard: FunctionComponent = () => {
     }
   };
 
-  // Helper: given a list of tools, group by tool_name and return groups
-  const groupToolsByName = (tools: any[]) => {
-    const groups = new Map<string, any[]>();
-    tools.forEach((tool: any) => {
-      const name = tool.tool_name;
-      if (!groups.has(name)) {
-        groups.set(name, []);
-      }
-      groups.get(name)!.push(tool);
-    });
-    return groups;
-  };
 
-  // Handle click on a tool card: if multiple accounts, show modal; otherwise launch directly
-  const handleToolClick = (toolName: string, toolImage: string, toolIds: { tool_id: number; endedAt?: string }[]) => {
-    if (toolIds.length === 1) {
-      // Single account - launch directly (extension handles it via the card's buttonId)
-      launchApp(toolIds[0].tool_id);
-    } else {
-      // Multiple accounts - show selection modal with numbered buttonIds
-      const accounts = toolIds.map((t, idx) => ({
-        tool_id: t.tool_id,
-        tool_name: toolName,
-        tool_image: toolImage,
-        endedAt: t.endedAt,
-        accountIndex: idx + 1,
-        tag: `Account ${idx + 1}`,
-        buttonId: getButtonId(toolName, idx),
-      }));
-      setAccountModalToolName(toolName);
-      setAccountModalToolImage(toolImage);
-      setAccountModalAccounts(accounts);
-      setAccountModalOpen(true);
-    }
-  };
 
   const renderToolCard = (item: any) => {
     return (
@@ -321,7 +282,7 @@ const Dashboard: FunctionComponent = () => {
         deduplicatedTools.forEach((userTool: any) => {
           const tool = data?.toolsData?.find((t: any) => t.tool_id == userTool.tool_id);
           if (!tool) return;
-          const name = tool.tool_name;
+          const name = tool.tool_name.trim();
           if (!toolsByName.has(name)) {
             toolsByName.set(name, []);
           }
@@ -343,16 +304,47 @@ const Dashboard: FunctionComponent = () => {
 
               const hasMultiple = tools.length > 1;
 
+              if (!hasMultiple) {
+                return (
+                  <LaunchCard
+                    buttonId={getButtonId(displayTool.tool_name.trim())}
+                    onClick={() => launchApp(displayTool.tool_id)}
+                    activeApp={activeApp}
+                    isLoaded={isLoaded}
+                    key={toolName}
+                    toolData={displayTool}
+                    endedAt={latestEndedAt}
+                  />
+                );
+              }
+
+              // Multi-account: show one card + inline account buttons
               return (
-                <LaunchCard
-                  buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name)}
-                  onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
-                  activeApp={activeApp}
-                  isLoaded={isLoaded}
-                  key={toolName}
-                  toolData={{ ...displayTool, _multiAccount: hasMultiple, _accountCount: tools.length }}
-                  endedAt={latestEndedAt}
-                />
+                <div key={toolName} className="flex flex-col gap-2">
+                  <LaunchCard
+                    onClick={() => {}}
+                    activeApp={activeApp}
+                    isLoaded={isLoaded}
+                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                    endedAt={latestEndedAt}
+                  />
+                  <div className="flex gap-2 w-full">
+                    {tools.map((acc: any, idx: number) => {
+                      const cleanName = acc.tool_name.trim().replace(/[^a-zA-Z0-9]/g, '');
+                      const btnId = idx === 0 ? `${cleanName}Cookies` : `${cleanName}${idx + 1}Cookies`;
+                      return (
+                        <button
+                          key={btnId}
+                          id={btnId}
+                          onClick={() => launchApp(acc.tool_id)}
+                          className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] hover:from-purple-700 hover:to-[#00a070] text-white text-xs font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-lg"
+                        >
+                          Account {idx + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -392,7 +384,7 @@ const Dashboard: FunctionComponent = () => {
                   packToolIds.forEach((toolId: number) => {
                     const tool = data?.toolsData.find((d: any) => d.tool_id === toolId);
                     if (!tool) return;
-                    const name = tool.tool_name;
+                    const name = tool.tool_name.trim();
                     if (!packToolsByName.has(name)) {
                       packToolsByName.set(name, []);
                     }
@@ -404,17 +396,46 @@ const Dashboard: FunctionComponent = () => {
                     const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
                     const hasMultiple = tools.length > 1;
 
+                    if (!hasMultiple) {
+                      return (
+                        <LaunchCard
+                          buttonId={getButtonId(displayTool.tool_name.trim())}
+                          onClick={() => launchApp(displayTool.tool_id)}
+                          activeApp={activeApp}
+                          isLoaded={isLoaded}
+                          key={toolName}
+                          toolData={displayTool}
+                          endedAt={displayTool.endedAt}
+                        />
+                      );
+                    }
+
                     return (
-                      <LaunchCard
-                        buttonId={hasMultiple ? undefined : getButtonId(displayTool.tool_name)}
-                        content={displayTool.tool_content}
-                        onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
-                        activeApp={activeApp}
-                        isLoaded={isLoaded}
-                        key={toolName}
-                        toolData={{ ...displayTool, _multiAccount: hasMultiple, _accountCount: tools.length }}
-                        endedAt={displayTool.endedAt}
-                      />
+                      <div key={toolName} className="flex flex-col gap-2">
+                        <LaunchCard
+                          onClick={() => {}}
+                          activeApp={activeApp}
+                          isLoaded={isLoaded}
+                          toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                          endedAt={displayTool.endedAt}
+                        />
+                        <div className="flex gap-2 w-full">
+                          {tools.map((acc: any, idx: number) => {
+                            const cleanName = acc.tool_name.trim().replace(/[^a-zA-Z0-9]/g, '');
+                            const btnId = idx === 0 ? `${cleanName}Cookies` : `${cleanName}${idx + 1}Cookies`;
+                            return (
+                              <button
+                                key={btnId}
+                                id={btnId}
+                                onClick={() => launchApp(acc.tool_id)}
+                                className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] hover:from-purple-700 hover:to-[#00a070] text-white text-xs font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-lg"
+                              >
+                                Acc {idx + 1}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     );
                   });
                 })()}
@@ -479,7 +500,7 @@ const Dashboard: FunctionComponent = () => {
               ];
               const planToolsByName = new Map<string, any[]>();
               planTools.forEach((tool: any) => {
-                const name = tool.tool_name;
+                const name = tool.tool_name.trim();
                 if (!planToolsByName.has(name)) {
                   planToolsByName.set(name, []);
                 }
@@ -487,21 +508,38 @@ const Dashboard: FunctionComponent = () => {
               });
               return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
                 const displayTool = tools[0];
-                if (tools.length === 1) {
-                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
+                const hasMultiple = tools.length > 1;
+
+                if (!hasMultiple) {
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name.trim()) });
                 }
-                const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+
                 return (
-                  <LaunchCard
-                    buttonId={undefined}
-                    content={displayTool.tool_content}
-                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
-                    activeApp={activeApp}
-                    isLoaded={isLoaded}
-                    key={toolName}
-                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
-                    endedAt={displayTool.endedAt}
-                  />
+                  <div key={toolName} className="flex flex-col gap-2">
+                    <LaunchCard
+                      onClick={() => {}}
+                      activeApp={activeApp}
+                      isLoaded={isLoaded}
+                      toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                      endedAt={displayTool.endedAt}
+                    />
+                    <div className="flex gap-2 w-full">
+                      {tools.map((acc: any, idx: number) => {
+                        const cleanName = acc.tool_name.trim().replace(/[^a-zA-Z0-9]/g, '');
+                        const btnId = idx === 0 ? `${cleanName}Cookies` : `${cleanName}${idx + 1}Cookies`;
+                        return (
+                          <button
+                            key={btnId}
+                            id={btnId}
+                            onClick={() => launchApp(acc.tool_id)}
+                            className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] text-white text-xs font-bold rounded-xl active:scale-95 shadow-lg"
+                          >
+                            Acc {idx + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               });
             })()}
@@ -532,7 +570,7 @@ const Dashboard: FunctionComponent = () => {
               ];
               const planToolsByName = new Map<string, any[]>();
               planTools.forEach((tool: any) => {
-                const name = tool.tool_name;
+                const name = tool.tool_name.trim();
                 if (!planToolsByName.has(name)) {
                   planToolsByName.set(name, []);
                 }
@@ -540,21 +578,38 @@ const Dashboard: FunctionComponent = () => {
               });
               return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
                 const displayTool = tools[0];
-                if (tools.length === 1) {
-                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
+                const hasMultiple = tools.length > 1;
+
+                if (!hasMultiple) {
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name.trim()) });
                 }
-                const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+
                 return (
-                  <LaunchCard
-                    buttonId={undefined}
-                    content={displayTool.tool_content}
-                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
-                    activeApp={activeApp}
-                    isLoaded={isLoaded}
-                    key={toolName}
-                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
-                    endedAt={displayTool.endedAt}
-                  />
+                  <div key={toolName} className="flex flex-col gap-2">
+                    <LaunchCard
+                      onClick={() => {}}
+                      activeApp={activeApp}
+                      isLoaded={isLoaded}
+                      toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                      endedAt={displayTool.endedAt}
+                    />
+                    <div className="flex gap-2 w-full">
+                      {tools.map((acc: any, idx: number) => {
+                        const cleanName = acc.tool_name.trim().replace(/[^a-zA-Z0-9]/g, '');
+                        const btnId = idx === 0 ? `${cleanName}Cookies` : `${cleanName}${idx + 1}Cookies`;
+                        return (
+                          <button
+                            key={btnId}
+                            id={btnId}
+                            onClick={() => launchApp(acc.tool_id)}
+                            className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] text-white text-xs font-bold rounded-xl active:scale-95 shadow-lg"
+                          >
+                            Acc {idx + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               });
             })()}
@@ -582,7 +637,7 @@ const Dashboard: FunctionComponent = () => {
               const planTools = toolsData?.filter((item: any) => item.tool_plan === "standard") || [];
               const planToolsByName = new Map<string, any[]>();
               planTools.forEach((tool: any) => {
-                const name = tool.tool_name;
+                const name = tool.tool_name.trim();
                 if (!planToolsByName.has(name)) {
                   planToolsByName.set(name, []);
                 }
@@ -590,21 +645,38 @@ const Dashboard: FunctionComponent = () => {
               });
               return Array.from(planToolsByName.entries()).map(([toolName, tools]) => {
                 const displayTool = tools[0];
-                if (tools.length === 1) {
-                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
+                const hasMultiple = tools.length > 1;
+
+                if (!hasMultiple) {
+                  return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name.trim()) });
                 }
-                const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+
                 return (
-                  <LaunchCard
-                    buttonId={undefined}
-                    content={displayTool.tool_content}
-                    onClick={() => handleToolClick(displayTool.tool_name, displayTool.tool_image, accountIds)}
-                    activeApp={activeApp}
-                    isLoaded={isLoaded}
-                    key={toolName}
-                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
-                    endedAt={displayTool.endedAt}
-                  />
+                  <div key={toolName} className="flex flex-col gap-2">
+                    <LaunchCard
+                      onClick={() => {}}
+                      activeApp={activeApp}
+                      isLoaded={isLoaded}
+                      toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                      endedAt={displayTool.endedAt}
+                    />
+                    <div className="flex gap-2 w-full">
+                      {tools.map((acc: any, idx: number) => {
+                        const cleanName = acc.tool_name.trim().replace(/[^a-zA-Z0-9]/g, '');
+                        const btnId = idx === 0 ? `${cleanName}Cookies` : `${cleanName}${idx + 1}Cookies`;
+                        return (
+                          <button
+                            key={btnId}
+                            id={btnId}
+                            onClick={() => launchApp(acc.tool_id)}
+                            className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] text-white text-xs font-bold rounded-xl active:scale-95 shadow-lg"
+                          >
+                            Acc {idx + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               });
             })()}
@@ -623,67 +695,6 @@ const Dashboard: FunctionComponent = () => {
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
       />
-
-      {/* Multi-Account Selection Modal */}
-      <AccountSelectionModal
-        isOpen={accountModalOpen}
-        onClose={() => setAccountModalOpen(false)}
-        toolName={accountModalToolName}
-        toolImage={accountModalToolImage}
-        accounts={accountModalAccounts}
-        onSelectAccount={(toolId) => {
-          setAccountModalOpen(false);
-          // Find the account to get its buttonId, then click the hidden button
-          const acc = accountModalAccounts.find((a: any) => a.tool_id === toolId);
-          if (acc?.buttonId) {
-            const hiddenBtn = document.getElementById(acc.buttonId);
-            if (hiddenBtn) {
-              hiddenBtn.click();
-              return;
-            }
-          }
-          // Fallback: direct API launch
-          launchApp(toolId);
-        }}
-        isLoading={isLoading}
-      />
-
-      {/* Hidden buttons for extension to register at page load */}
-      <div style={{ display: 'none' }} aria-hidden="true">
-        {(() => {
-          const allGroups: any[] = [];
-          // Collect individual tools
-          const uniqueTools = new Map();
-          data?.userToolsData?.forEach((tool: any) => {
-            const existing = uniqueTools.get(tool.tool_id);
-            if (!existing || new Date(tool.endedAt) > new Date(existing.endedAt)) {
-              uniqueTools.set(tool.tool_id, tool);
-            }
-          });
-          const toolsByName = new Map<string, any[]>();
-          Array.from(uniqueTools.values()).forEach((ut: any) => {
-            const tool = data?.toolsData?.find((t: any) => t.tool_id == ut.tool_id);
-            if (!tool) return;
-            const name = tool.tool_name;
-            if (!toolsByName.has(name)) toolsByName.set(name, []);
-            toolsByName.get(name)!.push({ ...tool, endedAt: ut.endedAt });
-          });
-          toolsByName.forEach((tools, name) => { if (tools.length > 1) allGroups.push({ name, tools }); });
-
-          return allGroups.map((group) =>
-            group.tools.map((tool: any, idx: number) => (
-              <button
-                key={`hidden-${tool.tool_id}`}
-                id={getButtonId(group.name, idx)}
-                type="button"
-                onClick={() => launchApp(tool.tool_id)}
-              >
-                {group.name} {idx + 1}
-              </button>
-            ))
-          );
-        })()}
-      </div>
     </>
   );
 };
