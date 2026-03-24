@@ -38,10 +38,6 @@ const Dashboard: FunctionComponent = () => {
   const [accountModalToolImage, setAccountModalToolImage] = useState<string>("");
   const [accountModalAccounts, setAccountModalAccounts] = useState<any[]>([]);
 
-  // When you add multiple cookie accounts for the same tool in the Update Panel,
-  // the modal should be driven by the number of cookie sets inside tool_data (not userToolsData rows).
-  const [isCheckingToolAccounts, setIsCheckingToolAccounts] = useState<boolean>(false);
-  const [toolAccountsCountCache, setToolAccountsCountCache] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const handleExtMessage = (event: MessageEvent) => {
@@ -167,50 +163,14 @@ const Dashboard: FunctionComponent = () => {
     return groups;
   };
 
-  const getToolCookieAccountsCount = async (toolId: number) => {
-    if (toolAccountsCountCache[toolId]) return toolAccountsCountCache[toolId];
-
-    const token = localStorage.getItem("a");
-    if (!token) {
-      window.location.href = "/signin";
-      return 1;
-    }
-
-    try {
-      setIsCheckingToolAccounts(true);
-      const res = await axios.post(
-        "https://api.nexustoolz.com/api/user/get-tool-accounts",
-        {
-          appId: "wuXQpO8EsheI13FKKNn5p25DY92s6VtL",
-          token,
-          toolId,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "User-Client": (globalThis as any).clientId1328 || "",
-          },
-        }
-      );
-
-      const accountsCount = res?.data?.accountsCount;
-      const count =
-        typeof accountsCount === "number" && Number.isFinite(accountsCount) && accountsCount >= 1
-          ? Math.floor(accountsCount)
-          : 1;
-
-      setToolAccountsCountCache((prev) => ({ ...prev, [toolId]: count }));
-      return count;
-    } catch (e) {
-      console.error("Failed to get tool cookie accounts count:", e);
-      return 1;
-    } finally {
-      setIsCheckingToolAccounts(false);
-    }
+  const getToolCookieAccountsCount = (toolId: number): number => {
+    const fromData = data?.toolCookieAccountsCount?.[toolId];
+    if (typeof fromData === "number" && fromData >= 1) return Math.floor(fromData);
+    return 1;
   };
 
   // Handle click on a tool card: if multiple accounts, show modal; otherwise launch directly
-  const handleToolClick = async (
+  const handleToolClick = (
     toolName: string,
     toolImage: string,
     toolIds: { tool_id: number; endedAt?: string }[]
@@ -218,7 +178,7 @@ const Dashboard: FunctionComponent = () => {
     const toolId = toolIds?.[0]?.tool_id;
     if (!toolId) return;
 
-    const cookieAccountsCount = await getToolCookieAccountsCount(toolId);
+    const cookieAccountsCount = getToolCookieAccountsCount(toolId);
 
     if (cookieAccountsCount <= 1) {
       launchApp(toolId, 1);
@@ -398,6 +358,7 @@ const Dashboard: FunctionComponent = () => {
               }, tools[0].endedAt);
 
               const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+              const cookieCount = getToolCookieAccountsCount(displayTool.tool_id);
 
               return (
                 <LaunchCard
@@ -406,7 +367,7 @@ const Dashboard: FunctionComponent = () => {
                   activeApp={activeApp}
                   isLoaded={isLoaded}
                   key={toolName}
-                  toolData={{ ...displayTool, _multiAccount: tools.length > 1, _accountCount: tools.length }}
+                  toolData={{ ...displayTool, _multiAccount: cookieCount > 1, _accountCount: cookieCount }}
                   endedAt={latestEndedAt}
                 />
               );
@@ -458,6 +419,7 @@ const Dashboard: FunctionComponent = () => {
                   return Array.from(packToolsByName.entries()).map(([toolName, tools]) => {
                     const displayTool = tools[0];
                     const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                    const cookieCount = getToolCookieAccountsCount(displayTool.tool_id);
 
                     return (
                       <LaunchCard
@@ -467,7 +429,7 @@ const Dashboard: FunctionComponent = () => {
                         activeApp={activeApp}
                         isLoaded={isLoaded}
                         key={toolName}
-                        toolData={{ ...displayTool, _multiAccount: tools.length > 1, _accountCount: tools.length }}
+                        toolData={{ ...displayTool, _multiAccount: cookieCount > 1, _accountCount: cookieCount }}
                         endedAt={displayTool.endedAt}
                       />
                     );
@@ -546,6 +508,7 @@ const Dashboard: FunctionComponent = () => {
                   return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
                 }
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                const cookieCount = getToolCookieAccountsCount(displayTool.tool_id);
                 return (
                   <LaunchCard
                     buttonId={getButtonId(displayTool.tool_name)}
@@ -554,7 +517,7 @@ const Dashboard: FunctionComponent = () => {
                     activeApp={activeApp}
                     isLoaded={isLoaded}
                     key={toolName}
-                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                    toolData={{ ...displayTool, _multiAccount: cookieCount > 1, _accountCount: cookieCount }}
                     endedAt={displayTool.endedAt}
                   />
                 );
@@ -599,6 +562,7 @@ const Dashboard: FunctionComponent = () => {
                   return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
                 }
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                const cookieCount = getToolCookieAccountsCount(displayTool.tool_id);
                 return (
                   <LaunchCard
                     buttonId={getButtonId(displayTool.tool_name)}
@@ -607,7 +571,7 @@ const Dashboard: FunctionComponent = () => {
                     activeApp={activeApp}
                     isLoaded={isLoaded}
                     key={toolName}
-                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                    toolData={{ ...displayTool, _multiAccount: cookieCount > 1, _accountCount: cookieCount }}
                     endedAt={displayTool.endedAt}
                   />
                 );
@@ -649,6 +613,7 @@ const Dashboard: FunctionComponent = () => {
                   return renderToolCard({ ...displayTool, buttonId: getButtonId(displayTool.tool_name) });
                 }
                 const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                const cookieCount = getToolCookieAccountsCount(displayTool.tool_id);
                 return (
                   <LaunchCard
                     buttonId={getButtonId(displayTool.tool_name)}
@@ -657,7 +622,7 @@ const Dashboard: FunctionComponent = () => {
                     activeApp={activeApp}
                     isLoaded={isLoaded}
                     key={toolName}
-                    toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
+                    toolData={{ ...displayTool, _multiAccount: cookieCount > 1, _accountCount: cookieCount }}
                     endedAt={displayTool.endedAt}
                   />
                 );
@@ -687,7 +652,7 @@ const Dashboard: FunctionComponent = () => {
         toolImage={accountModalToolImage}
         accounts={accountModalAccounts}
         onSelectAccount={(toolId, accountIndex) => launchApp(toolId, accountIndex)}
-        isLoading={isLoading || isCheckingToolAccounts}
+        isLoading={isLoading}
       />
     </>
   );
