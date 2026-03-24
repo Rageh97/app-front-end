@@ -85,6 +85,9 @@ export default function TestToolPage() {
       };
     });
 
+    console.log("NEXUS Authorized Tools:", Array.from(authorizedToolIds));
+    console.log("NEXUS Grouped Tools:", result);
+
     return result.sort((a, b) => a.group_name.localeCompare(b.group_name));
   }, [data]);
 

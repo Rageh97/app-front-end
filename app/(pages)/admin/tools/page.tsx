@@ -17,9 +17,10 @@ import { checkIfImageUrl } from "@/utils/imageValidator";
 import { useSearchToolByName } from "@/utils/tool/getToolByName";
 import { useTranslation } from "react-i18next";
 import { useUpdateTool } from "@/utils/tool/updateTool";
+import { useCreateTool } from "@/utils/tool/createTool";
 import { toast } from "react-hot-toast";
 
-import { Search } from "lucide-react";
+import { Search, Copy } from "lucide-react";
 type Props = {
   params: { clientId: string };
 };
@@ -30,6 +31,28 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
   const { t } = useTranslation();
 
   const { mutate: updateTool } = useUpdateTool();
+  const { mutate: createTool, isLoading: isCreating } = useCreateTool();
+
+  const handleCloneTool = (tool: any) => {
+    // Strip generated/unique identifiers
+    const { tool_id, createdAt, updatedAt, _id, __v, users_tools_id, ...cloneData } = tool;
+    
+    // Append a hidden space to the tool name. 
+    // This bypasses any UNIQUE database constraints for tool_name, 
+    // but our frontend uses .trim() so they still group perfectly!
+    cloneData.tool_name = (cloneData.tool_name || "").trim() + " ";
+    
+    createTool(cloneData as any, {
+      onSuccess: () => {
+        toast.success("Tool cloned successfully 👍");
+        refetch();
+      },
+      onError: (err: any) => {
+        console.error("Clone Error:", err?.response?.data || err);
+        toast.error("Failed to clone tool: " + (err?.response?.data?.message || err?.message || "Check console"));
+      }
+    });
+  };
 
   const handleToggleActive = (tool: any) => {
     const updatedTool = {
@@ -241,6 +264,17 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
         header: () => t("toolsTable.actions"),
         cell: (info) => (
           <div className="flex justify-center gap-4">
+            {/* Clone Button */}
+            <IconButton
+              buttonType="DarkBlue"
+              className="gradient-border-Qs"
+              title="Clone Tool"
+              onClick={() => handleCloneTool(info.row.original)}
+              disabled={isCreating}
+            >
+              <Copy className="w-5 h-5 text-blue-400" />
+            </IconButton>
+
             <IconButton
               buttonType="DarkBlue"
               className="gradient-border-Qs"
