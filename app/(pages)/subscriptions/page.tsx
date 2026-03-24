@@ -339,7 +339,7 @@ const Dashboard: FunctionComponent = () => {
                           onClick={() => launchApp(acc.tool_id)}
                           className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] hover:from-purple-700 hover:to-[#00a070] text-white text-xs font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-lg"
                         >
-                          Account {idx + 1}
+                          Access Account {idx + 1}
                         </button>
                       );
                     })}
@@ -430,7 +430,7 @@ const Dashboard: FunctionComponent = () => {
                                 onClick={() => launchApp(acc.tool_id)}
                                 className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] hover:from-purple-700 hover:to-[#00a070] text-white text-xs font-bold rounded-xl transition-all duration-300 active:scale-95 shadow-lg"
                               >
-                                Acc {idx + 1}
+                                Access Account {idx + 1}
                               </button>
                             );
                           })}
@@ -534,7 +534,7 @@ const Dashboard: FunctionComponent = () => {
                             onClick={() => launchApp(acc.tool_id)}
                             className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] text-white text-xs font-bold rounded-xl active:scale-95 shadow-lg"
                           >
-                            Acc {idx + 1}
+                            Access Account {idx + 1}
                           </button>
                         );
                       })}
@@ -604,7 +604,7 @@ const Dashboard: FunctionComponent = () => {
                             onClick={() => launchApp(acc.tool_id)}
                             className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] text-white text-xs font-bold rounded-xl active:scale-95 shadow-lg"
                           >
-                            Acc {idx + 1}
+                            Access Account {idx + 1}
                           </button>
                         );
                       })}
@@ -671,7 +671,7 @@ const Dashboard: FunctionComponent = () => {
                             onClick={() => launchApp(acc.tool_id)}
                             className="flex-1 py-2.5 px-3 bg-gradient-to-r from-purple-600 to-[#00c48c] text-white text-xs font-bold rounded-xl active:scale-95 shadow-lg"
                           >
-                            Acc {idx + 1}
+                            Access Account {idx + 1}
                           </button>
                         );
                       })}

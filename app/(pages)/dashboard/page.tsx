@@ -123,8 +123,8 @@ const Dashboard: FunctionComponent = () => {
     data: searchedData,
   } = useSearchToolByName(seachedTool);
   
-  // Filter tools based on search and stability
-  const filteredTools = (seachedTool.trim() !== "" ? (searchedData || []) : (toolsData || []))
+  // Filter tools based on search and stability, then deduplicate by name (trim trailing spaces)
+  const filteredToolsOriginal = (seachedTool.trim() !== "" ? (searchedData || []) : (toolsData || []))
     .filter(tool => {
       if (stabilityFilter !== 'all' && tool.isStable !== stabilityFilter) {
         return false;
@@ -137,6 +137,14 @@ const Dashboard: FunctionComponent = () => {
       }
       return true;
     });
+
+  const seenTools = new Set();
+  const filteredTools = filteredToolsOriginal.filter((tool: any) => {
+    const cleanName = tool.tool_name.trim();
+    if (seenTools.has(cleanName)) return false;
+    seenTools.add(cleanName);
+    return true;
+  });
 
   const shuffleArray = async (array: any) => {
     let data = array;
