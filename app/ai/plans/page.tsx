@@ -47,6 +47,8 @@ const ALL_TOOLS_MAPPING: Record<string, string> = {
   'image-to-text': 'استخراج النص من الصورة',
   'upscale': 'رفع دقة الصور',
   'bg-remove': 'حذف الخلفية',
+  'clothes-extraction': 'استخراج الملابس الذكي',
+  'id-photo': 'صانع الصور الشخصية',
   'restore': 'ترميم الصور',
   'avatar': 'صانع الأفاتار',
   'nano': 'نانو بانانا برو 🍌',

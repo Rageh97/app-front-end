@@ -27,7 +27,8 @@ import {
   CreditCard,
   ChevronRight,
   Star,
-  ArrowLeft
+  ArrowLeft,
+  Shirt
 } from 'lucide-react';
 import TextType from "@/components/TextType";
 import Image from "next/image";
@@ -97,6 +98,28 @@ const AI_TOOLS = [
     gradient: 'from-cyan-600/80 to-sky-600/80',
     image: '/images/ازالة الخلفية.png',
     href: '/ai/bg-remove'
+  },
+  {
+    id: 'clothes-extraction',
+    title: 'استخراج الملابس الذكي',
+    description: 'استخرج قطع الملابس من الصور بذكاء (قمصان، بناطيل، تنانير) بدقة عالية',
+    icon: Shirt,
+    category: 'image',
+    gradient: 'from-blue-500/80 to-indigo-600/80',
+    image: '/images/getclothes.png',
+    href: '/ai/clothes-extraction',
+    isNew: true
+  },
+  {
+    id: 'id-photo',
+    title: 'صانع الصور الشخصية',
+    description: 'حول صورك العادية إلى صور بطاقة وهوية احترافية بأبعاد وخلفيات رسمية',
+    icon: Camera,
+    category: 'image',
+    gradient: 'from-blue-600/80 to-sky-600/80',
+    image: 'https://i.pinimg.com/736x/79/dd/11/79dd11a9452a92a1accceec38a45e16a.jpg',
+    href: '/ai/id-photo',
+    isNew: true
   },
   {
     id: 'restore',
@@ -334,6 +357,7 @@ export default function AIHomePage() {
                 text={["حول خيالك إلى حقيقة في ثوانٍ", "مستقبل الذكاء الاصطناعي الآن بين يديك"]}
                 typingSpeed={50}
                 loop={true}
+                
             />
           </div>
         </div>
@@ -411,6 +435,7 @@ export default function AIHomePage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
             {filteredTools.map((tool) => {
                 const isComingSoon = tool.comingSoon;
+                const isNew = tool.isNew;
                 return (
                     <div
                         key={tool.id}
@@ -424,6 +449,13 @@ export default function AIHomePage() {
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
                                 <div className="absolute top-4 md:top-5 -left-8 md:-left-10 w-32 md:w-40 bg-gradient-to-r from-emerald-600 via-teal-600 to-pink-600 backdrop-blur-xl text-white text-[8px] md:text-[10px] font-bold py-1 shadow-2xl transform -rotate-45 border-y border-white/10 flex justify-center items-center tracking-widest uppercase">
                                     قريباً
+                                </div>
+                            </div>
+                        )}
+                        {!isComingSoon && isNew && (
+                            <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
+                                <div className="absolute top-4 md:top-5 -left-8 md:-left-10 w-32 md:w-40 bg-gradient-to-r from-red-600 via-rose-600 to-red-600 backdrop-blur-xl text-white text-[9px] md:text-[11px] font-black py-1 shadow-2xl transform -rotate-45 border-y border-red-400/30 flex justify-center items-center tracking-widest">
+                                    NEW
                                 </div>
                             </div>
                         )}

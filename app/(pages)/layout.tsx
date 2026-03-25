@@ -108,41 +108,31 @@ useEffect(() => {
           zIndex: 999999,
         }}
       />
-      <div>
-        <PrivateRoutes>
+      <PrivateRoutes>
+        <div className="flex flex-col h-screen overflow-hidden">
+          {/* <!-- ===== Header Start ===== --> */}
+          <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+          {/* <!-- ===== Header End ===== --> */}
 
-        {/* <div className=""> */}
-          <div className="flex h-screen overflow-hidden ">
+          <div className="flex flex-1 overflow-hidden relative">
             {/* <!-- ===== Sidebar Start ===== --> */}
+            <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             {/* <!-- ===== Sidebar End ===== --> */}
 
             {/* <!-- ===== Content Area Start ===== --> */}
-            <div className=" relative flex flex-1 flex-col  overflow-x-hidden">
-              {/* <!-- ===== Header Start ===== --> */}
-              <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-              {/* <!-- ===== Header End ===== --> */}
-
-              {/* <!-- ===== Main Content Start ===== --> */}
-              {/* <div className="lg:ml-60 ml-20"> */}
-                <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-              <main>
-                <div className="mx-auto px-2 sm:px-4 md:px-6 lg:px-8 sm:ml-5 md:ms-40 xl:ms-44 ml-0"> 
-
-                  {children}
+            <main className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar md:ms-40 xl:ms-44">
+              <div className="px-2 sm:px-4 md:px-6 lg:px-8"> 
+                {children}
                 <MostQuestions/>
                 <ClientReviews/>
-                </div>
-              </main>
-                  <Footer/>
-              {/* </div> */}
-              {/* <!-- ===== Main Content End ===== --> */}
-            {/* </div> */}
+              </div>
+              <Footer/>
+            </main>
             {/* <!-- ===== Content Area End ===== --> */}
             <ChatWidget />
           </div>
         </div>
       </PrivateRoutes>
-    </div>
     </I18nextProvider>
   );
 }

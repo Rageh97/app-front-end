@@ -26,7 +26,8 @@ import {
   MessageSquare,
   Wand2,
   CreditCard,
-  ChevronRight
+  ChevronRight,
+  Shirt
 } from 'lucide-react';
 import TextType from "@/components/TextType";
 import Image from "next/image";
@@ -66,6 +67,29 @@ const IMAGE_TOOLS = [
   //   href: '/ai/upscale',
   //   featured: true
   // },
+  {
+    id: 'clothes-extraction',
+    title: 'استخراج الملابس الذكي',
+    description: 'استخرج قطع الملابس من الصور بذكاء (قمصان، بناطيل، تنانير) بدقة عالية',
+    icon: Shirt,
+    category: 'image',
+    gradient: 'from-blue-500/80 to-indigo-600/80',
+    image: '/images/getclothes.png',
+    href: '/ai/clothes-extraction',
+    isNew: true
+  },
+  {
+    id: 'id-photo',
+    title: 'صانع الصور الشخصية',
+    description: 'حول صورك العادية إلى صور بطاقة وهوية احترافية بأبعاد وخلفيات رسمية',
+    icon: Camera,
+    category: 'image',
+    gradient: 'from-blue-600/80 to-sky-600/80',
+    image: 'https://i.pinimg.com/736x/79/dd/11/79dd11a9452a92a1accceec38a45e16a.jpg',
+    href: '/ai/id-photo',
+    isNew: true
+  },
+
   {
     id: 'bg-remove',
     title: 'حذف الخلفية',
@@ -177,7 +201,7 @@ const VIDEO_TOOLS = [
     icon: Move3D,
     category: 'video',
     gradient: 'from-sky-600/80 to-blue-600/80',
-    image: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?q=80&w=1000&auto=format&fit=crop',
+    image: '/images/محاكاة الحركة.png',
     href: '/ai/motion',
     featured: true
   },
@@ -246,7 +270,7 @@ const VIDEO_TOOLS = [
     icon: Maximize,
     category: 'video',
     gradient: 'from-cyan-600/80 to-blue-600/80',
-    image: 'https://images.unsplash.com/photo-1492691523567-6273c2fd55f?q=80&w=1000&auto=format&fit=crop',
+    image: '/images/تغيير الابعاد.png',
     href: '/ai/resize',
     comingSoon: true
   }

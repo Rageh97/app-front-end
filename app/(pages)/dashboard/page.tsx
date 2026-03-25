@@ -21,7 +21,6 @@ import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import { BorderBeam } from "@/components/ui/border-beam";
 
 interface Banner {
   id: number;
@@ -385,7 +384,6 @@ useEffect(() => {
             className={`w-full bg-transparent placeholder:text-slate-400 text-white text-sm border border-white rounded-full py-2 lg:py-2.5 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow ${i18n.language === 'ar' ? 'pr-9 pl-3 text-right placeholder:text-right' : 'pl-9 pr-3 text-left placeholder:text-left'}`}
             placeholder={displayedText}/>
             </div>
-            <BorderBeam/>
         </div>
      
     </div>

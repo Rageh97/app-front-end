@@ -89,27 +89,38 @@ const PlansPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
               </tr>
             </thead>
             <tbody>
-              {data?.toolsData?.map((tool: any, index: number) => (
-                <tr key={index} className="hover:bg-[#2a0854] transition-colors bg-[linear-gradient(135deg,rgba(79,0,140,0.54),rgba(25,2,55,0.5),rgba(25,2,55,0.3))]">
-                  <td className="py-3 px-6 font-bold text-center border-2 border-[#ff7702] text-md xl:text-2xl">
-                    {tool.tool_name}
-                  </td>
-                  {data?.packsData?.map((pack: any, packIndex: number) => {
-                    const isIncluded = JSON.parse(pack.pack_tools).includes(tool.tool_id);
-                    return (
-                      <td key={packIndex} className="py-3 px-6 text-center border-[#ff7702] border-2 text-md xl:text-2xl">
-                        <span title={isIncluded ? t('plans.included') : t('plans.notIncluded')}>
-                          {isIncluded ? (
-                            <CircleCheckBig className="inline-block" strokeWidth={3} size={20} color={"#00c48c"} />
-                          ) : (
-                            <CircleX className="inline-block" strokeWidth={3} size={20} color={"#ff7702"} />
-                          )}
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {(() => {
+                const toolsByName = new Map<string, any[]>();
+                data?.toolsData?.forEach((tool: any) => {
+                  const name = tool.tool_name.trim();
+                  if (!toolsByName.has(name)) toolsByName.set(name, []);
+                  toolsByName.get(name)!.push(tool);
+                });
+
+                return Array.from(toolsByName.entries()).map(([toolName, tools], index) => (
+                  <tr key={index} className="hover:bg-[#2a0854] transition-colors bg-[linear-gradient(135deg,rgba(79,0,140,0.54),rgba(25,2,55,0.5),rgba(25,2,55,0.3))]">
+                    <td className="py-3 px-6 font-bold text-center border-2 border-[#ff7702] text-md xl:text-2xl">
+                      {toolName}
+                    </td>
+                    {data?.packsData?.map((pack: any, packIndex: number) => {
+                      const packToolIds = JSON.parse(pack.pack_tools);
+                      // Included if any of the tool IDs for this name group are in the pack
+                      const isIncluded = tools.some(t => packToolIds.includes(t.tool_id));
+                      return (
+                        <td key={packIndex} className="py-3 px-6 text-center border-[#ff7702] border-2 text-md xl:text-2xl">
+                          <span title={isIncluded ? t('plans.included') : t('plans.notIncluded')}>
+                            {isIncluded ? (
+                              <CircleCheckBig className="inline-block" strokeWidth={3} size={20} color={"#00c48c"} />
+                            ) : (
+                              <CircleX className="inline-block" strokeWidth={3} size={20} color={"#ff7702"} />
+                            )}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ));
+              })()}
             </tbody>
           </table>
         </div>

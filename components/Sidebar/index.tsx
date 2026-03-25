@@ -144,6 +144,7 @@ type SidebarLinkProps =
     icon: React.ReactNode;
     getIsActive?: (pathname: string, completeHref: string) => boolean;
     permission?: Boolean;
+    badge?: string;
   }
   | SidebarDropdownProps;
 
@@ -153,12 +154,15 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
   icon,
   getIsActive,
   name,
+  ...props
 }) => {
   const pathname = usePathname();
 
   const isActive = getIsActive
     ? getIsActive(pathname, completeHref)
     : pathname.startsWith(completeHref);
+
+  const badge = 'badge' in props ? props.badge : undefined;
 
   return (
     <Link
@@ -174,9 +178,17 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
       <span className="relative z-10 transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
         {icon}
       </span>
-      <span className="relative z-10 font-medium whitespace-nowrap text-sm truncate">
-        {name}
-      </span>
+      <div className="flex items-center gap-2 overflow-hidden w-full">
+        <span className="relative z-10 font-medium whitespace-nowrap text-sm truncate">
+          {name}
+        </span>
+        {badge && (
+          <span className="relative z-10 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+          </span>
+        )}
+      </div>
       
       {/* Animated glow on hover for non-active items */}
       {!isActive && (
@@ -296,6 +308,7 @@ const GlobalMenu: FunctionComponent = () => {
             completeHref: "/ai",
             name: "Nexus Ai",
             icon: <Brain size={24} />,
+            badge: "NEW",
             children: "",
             permission: isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },

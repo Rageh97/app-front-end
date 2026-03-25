@@ -37,10 +37,10 @@ const ToolsPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
     // Strip generated/unique identifiers
     const { tool_id, createdAt, updatedAt, _id, __v, users_tools_id, ...cloneData } = tool;
     
-    // Append a hidden space to the tool name. 
-    // This bypasses any UNIQUE database constraints for tool_name, 
-    // but our frontend uses .trim() so they still group perfectly!
-    cloneData.tool_name = (cloneData.tool_name || "").trim() + " ";
+    // Append a hidden space to the existing tool name. 
+    // This allows infinite clones (Canva -> Canva [space] -> Canva [space][space])
+    // which bypasses UNIQUE constraints while still grouping perfectly with .trim()!
+    cloneData.tool_name = (tool.tool_name || "") + " ";
     
     createTool(cloneData as any, {
       onSuccess: () => {

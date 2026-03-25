@@ -35,6 +35,8 @@ type CreditPlan = {
 };
 
 const ALL_TOOLS = [
+  { id: 'id-photo', name: 'صانع الصور الشخصية (جديد) 🆔', category: 'image' },
+  { id: 'clothes-extraction', name: 'استخراج الملابس الذكي (جديد) 🔥', category: 'image' },
   { id: 'chat', name: 'نيكسوس تشات برو', category: 'chat' },
   { id: 'image', name: 'انشاء صور احترافية', category: 'image' },
   { id: 'image-to-text', name: 'استخراج النص من الصورة', category: 'image' },

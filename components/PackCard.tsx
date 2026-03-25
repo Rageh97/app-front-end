@@ -142,28 +142,61 @@ const PackCard: FunctionComponent<PackCardProps> = ({
                 </p>
             </div>
 
-            {JSON.parse(packData.pack_tools)?.map((item: any, index: number) =>
-              <div className="flex items-center" style={{ display: getToolNameById(item) ? "flex" : "none" }} key={index}>
-                <CircleCheckBig strokeWidth={3} size={20} color={"#00c48c"} />
-                <p className="px-2 text-[14px] font-semibold text-[#ACADB1]">
-                  {getToolNameById(item)}
-                </p>
-              </div>
-            )}
+            {(() => {
+              const packToolIds = JSON.parse(packData.pack_tools || '[]');
+              const toolsByName = new Map<string, any[]>();
+              
+              toolsData?.forEach((tool: any) => {
+                const name = tool.tool_name.trim();
+                if (!toolsByName.has(name)) toolsByName.set(name, []);
+                toolsByName.get(name)!.push(tool);
+              });
+
+              return Array.from(toolsByName.entries()).map(([name, tools], idx) => {
+                const isIncluded = tools.some(t => packToolIds.includes(t.tool_id));
+                
+                if (isIncluded) {
+                  return (
+                    <div className="flex items-center" key={`inc-${idx}`}>
+                      <CircleCheckBig strokeWidth={3} size={20} color={"#00c48c"} />
+                      <p className="px-2 text-[14px] font-semibold text-[#ACADB1]">
+                        {name}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              });
+            })()}
           </div>
 
           <div>
-          
-            {toolsData
-              .filter(tool => !JSON.parse(packData.pack_tools).includes(tool.tool_id))
-              .map((tool: any, index: number) => (
-                <div className="flex items-center" key={index}>
-                  <CircleX strokeWidth={3} size={20} color={"#ff7702"} />
-                  <p className="px-2 text-[14px] font-semibold text-[#ACADB1]">
-                    {tool.tool_name}
-                  </p>
-                </div>
-              ))}
+            {(() => {
+              const packToolIds = JSON.parse(packData.pack_tools || '[]');
+              const toolsByName = new Map<string, any[]>();
+              
+              toolsData?.forEach((tool: any) => {
+                const name = tool.tool_name.trim();
+                if (!toolsByName.has(name)) toolsByName.set(name, []);
+                toolsByName.get(name)!.push(tool);
+              });
+
+              return Array.from(toolsByName.entries()).map(([name, tools], idx) => {
+                const isIncluded = tools.some(t => packToolIds.includes(t.tool_id));
+                
+                if (!isIncluded) {
+                  return (
+                    <div className="flex items-center" key={`exc-${idx}`}>
+                      <CircleX strokeWidth={3} size={20} color={"#ff7702"} />
+                      <p className="px-2 text-[14px] font-semibold text-[#ACADB1]">
+                        {name}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              });
+            })()}
           </div>
         </div>
 
