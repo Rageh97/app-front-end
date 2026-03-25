@@ -107,7 +107,7 @@ const IMAGE_TOOLS = [
     icon: RefreshCw,
     category: 'image',
     gradient: 'from-amber-600/80 to-orange-600/80',
-    image: '/images/ترميم الصور .jpeg',
+    image: '/images/ترميم الصور.png',
     href: '/ai/restore'
   },
   {
