@@ -31,6 +31,7 @@ export default function ClothesExtractorPage() {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [extractionMode, setExtractionMode] = useState<'full' | 'upper' | 'lower'>('full');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Gallery
@@ -155,7 +156,7 @@ export default function ClothesExtractorPage() {
       const res = await fetch(`${apiBase}/api/ai/clothes-extraction`, {
         method: "POST",
         headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 },
-        body: JSON.stringify({ image: originalImage }),
+        body: JSON.stringify({ image: originalImage, mode: extractionMode }),
       });
       
       clearInterval(interval);
@@ -257,6 +258,32 @@ export default function ClothesExtractorPage() {
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
+                            <Sparkles size={12} className="text-blue-400" /> وضع الاستخراج
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                                { id: 'full', label: 'كامل', icon: Shirt },
+                                { id: 'upper', label: 'الجزء العلوي', icon: Shirt },
+                                { id: 'lower', label: 'الجزء السفلي', icon: Shirt }
+                            ].map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    onClick={() => setExtractionMode(opt.id as any)}
+                                    className={`flex flex-col items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                                        extractionMode === opt.id 
+                                        ? 'bg-blue-600/10 border-blue-500/50 text-blue-400' 
+                                        : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
+                                    }`}
+                                >
+                                    <opt.icon size={16} className={extractionMode === opt.id ? 'text-blue-400' : 'text-gray-600'} />
+                                    <span className="text-[10px] font-black">{opt.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10 flex gap-2 items-start">
