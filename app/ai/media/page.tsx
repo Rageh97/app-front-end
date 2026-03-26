@@ -281,10 +281,23 @@ export default function MediaPage() {
   const searchParams = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<'image' | 'video'>('image');
   const [scrolled, setScrolled] = useState(false);
+  const [customAssets, setCustomAssets] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
+
+    const fetchAssets = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/settings/public/ai-assets`);
+        if (res.ok) {
+          const data = await res.json();
+          setCustomAssets(data);
+        }
+      } catch (e) { console.error("Failed to fetch ai assets", e); }
+    };
+    fetchAssets();
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -415,41 +428,51 @@ export default function MediaPage() {
 
      
       {/* All Tools Grid */}
-      <section className="max-w-7xl mx-auto px-6 py-20 pb-40">
-        <div className="flex items-center gap-4 mb-10">
-            <div className="w-1.5 h-8 bg-blue-500 rounded-full"></div>
-            <h2 className="text-3xl font-black">كافة الأدوات المتاحة</h2>
+      <section className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16 pb-32">
+        <div className="flex items-center gap-3 mb-8">
+            <div className="w-1 h-6 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+            <h2 className="text-xl md:text-2xl font-black">كافة الأدوات المتاحة</h2>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
             {currentTools.map((tool) => {
                 const isComingSoon = tool?.comingSoon;
+                const isNew = (tool as any)?.isNew;
+                const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
+
                 return (
                     <div
                         key={tool.id}
-                        className={`group relative h-[300px] rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
-                            isComingSoon ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20'
+                        className={`group relative h-[180px] md:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
+                            isComingSoon ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
                         }`}
                     >
                         {!isComingSoon ? (
                             <Link href={tool.href} className="absolute inset-0 z-10" />
                         ) : (
-                            <div className="absolute top-0 left-0 z-20 w-32 h-32 overflow-hidden pointer-events-none">
-                                <div className="absolute top-5 -left-10 w-40 bg-gradient-to-r from-emerald-600 via-teal-600 to-pink-600 backdrop-blur-xl text-white text-[10px] font-bold py-1.5 shadow-2xl transform -rotate-45 border-y border-white/10 flex justify-center items-center tracking-widest uppercase">
+                            <div className="absolute top-0 left-0 z-20 w-20 h-20 md:w-24 md:h-24 overflow-hidden pointer-events-none">
+                                <div className="absolute top-3 md:top-4 -left-6 md:-left-8 w-24 md:w-32 bg-emerald-600 text-white text-[7px] md:text-[8px] font-black py-1 transform -rotate-45 flex justify-center items-center tracking-widest uppercase">
                                     قريباً
+                                </div>
+                            </div>
+                        )}
+                        {!isComingSoon && isNew && (
+                            <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
+                                <div className="absolute top-3 md:top-4 -left-10 md:-left-12 w-32 md:w-40 bg-red-600 text-white text-[7px] md:text-[9px] font-black py-1 transform -rotate-45 flex justify-center items-center tracking-widest">
+                                    NEW
                                 </div>
                             </div>
                         )}
                         
                         <img 
-                            src={tool.image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400'} 
+                            src={bgImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400'} 
                             alt={tool.title} 
-                            className="absolute w-full h-full object-cover transition-all duration-700 " 
+                            className="absolute w-full h-full object-cover transition-all duration-700 opacity-70 group-hover:opacity-60" 
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
 
-                        <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                            <h3 className="text-lg font-bold mb-1 text-white">{tool.title}</h3>
-                            <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed">{tool.description}</p>
+                        <div className="absolute inset-0 p-3 md:p-5 flex flex-col justify-end">
+                            <h3 className="text-sm md:text-base font-black mb-0.5 text-white">{tool.title}</h3>
+                            <p className="text-[8px] md:text-[9px] text-gray-500 line-clamp-1 leading-relaxed">{tool.description}</p>
                         </div>
                     </div>
                 );

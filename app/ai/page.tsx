@@ -273,10 +273,24 @@ const AI_TOOLS = [
 export default function AIHomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [scrolled, setScrolled] = useState(false);
+  const [customAssets, setCustomAssets] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
+
+    // Fetch Custom Assets
+    const fetchAssets = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/settings/public/ai-assets`);
+        if (res.ok) {
+          const data = await res.json();
+          setCustomAssets(data);
+        }
+      } catch (e) { console.error("Failed to fetch ai assets", e); }
+    };
+    fetchAssets();
+
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -365,50 +379,51 @@ export default function AIHomePage() {
 
       {/* Featured Tools */}
       <section className="max-w-7xl mx-auto px-4 md:px-6">
-         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 md:mb-12 gap-4">
+         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 md:mb-8 gap-4">
             <div className="flex items-center gap-3 md:gap-4">
-                <div className="w-1.5 h-8 md:h-10 bg-blue-500 rounded-full"></div>
+                <div className="w-1 h-6 md:h-8 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
                 <div>
-                    <h2 className="text-2xl md:text-3xl font-black">الأدوات المميزة</h2>
-                    <p className="text-gray-500 text-xs md:text-sm mt-1">الأدوات الأكثر قوة وشهرة</p>
+                    <h2 className="text-xl md:text-2xl font-black">الأدوات المميزة</h2>
+                    <p className="text-gray-500 text-[10px] md:text-xs mt-0.5">الأدوات الأكثر قوة وشهرة</p>
                 </div>
             </div>
-            <Link href="#all" className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors">عرض كافة الأدوات</Link>
+            <Link href="#all" className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/5 px-3 py-1.5 rounded-full border border-blue-500/10 hover:border-blue-500/30">عرض كافة الأدوات</Link>
          </div>
 
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {featuredTools.map((tool) => (
+            {featuredTools.map((tool) => {
+              const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
+              return (
                 <Link
                     key={tool.id}
                     href={tool.href}
-                    className="group relative h-[350px] md:h-[450px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:border-white/30"
+                    className="group relative h-[300px] md:h-[400px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:border-white/20 active:scale-[0.98]"
                 >
                     <img 
-                        src={tool.image} 
+                        src={bgImage} 
                         alt={tool.title} 
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
                     <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end">
-                        <h3 className="text-2xl md:text-3xl font-black mb-2 md:mb-3 text-white group-hover:translate-x-1 transition-transform">{tool.title}</h3>
-                        <p className="text-gray-300 text-xs md:text-sm leading-relaxed mb-4 md:mb-6 line-clamp-2">{tool.description}</p>
-                        <div className="inline-flex items-center gap-3 px-4 md:px-5 py-2 md:py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300 w-fit">
-                            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/90">جرب الأداة الآن</span>
-                            <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-                                <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
-                            </div>
+                        <h3 className="text-xl md:text-2xl font-black mb-1 md:mb-2 text-white group-hover:translate-x-1 transition-transform">{tool.title}</h3>
+                        <p className="text-gray-300 text-[9px] md:text-xs leading-relaxed mb-4 md:mb-5 line-clamp-2 max-w-[90%]">{tool.description}</p>
+                        <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md group-hover:bg-white group-hover:text-black transition-all duration-300 w-fit">
+                            <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest">عرض الموديل</span>
+                            <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
                         </div>
                     </div>
                 </Link>
-            ))}
+              );
+            })}
          </div>
       </section>
 
       {/* All Tools Library */}
-      <section id="all" className="max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-20 pb-32">
-        <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-8 md:mb-10"> تصفح كامل الأدوات</h2>
-            <div className="relative inline-flex flex-wrap justify-center items-center gap-2 p-1.5 bg-black/40 md:bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-full shadow-2xl">
+      <section id="all" className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16 pb-24">
+        <div className="text-center mb-10 md:mb-12">
+            <h2 className="text-2xl md:text-3xl font-black mb-6 md:mb-8"> تصفح المكتبة الذكية</h2>
+            <div className="relative inline-flex flex-wrap justify-center items-center gap-2 p-1 bg-black/40 md:bg-black/60 backdrop-blur-3xl border border-white/10 rounded-full shadow-2xl">
                 {[
                     { id: 'all', name: 'عرض الكل', icon: Layers, color: 'text-purple-400' },
                     { id: 'image', name: 'أدوات الصور', icon: ImageIcon, color: 'text-blue-400' },
@@ -417,57 +432,57 @@ export default function AIHomePage() {
                     <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
-                        className={`group relative px-4 md:px-8 py-2 md:py-2.5 rounded-xl md:rounded-full text-xs md:text-sm font-bold transition-all duration-500 flex items-center gap-2 overflow-hidden ${
+                        className={`group relative px-4 md:px-6 py-2 rounded-full text-[10px] md:text-xs font-bold transition-all duration-500 flex items-center gap-2 overflow-hidden ${
                             selectedCategory === cat.id
-                                ? 'bg-white/10 text-white shadow-inner'
+                                ? 'bg-white/10 text-white'
                                 : 'text-gray-400 hover:text-white'
                         }`}
                     >
-                        <cat.icon size={14} className={`transition-all duration-300 ${cat.color} ${selectedCategory === cat.id ? 'opacity-100 scale-110' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
+                        <cat.icon size={12} className={`transition-all duration-300 ${cat.color} ${selectedCategory === cat.id ? 'opacity-100 scale-110' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
                         <span className="relative z-10">{cat.name}</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     </button>
                 ))}
-                <div className="absolute -bottom-[1px] left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/50 to-transparent shadow-[0_0_15px_rgba(255,255,255,0.4)] hidden md:block"></div>
             </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
             {filteredTools.map((tool) => {
                 const isComingSoon = tool.comingSoon;
                 const isNew = tool.isNew;
+                const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
+
                 return (
                     <div
                         key={tool.id}
-                        className={`group relative h-[250px] md:h-[300px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
+                        className={`group relative h-[180px] md:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
                             isComingSoon ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
                         }`}
                     >
                         {!isComingSoon ? (
                             <Link href={tool.href} className="absolute inset-0 z-10" />
                         ) : (
-                            <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
-                                <div className="absolute top-4 md:top-5 -left-8 md:-left-10 w-32 md:w-40 bg-gradient-to-r from-emerald-600 via-teal-600 to-pink-600 backdrop-blur-xl text-white text-[8px] md:text-[10px] font-bold py-1 shadow-2xl transform -rotate-45 border-y border-white/10 flex justify-center items-center tracking-widest uppercase">
+                            <div className="absolute top-0 left-0 z-20 w-20 h-20 md:w-24 md:h-24 overflow-hidden pointer-events-none">
+                                <div className="absolute top-3 md:top-4 -left-6 md:-left-8 w-24 md:w-32 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[7px] md:text-[8px] font-black py-1 shadow-2xl transform -rotate-45 flex justify-center items-center tracking-widest uppercase">
                                     قريباً
                                 </div>
                             </div>
                         )}
                         {!isComingSoon && isNew && (
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
-                                <div className="absolute top-4 md:top-5 -left-8 md:-left-10 w-32 md:w-40 bg-gradient-to-r from-red-600 via-rose-600 to-red-600 backdrop-blur-xl text-white text-[9px] md:text-[11px] font-black py-1 shadow-2xl transform -rotate-45 border-y border-red-400/30 flex justify-center items-center tracking-widest">
+                                <div className="absolute top-3 md:top-4 -left-10 md:-left-12 w-32 md:w-40 bg-red-600 text-white text-[7px] md:text-[9px] font-black py-1 shadow-2xl transform -rotate-45 flex justify-center items-center tracking-widest">
                                     NEW
                                 </div>
                             </div>
                         )}
                         <img 
-                            src={tool.image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400'} 
+                            src={bgImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400'} 
                             alt={tool.title} 
-                            className="absolute w-full h-full object-cover transition-all duration-700 group-hover:scale-110" 
+                            className="absolute w-full h-full object-cover transition-all duration-700 group-hover:scale-110 opacity-70 group-hover:opacity-60" 
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
-                        <div className="absolute inset-0 p-4 md:p-6 flex flex-col justify-end">
-                            <h3 className="text-base md:text-lg font-bold mb-1 text-white">{tool.title}</h3>
-                            <p className="text-[9px] md:text-[10px] text-gray-400 line-clamp-2 leading-relaxed">{tool.description}</p>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+                        <div className="absolute inset-0 p-3 md:p-5 flex flex-col justify-end">
+                            <h3 className="text-sm md:text-base font-black mb-0.5 text-white">{tool.title}</h3>
+                            <p className="text-[8px] md:text-[9px] text-gray-500 line-clamp-1 leading-relaxed">{tool.description}</p>
                         </div>
                     </div>
                 );

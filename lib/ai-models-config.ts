@@ -195,31 +195,31 @@ export const VIDEO_MODELS: VideoModel[] = [
 // ═══════════════════════════════════════════════════════════════════
 
 export const NANO_MODELS: AIModel[] = [
-  // 🍌👑 Nano Banana Pro (Gemini 3 Pro Image) - الافتراضي
+  // 🍌👑 Nano Banana Pro (Gemini 3 Pro Image)
   {
     id: 'gemini-3-pro-image-preview',
     name: 'Nano Banana Pro',
     provider: 'google',
-    description: 'جودة احترافية فائقة',
+    description: 'جودة استوديو احترافية - الأفضل للنصوص العربية المعقدة',
     quality: 'ultra',
     speed: 'medium',
     baseCostCredits: 30,
     creditsBySize: { '1024x1024': 30, '1792x1024': 30, '1024x1792': 30 },
     badge: 'Pro',
     isPremium: true,
-    isNew: true,
   },
-  // 🍌 Nano Banana Standard (Gemini 2.5 Flash Image)
+  // 🍌 Nano Banana Standard (Gemini 3.1 Flash Image)
   {
-    id: 'gemini-2.5-flash-image',
+    id: 'gemini-3.1-flash-image-preview',
     name: 'Nano Banana Standard',
     provider: 'google',
-    description: 'سريع واقتصادي',
-    quality: 'standard',
+    description: 'سرعة البرق مع دعم متطور للنصوص العربية (2026)',
+    quality: 'high',
     speed: 'fast',
     baseCostCredits: 12,
     creditsBySize: { '1024x1024': 12, '1792x1024': 12, '1024x1792': 12 },
     badge: '⚡',
+    isNew: true,
   },
 ];
 
@@ -417,10 +417,10 @@ export function syncModelsWithDynamicPricing(
     // Check for nano specifically first if it's a nano model
     // Map each Nano model to its specific pricing key
     if (updated.name.toLowerCase().includes('nano')) {
-      if (updated.id.includes('gemini-3') || updated.id.includes('pro-image-preview') || updated.name.toLowerCase().includes('pro')) {
-        priceKey = 'nano-pro';
-      } else if (updated.id.includes('gemini-2.5') || updated.id.includes('flash')) {
+      if (updated.id.includes('flash') || updated.name.toLowerCase().includes('standard')) {
         priceKey = 'nano-standard';
+      } else if (updated.id.includes('gemini-3') || updated.id.includes('pro-image-preview') || updated.name.toLowerCase().includes('pro')) {
+        priceKey = 'nano-pro';
       } else {
         priceKey = 'nano-standard';
       }
