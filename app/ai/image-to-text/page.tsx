@@ -319,9 +319,14 @@ export default function ImageToTextPage() {
                   <span className="text-sm font-bold">عودة</span>
                 </Link>
                 
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-8 bg-emerald-600 rounded-full"></span>
-                  <h1 className="text-lg font-bold">صورة إلى نص</h1>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-8 bg-emerald-600 rounded-full"></span>
+                    <h1 className="text-lg font-bold">صورة إلى نص</h1>
+                  </div>
+                  <p className="text-[9px] text-gray-400 font-medium mt-0.5 opacity-80">
+                    ⚠️ الموديلات السينمائية لا تدعم النصوص العربية بدقة؛ للتصميم بالعربي استخدم <Link href="/ai/nano" className="text-emerald-400 hover:underline">نانو بنانا</Link>
+                  </p>
                 </div>
               </div>
 

@@ -814,8 +814,8 @@ export default function AdminCreditsPage() {
                                 <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest">المدة</th>
                                 <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest">النقاط</th>
                                 <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest">السعر</th>
-                                <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest">هـ.ربح (صور)</th>
-                                <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest">هـ.ربح (فيديو)</th>
+                                <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest">هـامش.ربح (صور)</th>
+                                <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest">هـامش.ربح (فيديو)</th>
                                 <th className="pb-4 text-[9px] font-black uppercase text-gray-600 tracking-widest text-center">الإجراءات</th>
                             </tr>
                         </thead>
