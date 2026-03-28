@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { usePathname, redirect } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const PrivateRoutes: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const pathName = usePathname();
+  const router = useRouter();
   const [isAllowed, setIsAllowed] = useState(false);
 
   useEffect(() => {
@@ -13,7 +14,7 @@ const PrivateRoutes: React.FC<{ children: React.ReactNode }> = ({
       if (!localStorage.getItem("a")) {
         setIsAllowed(true);
       } else {
-        redirect("/dashboard");
+        router.push("/dashboard");
       }
     }
   }, [pathName]);
