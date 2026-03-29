@@ -30,7 +30,9 @@ async function authRequestInterceptor(config: InternalAxiosRequestConfig) {
   // Handle token
   const token = localStorage.getItem("a");
   if (!token) {
-    window.location.href = "/signin";
+    if (typeof window !== "undefined" && window.location.pathname !== "/signin") {
+      window.location.replace("/signin");
+    }
   }
   if (token) {
     config.headers.authorization = token;
@@ -54,7 +56,9 @@ axiosInstance.interceptors.request.use(authRequestInterceptor, (error) => {
 function authErrorInterceptor(error: any) {
   if (error?.response?.status === 401 || error?.response?.status === 403) {
     localStorage.removeItem("a");
-    window.location.href = "/signin";
+    if (typeof window !== "undefined" && window.location.pathname !== "/signin") {
+      window.location.replace("/signin");
+    }
   }
   return Promise.reject<any>(error);
 }
