@@ -262,11 +262,23 @@ export default function VideoGenerationPage() {
         }
         fetchUserVideos();
       } else {
-        setError(await res.text() || 'فشلت العملية');
+        const errText = await res.text();
+        if (res.status === 504 || res.status === 502 || (errText && errText.toLowerCase().includes('timeout'))) {
+            setError('يستغرق التوليد وقتاً إضافياً وهو مستمر في الخلفية، لا تطلب توليداً جديداً. تفقد بطل أعمالك بعد قليل.');
+            toast.success('جاري المعالجة في الخلفية...');
+            setTimeout(() => { fetchBalance(); fetchUserVideos(); }, 30000);
+            setTimeout(() => { fetchBalance(); fetchUserVideos(); }, 60000);
+        } else {
+            setError(errText || 'فشلت العملية');
+        }
       }
     } catch (e) {
       clearInterval(interval);
-      setError('خطأ في الاتصال');
+      setError('جاري التوليد في الخلفية! بسبب طول المدة، انقضى وقت الاتصال لكن العملية مستمرة. لا تقم بطلب جديد لتجنب خصم الرصيد مرتين.');
+      toast.success('جاري المعالجة في الخلفية...');
+      setTimeout(() => { fetchBalance(); fetchUserVideos(); }, 20000);
+      setTimeout(() => { fetchBalance(); fetchUserVideos(); }, 45000);
+      setTimeout(() => { fetchBalance(); fetchUserVideos(); }, 90000);
     } finally { setIsGenerating(false); }
   };
 
