@@ -18,6 +18,9 @@ import { PLANS_OPTIONS, TOOL_MODE_OPTIONS } from "@/consts";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { useTranslation } from "react-i18next";
+import api from "@/utils/api";
+import { toast } from "react-hot-toast";
+import { Upload } from "lucide-react";
 
 type FormType = NewToolsReqDto;
 
@@ -231,6 +234,35 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
 
   const [isLocalStorageError, setIsLocalStorageError] = useState<boolean>(false);
   const [isCookiesError, setIsCookiesError] = useState<boolean>(false);
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, setFieldValue: (field: string, value: any, shouldValidate?: boolean) => void) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("toolImage", file);
+
+      const res = await api.post("/api/media/upload-tool-image", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (res.data?.url) {
+        setFieldValue("tool_image", res.data.url);
+        toast.success("تم رفع الصورة بنجاح");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("فشل في رفع الصورة: " + (err.response?.data || err.message));
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = "";
+    }
+  };
 
   const {
     data,
@@ -559,18 +591,49 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
               onBlur={handleBlur}
               error={touched.tool_url && errors.tool_url}
             />
-            <InputField
-              className={"w-full mb-4.5"}
-              required={true}
-              id={"tool_image"}
-              label={t('toolsForm.toolImage')}
-              type={"text"}
-              placeholder={t('toolsForm.enterToolImage')}
-              value={values.tool_image}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              error={touched.tool_image && errors.tool_image}
-            />
+            <div className="w-full mb-4.5">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <InputField
+                    className={"w-full"}
+                    required={true}
+                    id={"tool_image"}
+                    label={t('toolsForm.toolImage')}
+                    type={"text"}
+                    placeholder={t('toolsForm.enterToolImage')}
+                    value={values.tool_image}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.tool_image && errors.tool_image}
+                  />
+                </div>
+                <div className="flex items-center gap-2 mb-[1px]">
+                  <input
+                    type="file"
+                    id="tool-image-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, setFieldValue)}
+                  />
+                  <label
+                    htmlFor="tool-image-upload"
+                    className="cursor-pointer bg-primary text-white p-[11px] rounded-md flex items-center justify-center min-w-[50px] transition hover:bg-opacity-90 h-[50px]"
+                    title="Upload Image"
+                  >
+                    {isUploadingImage ? (
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-white border-t-transparent"></div>
+                    ) : (
+                      <Upload size={22} />
+                    )}
+                  </label>
+                  {values.tool_image && (
+                     <div className="h-[50px] w-[50px] rounded-md overflow-hidden bg-white/10 flex-shrink-0 border border-white/20">
+                       <img src={values.tool_image} alt="Preview" className="h-full w-full object-cover" />
+                     </div>
+                  )}
+                </div>
+              </div>
+            </div>
             <InputField
               className={"w-full mb-4.5"}
               id={"tool_day_price"}

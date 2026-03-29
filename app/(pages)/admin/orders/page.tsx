@@ -96,6 +96,16 @@ const {
         header: () => t("orders.paymentMethod"),
         cell: (info) => {
           const paymentMethod = info.getValue()?.toLowerCase();
+          const rawAmount = info.row.original.amount;
+          
+          if (paymentMethod === 'zain' && Number(rawAmount) === 0) {
+            return (
+              <span className="bg-purple-600/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-normal">
+                كوبون مجاني
+              </span>
+            );
+          }
+
           const methodLogos: Record<string, string> = {
             'zain': "https://www2.0zz0.com/2025/07/02/21/357173052.png",
             'fastpay': "https://stock-pik.com/tools/unnamed%20(3).png",
@@ -122,7 +132,15 @@ const {
       {
         accessorKey: "buyer_name",
         header: () => t("orders.buyer"),
-        cell: (info) => <div className="text-xs font-medium">{info.getValue() || "none"}</div>,
+        cell: (info) => {
+          const rawBuyer = info.getValue();
+          const isFreeActivation = rawBuyer === "Free Activation";
+          const displayBuyer = isFreeActivation 
+            ? info.row.original.buyer_email?.split('@')[0] || rawBuyer 
+            : rawBuyer || "none";
+            
+          return <div className="text-xs font-medium">{displayBuyer}</div>;
+        },
       },
       {
         accessorKey: "buyer_email",
