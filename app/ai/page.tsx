@@ -56,7 +56,8 @@ const AI_TOOLS = [
     gradient: 'from-blue-600/80 to-cyan-600/80',
     image: '/images/تاثيرات الفيديو.png',
     href: '/ai/video',
-    featured: true
+    featured: true,
+    maintenance: true
   },
   {
     id: 'chat',
@@ -201,6 +202,7 @@ const AI_TOOLS = [
     gradient: 'from-sky-600/80 to-blue-600/80',
     image: '/images/محاكاة الحركة.png',
     href: '/ai/motion',
+    maintenance: true
   },
   {
     id: 'long-video',
@@ -393,6 +395,32 @@ export default function AIHomePage() {
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {featuredTools.map((tool) => {
               const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
+              const isMaintenance = (tool as any).maintenance;
+              
+              if (isMaintenance) {
+                  return (
+                    <div
+                        key={tool.id}
+                        className="group relative h-[300px] md:h-[400px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 grayscale-[0.5] cursor-not-allowed"
+                    >
+                        <img 
+                            src={bgImage} 
+                            alt={tool.title} 
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30 opacity-90 transition-opacity"></div>
+                        <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/40 backdrop-blur-sm pointer-events-none text-center p-4">
+                           <span className="text-white text-lg font-black bg-red-600/80 px-4 py-2 rounded-lg mb-2">صيانة النظام</span>
+                           <span className="text-white/90 text-sm md:text-base font-bold max-w-[80%]">ستتوفر غدا نعمل على استرجاع الخدمة</span>
+                        </div>
+                        <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end opacity-50">
+                            <h3 className="text-xl md:text-2xl font-black mb-1 md:mb-2 text-white">{tool.title}</h3>
+                            <p className="text-gray-300 text-[9px] md:text-xs leading-relaxed mb-4 md:mb-5 line-clamp-2 max-w-[90%]">{tool.description}</p>
+                        </div>
+                    </div>
+                  );
+              }
+
               return (
                 <Link
                     key={tool.id}
@@ -449,25 +477,31 @@ export default function AIHomePage() {
             {filteredTools.map((tool) => {
                 const isComingSoon = tool.comingSoon;
                 const isNew = tool.isNew;
+                const isMaintenance = (tool as any).maintenance;
                 const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
 
                 return (
                     <div
                         key={tool.id}
                         className={`group relative h-[180px] md:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
-                            isComingSoon ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
+                            (isComingSoon || isMaintenance) ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
                         }`}
                     >
-                        {!isComingSoon ? (
+                        {(!isComingSoon && !isMaintenance) ? (
                             <Link href={tool.href} className="absolute inset-0 z-10" />
-                        ) : (
+                        ) : isComingSoon ? (
                             <div className="absolute top-0 left-0 z-20 w-20 h-20 md:w-24 md:h-24 overflow-hidden pointer-events-none">
                                 <div className="absolute top-3 md:top-4 -left-6 md:-left-8 w-24 md:w-32 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[7px] md:text-[8px] font-black py-1 shadow-2xl transform -rotate-45 flex justify-center items-center tracking-widest uppercase">
                                     قريباً
                                 </div>
                             </div>
-                        )}
-                        {!isComingSoon && isNew && (
+                        ) : isMaintenance ? (
+                            <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/60 backdrop-blur-sm pointer-events-none text-center p-2">
+                                <span className="text-white text-xs md:text-sm font-bold bg-red-600/80 px-2 py-1 rounded mb-1">صيانة</span>
+                                <span className="text-white/90 text-[9px] md:text-[10px] font-bold">ستتوفر غدا نعمل على استرجاع الخدمة</span>
+                            </div>
+                        ) : null}
+                        {!isComingSoon && !isMaintenance && isNew && (
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
                                 <div className="absolute top-3 md:top-4 -left-10 md:-left-12 w-32 md:w-40 bg-red-600 text-white text-[7px] md:text-[9px] font-black py-1 shadow-2xl transform -rotate-45 flex justify-center items-center tracking-widest">
                                     NEW

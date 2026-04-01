@@ -192,7 +192,8 @@ const VIDEO_TOOLS = [
     gradient: 'from-blue-600/80 to-cyan-600/80',
     image: '/images/تاثيرات الفيديو.png',
     href: '/ai/video',
-    featured: true
+    featured: true,
+    maintenance: true
   },
   {
     id: 'motion',
@@ -203,7 +204,8 @@ const VIDEO_TOOLS = [
     gradient: 'from-sky-600/80 to-blue-600/80',
     image: '/images/محاكاة الحركة.png',
     href: '/ai/motion',
-    featured: true
+    featured: true,
+    maintenance: true
   },
   {
     id: 'lipsync',
@@ -437,25 +439,31 @@ export default function MediaPage() {
             {currentTools.map((tool) => {
                 const isComingSoon = tool?.comingSoon;
                 const isNew = (tool as any)?.isNew;
+                const isMaintenance = (tool as any)?.maintenance;
                 const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
 
                 return (
                     <div
                         key={tool.id}
                         className={`group relative h-[180px] md:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
-                            isComingSoon ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
+                            (isComingSoon || isMaintenance) ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
                         }`}
                     >
-                        {!isComingSoon ? (
+                        {(!isComingSoon && !isMaintenance) ? (
                             <Link href={tool.href} className="absolute inset-0 z-10" />
-                        ) : (
+                        ) : isComingSoon ? (
                             <div className="absolute top-0 left-0 z-20 w-20 h-20 md:w-24 md:h-24 overflow-hidden pointer-events-none">
                                 <div className="absolute top-3 md:top-4 -left-6 md:-left-8 w-24 md:w-32 bg-emerald-600 text-white text-[7px] md:text-[8px] font-black py-1 transform -rotate-45 flex justify-center items-center tracking-widest uppercase">
                                     قريباً
                                 </div>
                             </div>
-                        )}
-                        {!isComingSoon && isNew && (
+                        ) : isMaintenance ? (
+                            <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/60 backdrop-blur-sm pointer-events-none text-center p-2">
+                                <span className="text-white text-xs md:text-sm font-bold bg-red-600/80 px-2 py-1 rounded mb-1">صيانة</span>
+                                <span className="text-white/90 text-[9px] md:text-[10px] font-bold">ستتوفر غدا نعمل على استرجاع الخدمة</span>
+                            </div>
+                        ) : null}
+                        {!isComingSoon && !isMaintenance && isNew && (
                             <div className="absolute top-0 left-0 z-20 w-24 h-24 md:w-32 md:h-32 overflow-hidden pointer-events-none">
                                 <div className="absolute top-3 md:top-4 -left-10 md:-left-12 w-32 md:w-40 bg-red-600 text-white text-[7px] md:text-[9px] font-black py-1 transform -rotate-45 flex justify-center items-center tracking-widest">
                                     NEW
