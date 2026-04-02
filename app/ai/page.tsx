@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import { useTranslation } from 'react-i18next';
 import { 
   MessageSquare, 
@@ -273,9 +274,13 @@ const AI_TOOLS = [
 ];
 
 export default function AIHomePage() {
+  const { data } = useMyInfo();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [scrolled, setScrolled] = useState(false);
   const [customAssets, setCustomAssets] = useState<Record<string, string>>({});
+
+  // Check if user has an AI plan
+  const hasAIPlan = data?.userCreditsData?.some((c: any) => c.remaining_credits > 0);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -396,8 +401,10 @@ export default function AIHomePage() {
             {featuredTools.map((tool) => {
               const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
               const isMaintenance = (tool as any).maintenance;
+              const isVideo = tool.category === 'video';
+              const isLockedVideo = isVideo && !hasAIPlan;
               
-              if (isMaintenance) {
+              if (isMaintenance || isLockedVideo) {
                   return (
                     <div
                         key={tool.id}
@@ -410,8 +417,17 @@ export default function AIHomePage() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30 opacity-90 transition-opacity"></div>
                         <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/40 backdrop-blur-sm pointer-events-none text-center p-4">
-                           <span className="text-white text-lg font-black bg-red-600/80 px-4 py-2 rounded-lg mb-2">صيانة النظام</span>
-                           <span className="text-white/90 text-sm md:text-base font-bold max-w-[80%]">ستتوفر غدا نعمل على استرجاع الخدمة</span>
+                           {isMaintenance ? (
+                             <>
+                               <span className="text-white text-lg font-black bg-red-600/80 px-4 py-2 rounded-lg mb-2">صيانة النظام</span>
+                               <span className="text-white/90 text-sm md:text-base font-bold max-w-[80%]">ستتوفر غدا نعمل على استرجاع الخدمة</span>
+                             </>
+                           ) : (
+                             <>
+                               <span className="text-white text-lg font-black bg-amber-600/80 px-4 py-2 rounded-lg mb-2">باقة AI فقط</span>
+                               <span className="text-white/90 text-sm md:text-base font-bold max-w-[80%]">هذه الأداة متاحة فقط في باقات الـ AI الاحترافية</span>
+                             </>
+                           )}
                         </div>
                         <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end opacity-50">
                             <h3 className="text-xl md:text-2xl font-black mb-1 md:mb-2 text-white">{tool.title}</h3>
@@ -478,16 +494,18 @@ export default function AIHomePage() {
                 const isComingSoon = tool.comingSoon;
                 const isNew = tool.isNew;
                 const isMaintenance = (tool as any).maintenance;
+                const isVideo = tool.category === 'video';
+                const isLockedVideo = isVideo && !hasAIPlan;
                 const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
 
                 return (
                     <div
                         key={tool.id}
                         className={`group relative h-[180px] md:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
-                            (isComingSoon || isMaintenance) ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
+                            (isComingSoon || isMaintenance || isLockedVideo) ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
                         }`}
                     >
-                        {(!isComingSoon && !isMaintenance) ? (
+                        {(!isComingSoon && !isMaintenance && !isLockedVideo) ? (
                             <Link href={tool.href} className="absolute inset-0 z-10" />
                         ) : isComingSoon ? (
                             <div className="absolute top-0 left-0 z-20 w-20 h-20 md:w-24 md:h-24 overflow-hidden pointer-events-none">
@@ -499,6 +517,11 @@ export default function AIHomePage() {
                             <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/60 backdrop-blur-sm pointer-events-none text-center p-2">
                                 <span className="text-white text-xs md:text-sm font-bold bg-red-600/80 px-2 py-1 rounded mb-1">صيانة</span>
                                 <span className="text-white/90 text-[9px] md:text-[10px] font-bold">ستتوفر غدا نعمل على استرجاع الخدمة</span>
+                            </div>
+                        ) : isLockedVideo ? (
+                            <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/60 backdrop-blur-sm pointer-events-none text-center p-2">
+                                <span className="text-white text-[10px] md:text-xs font-bold bg-amber-600/80 px-2 py-1 rounded mb-1">باقة AI فقط</span>
+                                <span className="text-white/90 text-[8px] md:text-[9px] font-bold">متاحة في باقات الـ AI</span>
                             </div>
                         ) : null}
                         {!isComingSoon && !isMaintenance && isNew && (
