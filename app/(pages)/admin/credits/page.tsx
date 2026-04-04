@@ -288,9 +288,10 @@ export default function AdminCreditsPage() {
   // - Sora 2.0: 4, 8, 12 seconds
   // - Sora 2 Pro: 5, 10, 15, 20 seconds (extended durations)
   const videoModelList = [
-    { id: 'veo-ultra', name: 'Veo Ultra', durations: [4, 6, 8] },
-    { id: 'veo-pro', name: 'Veo Pro', durations: [4, 6, 8] },
-    { id: 'veo-fast', name: 'Veo Fast', durations: [4, 6, 8] },
+    { id: 'veo-ultra', name: 'Veo 3 Generate (Ultra)', durations: [4, 6, 8] },
+    { id: 'veo-pro', name: 'Veo 3 Generate (Standard)', durations: [4, 6, 8] },
+    { id: 'veo-fast', name: 'Veo 3 Fast', durations: [4, 6, 8] },
+    { id: 'veo-lite', name: 'Veo 3 Lite', durations: [4, 6, 8] },
     { id: 'sora', name: 'Sora 2.0', durations: [4, 8, 12] },
     { id: 'sora-pro', name: 'Sora 2 Pro', durations: [5, 10, 15, 20] },
   ];

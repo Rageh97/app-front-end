@@ -58,7 +58,7 @@ const AI_TOOLS = [
     image: '/images/تاثيرات الفيديو.png',
     href: '/ai/video',
     featured: true,
-    maintenance: true
+    // maintenance: true
   },
   {
     id: 'chat',
@@ -203,7 +203,7 @@ const AI_TOOLS = [
     gradient: 'from-sky-600/80 to-blue-600/80',
     image: '/images/محاكاة الحركة.png',
     href: '/ai/motion',
-    maintenance: true
+    // maintenance: true
   },
   {
     id: 'long-video',
@@ -306,8 +306,8 @@ export default function AIHomePage() {
     ? AI_TOOLS 
     : AI_TOOLS.filter(tool => tool.category === selectedCategory);
 
-  return (
-    <div className="h-full bg-[#000000] text-white selection:bg-blue-500/30 font-sans overflow-x-hidden" dir="rtl">
+    return (
+        <div className="h-full bg-[#000000] text-white selection:bg-blue-500/30 font-sans overflow-x-hidden" dir="rtl">
       {/* Dynamic Background */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
       <div className="fixed top-[-10%] left-[-10%] w-[80%] md:w-[60%] h-[60%] bg-blue-900/20 blur-[100px] md:blur-[140px] rounded-full pointer-events-none"></div>
@@ -399,66 +399,55 @@ export default function AIHomePage() {
 
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {featuredTools.map((tool) => {
-              const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
-              const isMaintenance = (tool as any).maintenance;
-              const isVideo = tool.category === 'video';
-              const isLockedVideo = isVideo && !hasAIPlan;
-              
-              if (isMaintenance || isLockedVideo) {
-                  return (
-                    <div
+                const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
+                const isMaintenance = (tool as any).maintenance;
+                
+                if (isMaintenance) {
+                    return (
+                        <div
+                            key={tool.id}
+                            className="group relative h-[300px] md:h-[400px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 grayscale-[0.5] cursor-not-allowed"
+                        >
+                            <img 
+                                src={bgImage} 
+                                alt={tool.title} 
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30 opacity-90 transition-opacity"></div>
+                            <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/40 backdrop-blur-sm pointer-events-none text-center p-4">
+                                <span className="text-white text-lg font-black bg-red-600/80 px-4 py-2 rounded-lg mb-2">صيانة النظام</span>
+                                <span className="text-white/90 text-sm md:text-base font-bold max-w-[80%]">ستتوفر غدا نعمل على استرجاع الخدمة</span>
+                            </div>
+                            <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end opacity-50">
+                                <h3 className="text-xl md:text-2xl font-black mb-1 md:mb-2 text-white">{tool.title}</h3>
+                                <p className="text-gray-300 text-[9px] md:text-xs leading-relaxed mb-4 md:mb-5 line-clamp-2 max-w-[90%]">{tool.description}</p>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <Link
                         key={tool.id}
-                        className="group relative h-[300px] md:h-[400px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 grayscale-[0.5] cursor-not-allowed"
+                        href={tool.href}
+                        className="group relative h-[300px] md:h-[400px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:border-white/20 active:scale-[0.98]"
                     >
                         <img 
                             src={bgImage} 
                             alt={tool.title} 
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30 opacity-90 transition-opacity"></div>
-                        <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/40 backdrop-blur-sm pointer-events-none text-center p-4">
-                           {isMaintenance ? (
-                             <>
-                               <span className="text-white text-lg font-black bg-red-600/80 px-4 py-2 rounded-lg mb-2">صيانة النظام</span>
-                               <span className="text-white/90 text-sm md:text-base font-bold max-w-[80%]">ستتوفر غدا نعمل على استرجاع الخدمة</span>
-                             </>
-                           ) : (
-                             <>
-                               <span className="text-white text-lg font-black bg-amber-600/80 px-4 py-2 rounded-lg mb-2">باقة AI فقط</span>
-                               <span className="text-white/90 text-sm md:text-base font-bold max-w-[80%]">هذه الأداة متاحة فقط في باقات الـ AI الاحترافية</span>
-                             </>
-                           )}
-                        </div>
-                        <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end opacity-50">
-                            <h3 className="text-xl md:text-2xl font-black mb-1 md:mb-2 text-white">{tool.title}</h3>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
+                        <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end">
+                            <h3 className="text-xl md:text-2xl font-black mb-1 md:mb-2 text-white group-hover:translate-x-1 transition-transform">{tool.title}</h3>
                             <p className="text-gray-300 text-[9px] md:text-xs leading-relaxed mb-4 md:mb-5 line-clamp-2 max-w-[90%]">{tool.description}</p>
+                            <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md group-hover:bg-white group-hover:text-black transition-all duration-300 w-fit">
+                                <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest">عرض الموديل</span>
+                                <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
+                            </div>
                         </div>
-                    </div>
-                  );
-              }
-
-              return (
-                <Link
-                    key={tool.id}
-                    href={tool.href}
-                    className="group relative h-[300px] md:h-[400px] rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl transition-all duration-700 hover:scale-[1.02] hover:border-white/20 active:scale-[0.98]"
-                >
-                    <img 
-                        src={bgImage} 
-                        alt={tool.title} 
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80"></div>
-                    <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end">
-                        <h3 className="text-xl md:text-2xl font-black mb-1 md:mb-2 text-white group-hover:translate-x-1 transition-transform">{tool.title}</h3>
-                        <p className="text-gray-300 text-[9px] md:text-xs leading-relaxed mb-4 md:mb-5 line-clamp-2 max-w-[90%]">{tool.description}</p>
-                        <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md group-hover:bg-white group-hover:text-black transition-all duration-300 w-fit">
-                            <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest">عرض الموديل</span>
-                            <ArrowLeft size={10} className="group-hover:-translate-x-0.5 transition-transform" />
-                        </div>
-                    </div>
-                </Link>
-              );
+                    </Link>
+                );
             })}
          </div>
       </section>
@@ -494,18 +483,16 @@ export default function AIHomePage() {
                 const isComingSoon = tool.comingSoon;
                 const isNew = tool.isNew;
                 const isMaintenance = (tool as any).maintenance;
-                const isVideo = tool.category === 'video';
-                const isLockedVideo = isVideo && !hasAIPlan;
                 const bgImage = customAssets[tool.id] ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[tool.id]}` : tool.image;
 
                 return (
                     <div
                         key={tool.id}
                         className={`group relative h-[180px] md:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 shadow-lg ${
-                            (isComingSoon || isMaintenance || isLockedVideo) ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
+                            (isComingSoon || isMaintenance) ? 'cursor-not-allowed grayscale-[0.5]' : 'cursor-pointer hover:border-white/20 hover:scale-[1.02]'
                         }`}
                     >
-                        {(!isComingSoon && !isMaintenance && !isLockedVideo) ? (
+                        {(!isComingSoon && !isMaintenance) ? (
                             <Link href={tool.href} className="absolute inset-0 z-10" />
                         ) : isComingSoon ? (
                             <div className="absolute top-0 left-0 z-20 w-20 h-20 md:w-24 md:h-24 overflow-hidden pointer-events-none">
@@ -517,11 +504,6 @@ export default function AIHomePage() {
                             <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/60 backdrop-blur-sm pointer-events-none text-center p-2">
                                 <span className="text-white text-xs md:text-sm font-bold bg-red-600/80 px-2 py-1 rounded mb-1">صيانة</span>
                                 <span className="text-white/90 text-[9px] md:text-[10px] font-bold">ستتوفر غدا نعمل على استرجاع الخدمة</span>
-                            </div>
-                        ) : isLockedVideo ? (
-                            <div className="absolute inset-0 z-20 flex flex-col justify-center items-center bg-black/60 backdrop-blur-sm pointer-events-none text-center p-2">
-                                <span className="text-white text-[10px] md:text-xs font-bold bg-amber-600/80 px-2 py-1 rounded mb-1">باقة AI فقط</span>
-                                <span className="text-white/90 text-[8px] md:text-[9px] font-bold">متاحة في باقات الـ AI</span>
                             </div>
                         ) : null}
                         {!isComingSoon && !isMaintenance && isNew && (

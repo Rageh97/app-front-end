@@ -403,7 +403,6 @@ export default function VideoGenerationPage() {
                         </div>
                     </div>
 
-                    {/* Reference Media Upload Section */}
                     {/* <div className="space-y-2">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                             <Upload size={12} className="text-blue-400" />
