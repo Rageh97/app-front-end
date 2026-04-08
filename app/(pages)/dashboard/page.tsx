@@ -450,7 +450,7 @@ useEffect(() => {
                    { id: 'chat', name: 'نيكسوس  GPT', path: '/ai', img: '/images/chat.jpg' },
                    { id: 'image-to-text', name: 'استخراج النص من الصورة', path: '/ai', img: '/images/الصورة لنص.png' },
                    { id: 'bg-remove', name: 'حذف الخلفية', path: '/ai', img: '/images/ازالة الخلفية.png' },
-                   { id: 'restore', name: 'ترميم الصور', path: '/ai', img: '/images/ترميم الصور .jpeg' },
+                   { id: 'restore', name: 'ترميم الصور', path: '/ai', img: '/images/ترميم الصور.png' },
                    { id: 'avatar', name: 'صانع الأفاتار', path: '/ai', img: '/images/انشاء افاتار.png' },
                    { id: 'nano', name: 'نانو بانانا برو', path: '/ai', img: '/images/Whisk_d2a441bc8622fa5b2774cf54a715f70feg.png' },
                    { id: 'product', name: 'نماذج لمنتجك', path: '/ai', img: '/images/نماذج لمنتجك.png' },
