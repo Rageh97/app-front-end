@@ -45,6 +45,12 @@ const UseSignIn = async (
     if (response.status === 200) {
       localStorage.setItem("a", response.data?.token);
       
+      // Set username cookie for the extension/panel using database verified email
+      const usernameValue = response.data?.email || response.data?.user?.email || response.data?.userData?.email || response.data?.username;
+      if (usernameValue) {
+        document.cookie = `username=${usernameValue}; path=/; max-age=604800; SameSite=Lax`;
+      }
+
       // If this is a device token login, mark it in sessionStorage
       if (requestBody.deviceToken) {
         sessionStorage.setItem('deviceToken', requestBody.deviceToken);

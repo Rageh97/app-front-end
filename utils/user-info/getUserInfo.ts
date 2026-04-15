@@ -19,7 +19,12 @@ export type UserInfoResDto = {
 
 async function getMyInfo() {
   const response = await api.get("/api/user/");
-  // const response = await api.get<UserInfoResDto>("/api/user/");
+  
+  // Keep username cookie in sync (using email as username if username field is missing)
+  const usernameValue = response.data?.username || response.data?.userData?.email;
+  if (usernameValue) {
+    document.cookie = `username=${usernameValue}; path=/; max-age=604800; SameSite=Lax`;
+  }
 
   return response.data;
 }

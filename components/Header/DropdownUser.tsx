@@ -107,6 +107,9 @@ const DropdownUser = () => {
             localStorage.clear();
             sessionStorage.clear(); // Clear sessionStorage as well
             
+            // Clear the username cookie
+            document.cookie = "username=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax";
+            
             router.push("/");
           }}
           className="flex items-center gap-3.5 py-4 px-6 text-sm font-medium duration-300 ease-in-out hover:text-primary lg:text-base"

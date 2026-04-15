@@ -2,8 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "@/utils/api";
-import { MessageSquare, X, Check, Image as ImageIcon, Smile } from "lucide-react";
+import {
+  MessageSquare,
+  X,
+  Check,
+  Image as ImageIcon,
+  Smile,
+  Send,
+  Paperclip,
+  Headphones,
+  ExternalLink,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Message = {
   message_id: number;
@@ -29,10 +40,11 @@ export default function ChatWidget() {
   const [showWelcome, setShowWelcome] = useState<boolean>(false);
   const [stickToBottom, setStickToBottom] = useState<boolean>(true);
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { t, i18n } = useTranslation();
+
+  const isRtl = i18n.language === "ar";
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -55,21 +67,18 @@ export default function ChatWidget() {
   useEffect(() => {
     if (!open) return;
     fetchMessages();
-    // Clear unread count when chat is opened
     setUnreadCount(0);
     const id = setInterval(fetchMessages, 5000);
     return () => clearInterval(id);
   }, [open, fetchMessages]);
 
-  // Fetch unread count when widget is not open
   useEffect(() => {
     if (open) return;
     fetchUnreadCount();
-    const id = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds instead of 5
+    const id = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(id);
   }, [open, fetchUnreadCount]);
 
-  // Show welcome message only the first time the user opens the chat
   useEffect(() => {
     if (!open) return;
     try {
@@ -84,16 +93,17 @@ export default function ChatWidget() {
     }
   }, [open]);
 
-  // Auto-scroll to bottom when user is near the bottom
   useEffect(() => {
     if (!open) return;
     const el = messagesContainerRef.current;
     if (el && stickToBottom) {
-      el.scrollTop = el.scrollHeight;
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: 'smooth'
+      });
     }
   }, [messages, open, stickToBottom]);
 
-  // Re-enable sticking when opening
   useEffect(() => {
     if (open) setStickToBottom(true);
   }, [open]);
@@ -157,7 +167,6 @@ export default function ChatWidget() {
           "Content-Type": "multipart/form-data",
         },
       });
-      // Mark welcome as shown after user sends the first message
       try {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('chatWelcomeShown', '1');
@@ -186,205 +195,290 @@ export default function ChatWidget() {
     [onSend]
   );
 
-  const headerTitle = useMemo(() => t("chat.supportChat"), []);
+  const headerTitle = useMemo(() => t("chat.supportChat"), [t]);
 
   return (
-    <div className="fixed bottom-4 right-4 z-[1000]">
+    <div className={`fixed bottom-6 right-2 z-[1000] font-cairo`}>
       {/* Toggle Button */}
-      <button
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
         onClick={() => setOpen((v) => !v)}
-        className="rounded-full animate-bounce shadow-lg bg-primary text-white p-3 hover:opacity-90 focus:outline-none relative"
+        className="group relative flex items-center justify-center transition-all focus:outline-none"
         aria-label={open ? "Close chat" : "Open chat"}
-        data-chat-widget-toggle
       >
-        <MessageSquare size={22} />
-        {unreadCount > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {open ? (
+            <motion.div
+              key="close"
+              initial={{ rotate: -90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 90, opacity: 0 }}
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-[#190237] text-white shadow-xl"
+            >
+              <X size={24} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="open"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+            >
+              <img src="/images/support.gif" alt="chat" className="w-15 h-15 object-contain" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {unreadCount > 0 && !open && (
+          <span className="absolute right-2 top-2 flex h-6 w-6 animate-bounce items-center justify-center rounded-full bg-[#ef4444] text-[10px] font-bold text-white shadow-lg ring-2 ring-white">
             {unreadCount > 10 ? '10+' : unreadCount}
           </span>
         )}
-      </button>
+      </motion.button>
 
       {/* Chat Panel */}
-      {open && (
-        <div className="mt-3 w-[320px] sm:w-[360px] h-[420px] bg-white rounded-xl shadow-2xl border border-stroke dark:border-strokedark flex flex-col">
-          <div className="px-3 py-2 border-b border-stroke dark:border-strokedark flex items-center justify-between">
-            <div className="text-sm font-semibold">{headerTitle}</div>
-            <button
-              className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-              onClick={() => setOpen(false)}
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <div ref={messagesContainerRef} onScroll={onMessagesScroll} className="flex-1 overflow-y-auto p-3 space-y-2">
-            {showWelcome && messages.length === 0 && (
-              <div className="flex justify-start">
-                <div className="max-w-[80%] px-3 py-2 rounded-lg bg-orange text-white rounded-bl-none">
-                  <div className="whitespace-pre-wrap break-words text-md ">
-                    {/* Simple welcome text; replace with i18n if desired */}
-                    مرحبًا! كيف يمكننا مساعدتك اليوم؟
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9, transformOrigin: "bottom right" }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className={`absolute bottom-20 right-0 flex h-[500px] w-[320px] sm:w-[380px] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:bg-[#150a24]`}
+          >
+            {/* Header */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-[#190237] to-[#4f008c] px-6 py-5 text-white">
+              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
+              <div className="relative flex items-center gap-3">
+                <div className="relative">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-md">
+                    <Headphones size={20} className="text-[#00c48c]" />
                   </div>
-                  <div className="whitespace-pre-wrap break-words text-md ">
-                    {/* Simple welcome text; replace with i18n if desired */}
-                    سيتم الرد عليك خلال دقائق...
-                  </div>
-                  {/* <div className="text-[9px] text-black opacity-60 mt-1">{new Date().toLocaleString()}</div> */}
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#190237] bg-[#00c48c]" />
                 </div>
-              </div>
-            )}
-            {messages.map((m) => (
-              <div
-                key={m.message_id}
-                className={m.sender_role === "user" ? "flex justify-end" : "flex justify-start"}
-              >
-                <div
-                  className={
-                    "max-w-[80%] px-3 py-2 rounded-lg " +
-                    (m.sender_role === "user"
-                      ? "bg-[#190237] text-white rounded-br-none"
-                      : "bg-gray-100  text-gray-900  rounded-bl-none")
-                  }
-                >
-                  {m.image_url && (
-                    <div className="mb-2">
-                      <img
-                        src={`${process.env.NEXT_PUBLIC_API_URL}${m.image_url}`}
-                        alt="Chat image"
-                        className="max-w-full h-auto rounded cursor-pointer hover:opacity-80 transition-opacity"
-                        style={{ maxHeight: "200px" }}
-                        onClick={() => openImageModal(`${process.env.NEXT_PUBLIC_API_URL}${m.image_url}`)}
-                      />
-                    </div>
-                  )}
-                  {m.content && (
-                    <div className="whitespace-pre-wrap break-words text-xs">{m.content}</div>
-                  )}
-                  <div className="text-[9px] opacity-60 mt-1 flex items-center gap-1">
-                    <span>{new Date(m.createdAt).toLocaleString()}</span>
-                    <span className="inline-flex items-center ">
-                      {m.sender_role === "user" ? (
-                        m.is_read_by_admin ? (
-                          <>
-                            <Check strokeWidth={5} size={12} className="text-[#00c48c]" />
-                            <Check strokeWidth={5} size={12} className="text-[#00c48c] " />
-                          </>
-                        ) : (
-                          <Check strokeWidth={5} size={12} className="text-gray-400" />
-                        )
-                      ) : m.is_read_by_user ? (
-                        <>
-                          <Check strokeWidth={5} size={12} className="text-[#00c48c]" />
-                          <Check strokeWidth={5} size={12} className="text-[#00c48c] " />
-                        </>
-                      ) : (
-                        <Check strokeWidth={5} size={12} className="text-gray-400" />
-                      )}
-                    </span>
-                  </div>
+                <div>
+                  <h3 className="text-sm font-bold leading-none">{headerTitle}</h3>
+                  <p className="mt-1 text-[10px] text-white/60">
+                    {isRtl ? "نحن متصلون لمساعدتك" : "We are online to help you"}
+                  </p>
                 </div>
-              </div>
-            ))}
-            <div ref={bottomRef} />
-          </div>
-          
-          {/* Image Preview */}
-          {imagePreview && (
-            <div  className="px-2 py-1 border-t border-stroke dark:border-strokedark">
-              <div  className="relative inline-block">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="max-w-full h-auto rounded"
-                  style={{ maxHeight: "100px" }}
-                />
                 <button
-                  onClick={removeImage}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                  onClick={() => setOpen(false)}
+                  className={`${isRtl ? 'mr-auto' : 'ml-auto'} rounded-full p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white`}
                 >
-                  ×
+                  <X size={18} />
                 </button>
               </div>
             </div>
-          )}
-          
-          <div className="p-2 border-t border-stroke dark:border-strokedark flex gap-2">
-            <input
-              className="flex-1 rounded border border-stroke dark:border-strokedark bg-transparent px-2 py-1 text-sm outline-none"
-              placeholder={t("chat.Type")}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              disabled={isSending}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-            
-            <button
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="px-2 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-              disabled={isSending}
+
+            {/* Messages Container */}
+            <div
+              ref={messagesContainerRef}
+              onScroll={onMessagesScroll}
+              className="flex-1 space-y-4 overflow-y-auto p-6 scroll-smooth scrollbar-hide dark:bg-[#0d011d]/50"
             >
-              <Smile className="text-primary" size={16} />
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-2 py-1 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
-              disabled={isSending}
-            >
-              <ImageIcon className="text-primary" size={16} />
-            </button>
-            <button
-              onClick={onSend}
-              disabled={isSending || (!input.trim() && !selectedImage)}
-              className="px-3 py-1 rounded bg-primary text-white text-sm disabled:opacity-50"
-            >
-              {t("chat.send")}
-            </button>
-          </div>
-          
-          {/* Emoji Picker */}
-          {showEmojiPicker && (
-            <div className="px-2 py-1 border-t border-stroke dark:border-strokedark bg-white dark:bg-gray-800">
-              <div className="grid grid-cols-8 gap-1">
-                {['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾', '🙈', '🙉', '🙊', '👶', '👧', '🧒', '👦', '👩', '🧑', '👨', '👵', '🧓', '👴', '👮‍♀️', '👮', '👮‍♂️', '🕵️‍♀️', '🕵️', '🕵️‍♂️', '💂‍♀️', '💂', '💂‍♂️', '👷‍♀️', '👷', '👷‍♂️', '🤴', '👸', '👳‍♀️', '👳', '👳‍♂️', '👲', '🧕', '🤵‍♀️', '🤵', '🤵‍♂️', '👰‍♀️', '👰', '👰‍♂️', '🤰', '🤱', '👼', '🎅', '🤶', '🧙‍♀️', '🧙', '🧙‍♂️', '🧝‍♀️', '🧝', '🧝‍♂️', '🧛‍♀️', '🧛', '🧛‍♂️', '🧟‍♀️', '🧟', '🧟‍♂️', '🧞‍♀️', '🧞', '🧞‍♂️', '🧜‍♀️', '🧜', '🧜‍♂️', '🧚‍♀️', '🧚', '🧚‍♂️', '👼', '🤰', '🤱', '👼', '🎅', '🤶', '🧙‍♀️', '🧙', '🧙‍♂️', '🧝‍♀️', '🧝', '🧝‍♂️', '🧛‍♀️', '🧛', '🧛‍♂️', '🧟‍♀️', '🧟', '🧟‍♂️', '🧞‍♀️', '🧞', '🧞‍♂️', '🧜‍♀️', '🧜', '🧜‍♂️', '🧚‍♀️', '🧚', '🧚‍♂️'].map((emoji, index) => (
-                  <button
-                    key={index}
-                    onClick={() => addEmoji(emoji)}
-                    className="w-8 h-8 text-lg hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center justify-center"
+              {showWelcome && messages.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl border border-[#ff7702]/20 bg-[#ff7702]/5 p-4 text-center"
+                >
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#ff7702]/10">
+                    <Smile className="text-[#ff7702]" size={24} />
+                  </div>
+                  <h4 className="text-sm font-bold text-gray-800 dark:text-white">
+                    {isRtl ? "مرحباً بك في NEXUS Support" : "Welcome to NEXUS Support"}
+                  </h4>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {isRtl ? "كيف يمكننا مساعدتك اليوم؟ سنقوم بالرد عليك خلال دقائق." : "How can we help you today? We will respond within minutes."}
+                  </p>
+                </motion.div>
+              )}
+
+              {messages.map((m) => {
+                const isUser = m.sender_role === "user";
+                return (
+                  <motion.div
+                    key={m.message_id}
+                    initial={{ opacity: 0, x: isUser ? 20 : -20, y: 10 }}
+                    animate={{ opacity: 1, x: 0, y: 0 }}
+                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
                   >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+                    <div className={`group relative flex max-w-[85%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+                      <div
+                        className={`overflow-hidden px-4 py-2.5 shadow-sm ${
+                          isUser
+                            ? `bg-gradient-to-br from-[#190237] to-[#4f008c] text-white ${isRtl ? 'rounded-2xl rounded-tl-none' : 'rounded-2xl rounded-tr-none'}`
+                            : `bg-gray-100 dark:bg-white/5 text-gray-800 dark:text-white ${isRtl ? 'rounded-2xl rounded-tr-none' : 'rounded-2xl rounded-tl-none'}`
+                        }`}
+                      >
+                        {m.image_url && (
+                          <div className="mb-2 relative group/img overflow-hidden rounded-lg">
+                            <img
+                              src={`${process.env.NEXT_PUBLIC_API_URL}${m.image_url}`}
+                              alt="Chat attachment"
+                              className="max-h-[200px] w-full object-cover transition-transform duration-500 group-hover/img:scale-105 cursor-pointer"
+                              onClick={() => openImageModal(`${process.env.NEXT_PUBLIC_API_URL}${m.image_url}`)}
+                            />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                               <ExternalLink size={18} className="text-white" />
+                            </div>
+                          </div>
+                        )}
+                        {m.content && (
+                          <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
+                            {m.content}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-1 flex items-center gap-1.5 px-1">
+                        <span className="text-[9px] text-gray-400 dark:text-gray-500">
+                          {new Date(m.createdAt).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {isUser && (
+                          <div className="flex items-center">
+                            <Check size={10} className={m.is_read_by_admin ? "text-[#00c48c]" : "text-gray-300"} />
+                            {m.is_read_by_admin && <Check size={10} className="-ml-1 text-[#00c48c]" />}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Input Area */}
+            <div className="border-t border-gray-100 active:p-4 bg-gray-50/50 p-4 dark:border-white/5 dark:bg-white/5">
+              {/* Image Preview Overlay */}
+              <AnimatePresence>
+                {imagePreview && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="mb-3 relative inline-block group"
+                  >
+                    <div className="relative h-16 w-16 overflow-hidden rounded-xl border-2 border-[#ff7702]/30 shadow-lg">
+                      <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                      <button
+                        onClick={removeImage}
+                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-red-500"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                   <div className={`flex items-center gap-1 rounded-2xl bg-white px-2 py-1 shadow-sm transition-all focus-within:shadow-md dark:bg-white/5 border border-gray-200 dark:border-white/10 focus-within:border-[#4f008c]/30`}>
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="p-1.5 text-gray-400 transition-colors hover:text-[#ff7702]"
+                      type="button"
+                    >
+                      <Smile size={18} />
+                    </button>
+                    <input
+                      className="flex-1 bg-transparent px-2 py-1.5 text-[13px] outline-none placeholder:text-gray-400 dark:text-white"
+                      placeholder={t("chat.Type")}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={onKeyDown}
+                      disabled={isSending}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-1.5 text-gray-400 transition-colors hover:text-blue-500"
+                      type="button"
+                    >
+                      <Paperclip size={18} />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                   </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onSend}
+                  disabled={isSending || (!input.trim() && !selectedImage)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#190237] to-[#4f008c] text-white shadow-lg transition-all disabled:opacity-50 disabled:grayscale`}
+                >
+                  <Send size={16} className={isRtl ? "rotate-180" : ""} />
+                </motion.button>
+              </div>
+
+              {/* Emoji Picker Popover */}
+              <AnimatePresence>
+                {showEmojiPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute bottom-[80px] left-4 right-4 z-10 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl dark:border-white/10 dark:bg-gray-800"
+                  >
+                    <div className="grid grid-cols-8 gap-1 p-2 max-h-[140px] overflow-y-auto scrollbar-hide">
+                      {['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '😎', '🤩', '🥳', '😏', '😒', '😔', '😟', '😕', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😴', '🤤', '🤒', '😷', '💩', '👻', '💀', '👽', '🤖', '🎃', '😺', '🤲', '👍', '👎', '👊', '👌', '🙌', '🙏', '🤝', '🔥', '⚡', '✨', '🎈', '🎉', '❤️', '💔', '❣️', '💯'].map((emoji, index) => (
+                        <button
+                          key={index}
+                          onClick={() => addEmoji(emoji)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors hover:bg-gray-100 dark:hover:bg-white/5"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Image Modal */}
-      {selectedImageUrl && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[2000] p-4"
-          onClick={closeImageModal}
-        >
-          <div className="relative max-w-full max-h-full">
-            <img
-              src={selectedImageUrl}
-              alt="Full size image"
-              className="max-w-full max-h-full object-contain"
+      <AnimatePresence>
+        {selectedImageUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+            onClick={closeImageModal}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-h-full max-w-full overflow-hidden rounded-2xl"
               onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        </div>
-      )}
+            >
+              <img
+                src={selectedImageUrl}
+                alt="Full size"
+                className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl"
+              />
+              <button
+                onClick={closeImageModal}
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-transform hover:scale-110"
+              >
+                <X size={20} />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
-
