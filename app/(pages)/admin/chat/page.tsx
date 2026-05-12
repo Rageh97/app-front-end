@@ -144,12 +144,32 @@ export default function AdminChatPage() {
     setShowEmojiPicker(false);
   };
 
+  // Handle browser back button to close the image modal
+  useEffect(() => {
+    const handlePopState = () => {
+      if (selectedImageUrl) {
+        setSelectedImageUrl(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [selectedImageUrl]);
+
   const openImageModal = (imageUrl: string) => {
     setSelectedImageUrl(imageUrl);
+    // Push a state so the back button closes the modal
+    window.history.pushState({ modal: "image-preview" }, "");
   };
 
   const closeImageModal = () => {
-    setSelectedImageUrl(null);
+    if (selectedImageUrl) {
+      // If we are in the pushed state, go back
+      if (window.history.state?.modal === "image-preview") {
+        window.history.back();
+      } else {
+        setSelectedImageUrl(null);
+      }
+    }
   };
 
   const onSend = useCallback(async () => {
@@ -495,23 +515,30 @@ export default function AdminChatPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/95 p-8 backdrop-blur-sm"
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/98 backdrop-blur-xl"
             onClick={closeImageModal}
           >
+            {/* Close/Back Button */}
+            <button
+              onClick={closeImageModal}
+              className={`fixed top-10 ${isRtl ? 'right-10' : 'left-10'} z-[100000] flex items-center gap-2 rounded-full bg-white/20 px-6 py-3 text-white backdrop-blur-2xl transition-all hover:bg-white/30 active:scale-95 shadow-2xl border border-white/10`}
+            >
+              <X size={24} />
+              <span className="text-base font-bold">{isRtl ? "رجوع" : "Back"}</span>
+            </button>
+
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-h-full max-w-full"
+              className="relative flex h-full w-full items-center justify-center p-4 md:p-12"
               onClick={(e) => e.stopPropagation()}
             >
-              <img src={selectedImageUrl} alt="Full size" className="max-h-[85vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl shadow-black" />
-              <button
-                onClick={closeImageModal}
-                className="absolute -right-4 -top-12 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition-transform hover:scale-110"
-              >
-                <X size={20} />
-              </button>
+              <img
+                src={selectedImageUrl}
+                alt="Full size"
+                className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+              />
             </motion.div>
           </motion.div>
         )}
