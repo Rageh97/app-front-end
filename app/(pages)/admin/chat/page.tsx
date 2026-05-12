@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "@/utils/api";
 import { useTranslation } from "react-i18next";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   Check,
   Image as ImageIcon,
@@ -41,15 +42,46 @@ type Message = {
 };
 
 export default function AdminChatPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
   const [users, setUsers] = useState<ChatUser[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  
+  // Get selectedUserId and selectedImageUrl from URL
+  const selectedUserId = useMemo(() => {
+    const u = searchParams.get("u");
+    return u ? parseInt(u) : null;
+  }, [searchParams]);
+
+  const selectedImageUrl = searchParams.get("img");
+
+  const setSelectedUserId = (id: number | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) {
+      params.set("u", id.toString());
+    } else {
+      params.delete("u");
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const setSelectedImageUrl = (url: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (url) {
+      params.set("img", url);
+    } else {
+      params.delete("img");
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -144,32 +176,12 @@ export default function AdminChatPage() {
     setShowEmojiPicker(false);
   };
 
-  // Handle browser back button to close the image modal
-  useEffect(() => {
-    const handlePopState = () => {
-      if (selectedImageUrl) {
-        setSelectedImageUrl(null);
-      }
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [selectedImageUrl]);
-
   const openImageModal = (imageUrl: string) => {
     setSelectedImageUrl(imageUrl);
-    // Push a state so the back button closes the modal
-    window.history.pushState({ modal: "image-preview" }, "");
   };
 
   const closeImageModal = () => {
-    if (selectedImageUrl) {
-      // If we are in the pushed state, go back
-      if (window.history.state?.modal === "image-preview") {
-        window.history.back();
-      } else {
-        setSelectedImageUrl(null);
-      }
-    }
+    setSelectedImageUrl(null);
   };
 
   const onSend = useCallback(async () => {
