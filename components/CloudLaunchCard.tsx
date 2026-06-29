@@ -21,7 +21,7 @@ const CloudLaunchCard: FunctionComponent<CloudLaunchCardProps> = ({
   const isFree = !!toolData?.isFree;
   return (
     <Link
-      href={`/cloud-tool?toolId=${toolData.tool_id}&toolName=${encodeURIComponent(toolData.tool_name)}&toolUrl=${encodeURIComponent(toolData.tool_url)}&toolDescription=${encodeURIComponent(toolData.tool_description || '')}`}
+      href={`/cloud-tool?toolId=${toolData.tool_id}&toolName=${encodeURIComponent(toolData.tool_name)}&toolUrl=${encodeURIComponent(toolData.tool_url)}&toolDescription=${encodeURIComponent(toolData.tool_description || '')}&cloudAccessMode=${toolData.metadata?.cloud_access_mode || 'direct'}&cloudPathPrefix=${toolData.metadata?.cloud_path_prefix || ''}`}
       className="flex flex-col h-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 relative rounded-[21px] cursor-pointer bg-[#190237] shadow-xl duration-500 hover:scale-[1.03] hover:shadow-xl"
     >
       <div className="h-[200px] flex justify-center items-center relative">

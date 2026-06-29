@@ -81,4 +81,13 @@ export type NewToolsDto = {
   external_link_8?: string;
   external_link_9?: string;
   external_link_10?: string;
+  metadata?: any;
+  cloud_access_mode?: string;
+  cloud_path_prefix?: string;
+  cloud_target_url?: string;
+  cloud_cookies?: string;
+  cloud_daily_download_limit?: number;
+  cloud_blocked_paths?: string;
+  cloud_user_agent?: string;
+  cloud_hidden_selectors?: string;
 };

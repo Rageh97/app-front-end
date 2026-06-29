@@ -53,6 +53,15 @@ const initialValues: FormType = {
   isFree: false,
   additional_device_price: "5",
   max_devices: 11,
+  metadata: null,
+  cloud_access_mode: "proxy",
+  cloud_path_prefix: "",
+  cloud_target_url: "",
+  cloud_cookies: "",
+  cloud_daily_download_limit: 0,
+  cloud_blocked_paths: "",
+  cloud_user_agent: "",
+  cloud_hidden_selectors: "",
   cookie_1: "",
   cookie_2: "",
   cookie_3: "",
@@ -377,6 +386,22 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
 
       values.tool_external_links = JSON.stringify(toolExternalLinks);
 
+      if (values.tool_mode === "cloud") {
+        values.metadata = {
+          is_cloud_tool: true,
+          cloud_access_mode: values.cloud_access_mode,
+          cloud_path_prefix: values.cloud_path_prefix,
+          cloud_target_url: values.cloud_target_url,
+          cloud_cookies: values.cloud_cookies,
+          cloud_daily_download_limit: Number(values.cloud_daily_download_limit || 0),
+          cloud_blocked_paths: values.cloud_blocked_paths,
+          cloud_user_agent: values.cloud_user_agent,
+          cloud_hidden_selectors: values.cloud_hidden_selectors
+        };
+      } else {
+        values.metadata = null;
+      }
+
       // Debug log for additional device settings
       console.log('📤 ToolsForm - Sending to backend:', {
         additional_device_price: values.additional_device_price,
@@ -497,6 +522,16 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
     // Handle additional device settings - ensure they exist with defaults for old tools
     data.additional_device_price = data.additional_device_price || "5";
     data.max_devices = data.max_devices || 11;
+
+    const metadata = data.metadata ? (typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata) : {};
+    data.cloud_access_mode = metadata.cloud_access_mode || "proxy";
+    data.cloud_path_prefix = metadata.cloud_path_prefix || "";
+    data.cloud_target_url = metadata.cloud_target_url || "";
+    data.cloud_cookies = metadata.cloud_cookies || "";
+    data.cloud_daily_download_limit = metadata.cloud_daily_download_limit || 0;
+    data.cloud_blocked_paths = metadata.cloud_blocked_paths || "";
+    data.cloud_user_agent = metadata.cloud_user_agent || "";
+    data.cloud_hidden_selectors = metadata.cloud_hidden_selectors || "";
 
     return data;
   };
@@ -761,6 +796,125 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
                 {errors.tool_mode.toString()}
               </p>
             ) : null}
+
+            {values.tool_mode === "cloud" && (
+              <div className="my-6 p-6 rounded-2xl border border-primary/30 bg-white/5 flex flex-col gap-5">
+                <h3 className="text-lg font-bold text-orange-500 border-b border-white/10 pb-2 mb-2">
+                   إعدادات الأداة السحابية (Cloud Tool Settings)
+                </h3>
+                
+                <FormikRadioGroup
+                  picked={values.cloud_access_mode}
+                  options={[
+                    { label: "الطريقة القديمة (Direct Link)", value: "direct" },
+                    { label: "الطريقة الجديدة (Cloud Proxy)", value: "proxy" }
+                  ]}
+                  id={"cloud_access_mode"}
+                  label={"طريقة تشغيل الأداة (Access Mode)"}
+                  name={"cloud_access_mode"}
+                />
+
+                {values.cloud_access_mode === "proxy" && (
+                  <div className="flex flex-col gap-4 mt-2">
+                    <InputField
+                      className="w-full"
+                      required={true}
+                      id="cloud_path_prefix"
+                      name="cloud_path_prefix"
+                      label="بادئة المسار (Cloud Path Prefix - e.g. envato)"
+                      type="text"
+                      placeholder="مثال: envato"
+                      value={values.cloud_path_prefix}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.cloud_path_prefix && errors.cloud_path_prefix}
+                    />
+                    
+                    <InputField
+                      className="w-full"
+                      required={true}
+                      id="cloud_target_url"
+                      name="cloud_target_url"
+                      label="الرابط المستهدف (Target Domain URL)"
+                      type="text"
+                      placeholder="مثال: https://app.envato.com"
+                      value={values.cloud_target_url}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.cloud_target_url && errors.cloud_target_url}
+                    />
+                    
+                    <InputField
+                      className="w-full"
+                      id="cloud_daily_download_limit"
+                      name="cloud_daily_download_limit"
+                      label="حد التنزيل اليومي للمستخدم (Daily Download Limit)"
+                      type="number"
+                      placeholder="0 = غير محدود"
+                      value={values.cloud_daily_download_limit}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.cloud_daily_download_limit && errors.cloud_daily_download_limit}
+                    />
+
+                    <div className="flex flex-col gap-2 w-full">
+                      <label htmlFor="cloud_cookies" className="text-white font-semibold">
+                        ملفات تعريف الارتباط (Premium Cookies String)
+                      </label>
+                      <textarea
+                        rows={4}
+                        id="cloud_cookies"
+                        name="cloud_cookies"
+                        placeholder="ضع كوكيز الحساب المميز هنا..."
+                        className="w-full rounded-lg border border-white/20 bg-black/20 p-3 text-white outline-none focus:border-primary transition"
+                        value={values.cloud_cookies}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                      />
+                    </div>
+
+                    <InputField
+                      className="w-full"
+                      id="cloud_blocked_paths"
+                      name="cloud_blocked_paths"
+                      label="المسارات المحظورة (Blocked Paths - Comma separated)"
+                      type="text"
+                      placeholder="مثال: /account,/settings,/billing"
+                      value={values.cloud_blocked_paths}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.cloud_blocked_paths && errors.cloud_blocked_paths}
+                    />
+
+                    <InputField
+                      className="w-full"
+                      id="cloud_user_agent"
+                      name="cloud_user_agent"
+                      label="عميل المستخدم المخصص (Custom User Agent - Optional)"
+                      type="text"
+                      placeholder="اتركه فارغاً للافتراضي"
+                      value={values.cloud_user_agent}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.cloud_user_agent && errors.cloud_user_agent}
+                    />
+
+                    <InputField
+                      className="w-full"
+                      id="cloud_hidden_selectors"
+                      name="cloud_hidden_selectors"
+                      label="محددات CSS لإخفاء العناصر (CSS Selectors to Hide - Optional)"
+                      type="text"
+                      placeholder="مثال: .user-menu-btn, #billing-link"
+                      value={values.cloud_hidden_selectors}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.cloud_hidden_selectors && errors.cloud_hidden_selectors}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mb-6">
               <p className="text-white font-semibold mb-2 flex items-center gap-2">

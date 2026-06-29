@@ -1,10 +1,112 @@
-import { FunctionComponent } from "react";
+import { FunctionComponent, useState, useEffect } from "react";
 import { NewToolsDto } from "@/types/tools/new-tools-dto";
 import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { checkIfImageUrl } from "@/utils/imageValidator";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Users } from "lucide-react";
+import { 
+  Users, 
+  CalendarDays, 
+  Cloud, 
+  AlertCircle, 
+  Clock, 
+  Download, 
+  RefreshCw, 
+  ChevronRight, 
+  Lock, 
+  ExternalLink 
+} from "lucide-react";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { useMyInfo } from "@/utils/user-info/getUserInfo";
+
+function CountdownTimer({ endDate }: { endDate: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    const targetDate = new Date(endDate).getTime();
+    
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        clearInterval(interval);
+        setIsExpired(true);
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000)
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [endDate]);
+
+  if (isExpired) {
+    return (
+      <div className="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-4 py-3 rounded-xl text-center font-bold text-sm">
+        الاشتراك منتهي
+      </div>
+    );
+  }
+
+  const TimeBox = ({ value, label }: { value: number, label: string }) => (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative w-11 h-14 md:w-14 md:h-16 bg-[#161033] border border-[#2a2054] rounded-lg flex items-center justify-center overflow-hidden shadow-lg">
+        <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-[#0a0616] z-10 w-full" />
+        <div className="absolute top-1/2 left-0 w-1 h-1 md:w-1.5 md:h-2 rounded-r-full bg-[#0a0616] -translate-y-1/2 z-10" />
+        <div className="absolute top-1/2 right-0 w-1 h-1 md:w-1.5 md:h-2 rounded-l-full bg-[#0a0616] -translate-y-1/2 z-10" />
+        
+        <div className="absolute top-0 left-0 right-0 bottom-1/2 bg-gradient-to-b from-white/[0.04] to-transparent" />
+        
+        <span className="font-mono font-black text-2xl md:text-3xl text-white relative z-0">{value.toString().padStart(2, '0')}</span>
+      </div>
+      <span className="text-[#a89fdf] text-[9px] md:text-xs font-bold">{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="flex gap-2 md:gap-3 justify-center items-start" dir="ltr">
+      <TimeBox value={timeLeft.days} label="يوم" />
+      <div className="text-[#a89fdf] font-black text-xl md:text-2xl pt-4 md:pt-6">:</div>
+      <TimeBox value={timeLeft.hours} label="ساعة" />
+      <div className="text-[#a89fdf] font-black text-xl md:text-2xl pt-4 md:pt-6">:</div>
+      <TimeBox value={timeLeft.minutes} label="دقيقة" />
+      <div className="text-[#a89fdf] font-black text-xl md:text-2xl pt-4 md:pt-6">:</div>
+      <TimeBox value={timeLeft.seconds} label="ثانية" />
+    </div>
+  );
+}
+
+function ResetTimer() {
+  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0 });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const midnight = new Date();
+      midnight.setHours(24, 0, 0, 0); // Next midnight
+      const diffMs = midnight.getTime() - now.getTime();
+
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      setTimeLeft({ hours, minutes });
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span dir="ltr">{timeLeft.hours.toString().padStart(2, '0')}h {timeLeft.minutes.toString().padStart(2, '0')}m</span>
+  );
+}
 
 interface LaunchCardProps {
   onClick: Function;
@@ -25,6 +127,9 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
   content,
   buttonId,
 }) => {
+  const { data: myInfoData } = useMyInfo();
+  const countToday = myInfoData?.downloadCounts?.[toolData.tool_id] || 0;
+
   // Check if this is a cloud tool
   const isCloudTool = toolData?.tool_mode === "cloud";
   const { t } = useTranslation();
@@ -51,9 +156,9 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
   if (isCloudTool) {
     return (
       <Link
-        href={isStable ? `/cloud-tool?toolId=${toolData.tool_id}&toolName=${encodeURIComponent(toolData.tool_name)}&toolUrl=${encodeURIComponent(toolData.tool_url)}&toolDescription=${encodeURIComponent(content || "")}&toolImage=${encodeURIComponent(toolData.tool_image || "")}` : "#"}
+        href={isStable ? `/cloud-tool?toolId=${toolData.tool_id}&toolName=${encodeURIComponent(toolData.tool_name)}&toolUrl=${encodeURIComponent(toolData.tool_url)}&toolDescription=${encodeURIComponent(content || "")}&toolImage=${encodeURIComponent(toolData.tool_image || "")}&cloudAccessMode=${toolData.metadata?.cloud_access_mode || 'direct'}&cloudPathPrefix=${toolData.metadata?.cloud_path_prefix || ''}&endedAt=${encodeURIComponent(endedAt)}` : "#"}
         onClick={(e) => !isStable && e.preventDefault()}
-        className={`flex flex-col h-full bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden ${
+        className={`flex flex-col h-fit self-start bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden ${
           isStable ? "cursor-pointer hover:scale-[1.03] hover:shadow-xl" : "cursor-not-allowed"
         }`}
       >
@@ -101,7 +206,7 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
       onClick={() => {
         if (isStable) onClick();
       }}
-      className={`flex mt-5 h-full flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden text-start ${
+      className={`flex mt-5 h-fit self-start flex-col bg-[linear-gradient(180deg,_#00c48c,_#4f008c)] w-full mx-auto gradient-border-3 rounded-[21px] bg-[#190237] shadow-xl duration-500 relative overflow-hidden text-start ${
         isStable ? "cursor-pointer hover:scale-[1.03] hover:shadow-xl" : "cursor-not-allowed"
       }`}
     >
