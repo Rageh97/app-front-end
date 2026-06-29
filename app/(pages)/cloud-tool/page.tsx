@@ -184,7 +184,21 @@ const CloudToolPage: FunctionComponent = () => {
       
       if (response.data?.success && response.data?.data?.token) {
         const token = response.data.data.token;
-        const proxyUrl = `https://tools.nexustoolz.com/api/proxy/${toolData.cloudPathPrefix}/?token=${token}`;
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.nexustoolz.com';
+        // Extract base domain from API URL (e.g. from https://api.nexustoolz.com to https://tools.nexustoolz.com)
+        let proxyBaseUrl = 'https://tools.nexustoolz.com';
+        try {
+          const urlObj = new URL(apiUrl);
+          if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+            proxyBaseUrl = `http://${urlObj.host}`;
+          } else {
+            // Replace api. with tools. or staging-api. with staging-tools.
+            proxyBaseUrl = `${urlObj.protocol}//${urlObj.host.replace('api.', 'tools.')}`;
+          }
+        } catch (e) {
+          console.error('Invalid API URL', e);
+        }
+        const proxyUrl = `${proxyBaseUrl}/api/proxy/${toolData.cloudPathPrefix}/?token=${token}`;
         window.open(proxyUrl, '_blank');
       } else {
         alert(response.data?.message || "Failed to generate access token.");
