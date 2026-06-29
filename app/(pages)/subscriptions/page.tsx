@@ -393,7 +393,7 @@ const Dashboard: FunctionComponent = () => {
 
                   return Array.from(packToolsByName.entries()).map(([toolName, tools]) => {
                     const displayTool = tools[0];
-                    const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: t.endedAt }));
+                    const accountIds = tools.map((t: any) => ({ tool_id: t.tool_id, endedAt: a.endedAt }));
                     const hasMultiple = tools.length > 1;
 
                     if (!hasMultiple) {
@@ -405,7 +405,7 @@ const Dashboard: FunctionComponent = () => {
                           isLoaded={isLoaded}
                           key={toolName}
                           toolData={displayTool}
-                          endedAt={displayTool.endedAt}
+                          endedAt={a.endedAt}
                         />
                       );
                     }
@@ -417,7 +417,7 @@ const Dashboard: FunctionComponent = () => {
                           activeApp={activeApp}
                           isLoaded={isLoaded}
                           toolData={{ ...displayTool, _multiAccount: true, _accountCount: tools.length }}
-                          endedAt={displayTool.endedAt}
+                          endedAt={a.endedAt}
                         />
                         <div className="flex gap-2 w-full">
                           {tools.map((acc: any, idx: number) => {
