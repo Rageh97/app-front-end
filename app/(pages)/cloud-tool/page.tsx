@@ -147,7 +147,8 @@ const CloudToolPage: FunctionComponent = () => {
     const toolImageUrl = searchParams.get('toolImage');
     const cloudAccessMode = searchParams.get('cloudAccessMode') || 'direct';
     const cloudPathPrefix = searchParams.get('cloudPathPrefix') || '';
-    const endedAt = searchParams.get('endedAt') || '';
+    const endedAtParam = searchParams.get('endedAt');
+    const endedAt = endedAtParam && endedAtParam !== "undefined" && endedAtParam !== "null" ? endedAtParam : '';
 
     if (toolId && toolName && toolUrl) {
       setToolData({
