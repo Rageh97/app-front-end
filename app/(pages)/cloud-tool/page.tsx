@@ -184,7 +184,15 @@ const CloudToolPage: FunctionComponent = () => {
       
       if (response.data?.success && response.data?.data?.token) {
         const token = response.data.data.token;
-        const proxyUrl = `https://tools.nexustoolz.com/api/proxy/${toolData.cloudPathPrefix}/?token=${token}`;
+        const prefixLower = toolData.cloudPathPrefix?.toLowerCase() || '';
+        const isChatgpt = prefixLower.startsWith('chatgpt') || prefixLower.startsWith('gpt') || prefixLower === 'openai';
+        const baseRoute = isChatgpt ? 'api/chatgpt' : 'api/proxy';
+        
+        // Support local testing when frontend is running on localhost/127.0.0.1
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const toolsHost = isLocal ? 'http://localhost:4560' : 'https://tools.nexustoolz.com';
+        
+        const proxyUrl = `${toolsHost}/${baseRoute}/${toolData.cloudPathPrefix}/?token=${token}`;
         window.open(proxyUrl, '_blank');
       } else {
         alert(response.data?.message || "Failed to generate access token.");
