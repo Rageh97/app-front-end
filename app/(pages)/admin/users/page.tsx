@@ -45,7 +45,7 @@ const UsersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
   } = useGetUsersList(page);
 
   const { isLoading: isSearching, data: searchedData } =
-    useSearchUserByEmail(seachedEmail);
+    useSearchUserByEmail(seachedEmail ? seachedEmail.trim() : "");
 
   useEffect(() => {
     refetch();
@@ -78,13 +78,15 @@ const UsersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
                 backgroundColor:
                   info.getValue() === true
                     ? "green"
-                    : info.getValue() === false && "#A020F0",
+                    : info.getValue() === false
+                    ? "#A020F0"
+                    : "transparent",
               }}
               className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
             >
               {info.getValue() === true ? "Active" : "Inactive"}
             </div>
-          ) || "none",
+          ),
       },
       {
         accessorKey: "role",
@@ -108,7 +110,7 @@ const UsersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
                role === "supervisor" ? "Supervisor" : 
                role === "employee" ? "Employee" : "Client"}
             </div>
-          ) || "none";
+          );
         },
       },
       {
@@ -177,7 +179,7 @@ const UsersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
               setSearchedEmail(event.target.value);
             }}
             className={
-                 "sm:w-[350px] w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-white rounded-full pl-10 pr-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow"
+                 "sm:w-[350px] w-full bg-transparent placeholder:text-slate-400 text-white text-sm border border-white rounded-full pl-10 pr-3 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow"
               }
             />
            </div>
