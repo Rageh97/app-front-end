@@ -51,17 +51,36 @@ type CreditsRecord = {
   createdAt: string;
 };
 
+const parseNumericValue = (val: any): number => {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  const cleaned = String(val).replace(/,/g, '').replace(/[^0-9.]/g, '');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+const formatPrice = (plan: any): string => {
+  const raw = plan?.amount ?? plan?.monthly_price ?? plan?.price ?? 0;
+  return parseNumericValue(raw).toLocaleString('en-US');
+};
+
+const formatCredits = (plan: any): string => {
+  const raw = plan?.credits_per_period ?? plan?.monthly_credits ?? plan?.credits ?? 0;
+  return parseNumericValue(raw).toLocaleString('en-US');
+};
+
 const getPlanColor = (plan: any): string => {
-  if (plan.credits_per_period <= 100) return "from-[#804A00] via-[#B87333] to-[#4D2D00]";
-  if (plan.credits_per_period <= 500) return "from-[#71706E] via-[#E5E4E2] to-[#3B3C36]";
-  if (plan.credits_per_period <= 1000) return "from-[#BF953F] via-[#FCF6BA] to-[#AA771C]";
+  const credits = parseNumericValue(plan?.credits_per_period);
+  if (credits <= 100) return "from-[#804A00] via-[#B87333] to-[#4D2D00]";
+  if (credits <= 500) return "from-[#71706E] via-[#E5E4E2] to-[#3B3C36]";
+  if (credits <= 1000) return "from-[#BF953F] via-[#FCF6BA] to-[#AA771C]";
   return "from-[#30CFD0] via-[#330867] to-[#30CFD0]";
 };
 
 const getPlanTierData = (plan: any, index: number, total: number) => {
-  const credits = Number(plan.credits_per_period) || 0;
+  const credits = parseNumericValue(plan?.credits_per_period);
   
-  if (credits <= 200 || index === 0) {
+  if (index === 0) {
     return {
       tierName: "باقة البداية",
       description: "مثالية للمبتدئين وتجربة أدوات الذكاء الاصطناعي وتوليد الصور والمهام البسيطة.",
@@ -72,26 +91,26 @@ const getPlanTierData = (plan: any, index: number, total: number) => {
         "دعم فني مستمر",
       ]
     };
-  } else if (credits <= 600 || (index === 1 && total >= 3)) {
-    return {
-      tierName: "باقة الانطلاق",
-      description: "لصناع المحتوى والمصممين لتوليد الصور والفيديوهات القصيرة بوتيرة منتظمة.",
-      features: [
-        "جميع موديلات الذكاء الاصطناعي متاحة بالكامل",
-        "توليد الفيديوهات، تحريك الصور، ونماذج المنتجات",
-        "سرعة معالجة عالية وجودة Full HD",
-        "أولوية متقدمة في طابور المعالجة",
-      ]
-    };
-  } else if (credits <= 1500 || (index === 2 && total === 4) || (index === 1 && total === 2)) {
+  } else if (total === 3 ? index === 1 : (credits <= 600 || index === 1)) {
     return {
       tierName: "باقة المحترفين",
-      description: "للمحترفين والمبدعين الذين يحتاجون إنتاجاً مستمراً ورصيداً وفيراً وسرعة مضاعفة.",
+      description: "لصناع المحتوى والمحترفين لإنتاج مستمر وتوليد الفيديوهات والصور بجودة عالية.",
       features: [
         "جميع موديلات الذكاء الاصطناعي متاحة بالكامل",
-        "توليد الفيديو السينمائي، استنساخ الصوت، وتحريك الشفاه",
-        "جودة فائقة 4K مع أولوية معالجة سريعة (Priority Queue)",
+        "توليد الفيديو السينمائي، تحريك الصور، واستنساخ الصوت",
+        "جودة فائقة مع أولوية متقدمة في طابور المعالجة",
         "دعم فني مباشر وسريع",
+      ]
+    };
+  } else if (total === 4 && index === 2) {
+    return {
+      tierName: "باقة الأعمال",
+      description: "للمبدعين والفرق التي تحتاج رصيداً وفيراً وسرعة معالجة مضاعفة للمشاريع الكبيرة.",
+      features: [
+        "جميع موديلات الذكاء الاصطناعي متاحة بالكامل",
+        "توليد غير مقيد بجودة 4K وأولوية معالجة سريعة (Priority Queue)",
+        "توليد الفيديوهات الطويلة والمهام المعقدة بدون انتظار",
+        "دعم فني مخصص ذو أولوية عالية",
       ]
     };
   } else {
@@ -293,7 +312,7 @@ export default function PlansPage() {
         </div>
 
         {/* Plans Grid - Identical to External Plans Design with Tiered Descriptions & Signature Button */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto w-full px-4 mb-24 justify-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto w-full px-4 mb-24 justify-center">
             {loadingPlans ? (
                 Array(2).fill(0).map((_, i) => (
                     <div key={i} className="h-[520px] rounded-[2.5rem] bg-[#12141C] animate-pulse border border-white/10"></div>
@@ -304,7 +323,7 @@ export default function PlansPage() {
                 </div>
             ) : (
                 [...plans]
-                  .sort((a: any, b: any) => (Number(a.credits_per_period) || 0) - (Number(b.credits_per_period) || 0))
+                  .sort((a: any, b: any) => parseNumericValue(a.credits_per_period) - parseNumericValue(b.credits_per_period))
                   .map((plan, index, arr) => {
                     const color = plan.color || getPlanColor(plan);
                     const periodText = plan.period === 'year' ? 'سنوياً' : 'شهرياً';
@@ -335,7 +354,7 @@ export default function PlansPage() {
                                 <div className="flex items-baseline gap-1.5">
                                     <span className="text-3xl sm:text-4xl font-black text-white">
                                         <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD </span>
-                                        {Number(plan.amount).toLocaleString('en-US')}
+                                        {formatPrice(plan)}
                                     </span>
                                     <span className="text-gray-400 text-xs font-bold">/ {plan.period === 'year' ? 'سنة' : 'شهر'}</span>
                                 </div>
@@ -345,7 +364,7 @@ export default function PlansPage() {
                             <div className="mb-6 flex flex-col justify-center">
                                 <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 text-center space-y-1.5">
                                     <div className="text-emerald-400 font-extrabold text-base sm:text-lg">
-                                        {Number(plan.credits_per_period).toLocaleString('en-US')} نقطة / {periodText}
+                                        {formatCredits(plan)} نقطة / {periodText}
                                     </div>
                                     <p className="text-gray-300 text-[11px] sm:text-xs font-medium leading-relaxed">
                                         صالحة لجميع أدوات واستوديو الذكاء الاصطناعي
@@ -466,10 +485,10 @@ export default function PlansPage() {
                       productData={{
                         tool_name: selectedPlan.plan_name,
                         pack_name: selectedPlan.plan_name,
-                        monthly_price: selectedPlan.amount,
-                        yearly_price: selectedPlan.amount,
-                        tool_day_price: selectedPlan.amount,
-                        amount: selectedPlan.amount
+                        monthly_price: String(parseNumericValue(selectedPlan.amount) || selectedPlan.amount),
+                        yearly_price: String(parseNumericValue(selectedPlan.amount) || selectedPlan.amount),
+                        tool_day_price: String(parseNumericValue(selectedPlan.amount) || selectedPlan.amount),
+                        amount: String(parseNumericValue(selectedPlan.amount) || selectedPlan.amount)
                       }}
                       onBuySuccess={() => {
                         setOpenPaymentModal(false);

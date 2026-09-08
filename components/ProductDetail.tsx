@@ -19,49 +19,67 @@ const ProductDetail: FunctionComponent<ProductDetailProps> = ({ period, productD
         return price;
     };
 
+    const toNum = (val: any): number => {
+        if (val === null || val === undefined || val === '') return 0;
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        const cleaned = String(val).replace(/,/g, '').replace(/[^0-9.]/g, '');
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+    };
+
     const displayPriceValue = (currency: "MAD" | "IQD" | "USD", productType: "tool" | "pack" | "device" | "credits") => {
         if (productType === "tool") {
+            const dayPrice = toNum(productData?.tool_day_price);
+            const monthPrice = toNum(productData?.tool_month_price);
+            const yearPrice = toNum(productData?.tool_year_price);
             if (currency === "MAD") {
                 switch (period) {
-                    case "day": return getDiscountedPrice(productData?.tool_day_price * 10);
-                    case "month": return getDiscountedPrice(productData?.tool_month_price * 10);
-                    case "year": return getDiscountedPrice(productData?.tool_year_price * 10);
+                    case "day": return getDiscountedPrice(dayPrice * 10);
+                    case "month": return getDiscountedPrice(monthPrice * 10);
+                    case "year": return getDiscountedPrice(yearPrice * 10);
                 }
             }
             if (currency === "IQD" || currency === "USD") {
                 switch (period) {
-                    case "day": return getDiscountedPrice(productData?.tool_day_price);
-                    case "month": return getDiscountedPrice(productData?.tool_month_price);
-                    case "year": return getDiscountedPrice(productData?.tool_year_price);
+                    case "day": return getDiscountedPrice(dayPrice);
+                    case "month": return getDiscountedPrice(monthPrice);
+                    case "year": return getDiscountedPrice(yearPrice);
                 }
             }
         }
 
         if (productType === "pack") {
+            const monthPrice = toNum(productData?.monthly_price);
+            const yearPrice = toNum(productData?.yearly_price);
             if (currency === "MAD") {
                 switch (period) {
-                    case "day": return getDiscountedPrice(productData?.monthly_price * 10);
-                    case "month": return getDiscountedPrice(productData?.monthly_price * 10);
-                    case "year": return getDiscountedPrice(productData?.yearly_price * 10);
+                    case "day": return getDiscountedPrice(monthPrice * 10);
+                    case "month": return getDiscountedPrice(monthPrice * 10);
+                    case "year": return getDiscountedPrice(yearPrice * 10);
                 }
             }
             if (currency === "IQD" || currency === "USD") {
                 switch (period) {
-                    case "day": return getDiscountedPrice(productData?.monthly_price);
-                    case "month": return getDiscountedPrice(productData?.monthly_price);
-                    case "year": return getDiscountedPrice(productData?.yearly_price);
+                    case "day": return getDiscountedPrice(monthPrice);
+                    case "month": return getDiscountedPrice(monthPrice);
+                    case "year": return getDiscountedPrice(yearPrice);
                 }
             }
         }
         
         if (productType === "device") {
-            if (currency === "MAD") return getDiscountedPrice(productData?.total_price_mad || (productData?.monthly_price * (productData?.quantity || 1) * 10));
-            return getDiscountedPrice(productData?.total_price || (productData?.monthly_price * (productData?.quantity || 1)));
+            const totalPriceMad = toNum(productData?.total_price_mad);
+            const monthlyPrice = toNum(productData?.monthly_price);
+            const quantity = toNum(productData?.quantity) || 1;
+            const totalPrice = toNum(productData?.total_price);
+            if (currency === "MAD") return getDiscountedPrice(totalPriceMad || (monthlyPrice * quantity * 10));
+            return getDiscountedPrice(totalPrice || (monthlyPrice * quantity));
         }
         
         if (productType === "credits") {
-            if (currency === "MAD") return getDiscountedPrice(productData?.amount * 10);
-            return getDiscountedPrice(productData?.amount);
+            const amount = toNum(productData?.amount ?? productData?.monthly_price);
+            if (currency === "MAD") return getDiscountedPrice(amount * 10);
+            return getDiscountedPrice(amount);
         }
         return 0;
     }

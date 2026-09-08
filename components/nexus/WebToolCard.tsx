@@ -19,10 +19,17 @@ export function WebToolCard({ tool, onClick, compact = true }: WebToolCardProps)
     ? (isExternal ? rawImage : `${process.env.NEXT_PUBLIC_API_URL}${rawImage}`)
     : "/images/nexus-logo-22.png";
 
+  const formatPrice = (val: any) => {
+    if (!val) return '';
+    const cleaned = String(val).replace(/,/g, '').replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? String(val) : num.toLocaleString('en-US');
+  };
+
   const priceText = isFree
     ? "مجاني"
     : monthlyPrice
-      ? `$${monthlyPrice}/شهر`
+      ? `IQD ${formatPrice(monthlyPrice)}/شهر`
       : "اشتراك شهري";
 
   return (
