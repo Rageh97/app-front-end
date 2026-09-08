@@ -3,6 +3,34 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --nexus-canvas: #05070d;
+  --nexus-panel: #090c14;
+  --nexus-panel-soft: #0d111c;
+  --nexus-line: rgba(255, 255, 255, 0.08);
+  --nexus-muted: #94a3b8;
+  --nexus-accent: #34d399;
+  --nexus-violet: #a78bfa;
+}
+
+.nexus-page {
+  background: transparent;
+  color: #f8fafc;
+}
+
+.dark .nexus-page {
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 84% 0%, rgba(16, 185, 129, 0.08), transparent 27rem),
+    radial-gradient(circle at 10% 35%, rgba(124, 58, 237, 0.08), transparent 30rem),
+    var(--nexus-canvas);
+}
+
+.nexus-dot-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.11) 0.7px, transparent 0.7px);
+  background-size: 24px 24px;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -17,12 +45,14 @@
 }
 
 /* Hide scrollbar for specific elements */
-.scrollbar-hide, .no-scrollbar {
+.scrollbar-hide, .no-scrollbar, aside, aside div {
   -ms-overflow-style: none !important;  /* Internet Explorer 10+ */
   scrollbar-width: none !important;  /* Firefox */
 }
-.scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { 
+.scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar, aside::-webkit-scrollbar, aside div::-webkit-scrollbar {
   display: none !important;  /* Safari and Chrome */
+  width: 0px !important;
+  height: 0px !important;
 }
 
 .haltip:hover {
@@ -52,12 +82,111 @@
 body {
   background: radial-gradient(circle at 0% 0%, #4f008c, #190237, #00c48c);
   font-family: Cairo, sans-serif;
-  
+}
+
+html.dark body, body.dark {
+  background: #08090e !important;
+  color: #f8fafc !important;
+  font-family: Cairo, sans-serif;
+}
+
+html.dark ::-webkit-scrollbar-thumb, body.dark ::-webkit-scrollbar-thumb {
+  background: #1e2230;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover, body.dark ::-webkit-scrollbar-thumb:hover {
+  background: #333a4d;
+}
+
+/* Completely disable garish neon glows and heavy animated shadows in Dark Mode for clean SaaS minimalism */
+html.dark .animate-glow-shadow, body.dark .animate-glow-shadow {
+  display: none !important;
+  opacity: 0 !important;
+}
+
+html.dark .gradient-border-Qs::before, body.dark .gradient-border-Qs::before,
+html.dark .gradient-border-2::before, body.dark .gradient-border-2::before,
+html.dark .gradient-border-3::before, body.dark .gradient-border-3::before,
+html.dark .gradient-border-packet::before, body.dark .gradient-border-packet::before {
+  display: none !important;
+}
+
+/* Continuous shimmer text animations for section titles */
+@keyframes emerald-shimmer-animation {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-emerald-shimmer {
+  background: linear-gradient(90deg, #ffffff 0%, #ffffff 35%, #00c48c 50%, #ffffff 65%, #ffffff 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: emerald-shimmer-animation 3.5s linear infinite;
+}
+
+.animate-fuchsia-shimmer {
+  background: linear-gradient(90deg, #ffffff 0%, #ffffff 35%, #f472b6 50%, #ffffff 65%, #ffffff 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: emerald-shimmer-animation 3.5s linear infinite;
+}
+
+.animate-sky-shimmer {
+  background: linear-gradient(90deg, #ffffff 0%, #ffffff 35%, #38bdf8 50%, #ffffff 65%, #ffffff 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: emerald-shimmer-animation 3.5s linear infinite;
+}
+
+.animate-silver-shimmer {
+  background: linear-gradient(90deg, #94a3b8 0%, #e2e8f0 35%, #ffffff 50%, #e2e8f0 65%, #94a3b8 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: emerald-shimmer-animation 3.5s linear infinite;
+}
+
+.animate-gold-shimmer {
+  background: linear-gradient(90deg, #ffffff 0%, #ffffff 35%, #fbbf24 50%, #ffffff 65%, #ffffff 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: emerald-shimmer-animation 3.5s linear infinite;
+}
+
+.animate-amber-shimmer {
+  background: linear-gradient(90deg, #ffffff 0%, #ffffff 32%, #fbbf24 46%, #fef08a 52%, #f59e0b 58%, #ffffff 72%, #ffffff 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: emerald-shimmer-animation 3s linear infinite;
+}
+
+.animate-green-shimmer {
+  background: linear-gradient(90deg, #ffffff 0%, #ffffff 32%, #10b981 46%, #6ee7b7 52%, #059669 58%, #ffffff 72%, #ffffff 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: emerald-shimmer-animation 3s linear infinite;
 }
 
 @layer base {
   body {
-    @apply relative z-1 bg-[#F0F0F0] font-satoshi text-base font-normal text-body;
+    @apply relative z-1 font-satoshi text-base font-normal text-white dark:bg-[#08090e] dark:text-slate-100;
   }
   input[type="number"][data-is-price="true"]::-webkit-inner-spin-button,
   input[type="number"][data-is-price="true"]::-webkit-outer-spin-button {

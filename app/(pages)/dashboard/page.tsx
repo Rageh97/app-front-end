@@ -1,805 +1,566 @@
 "use client";
-import CardItem from "@/components/CardItem";
-import PremiumLoader from "@/components/PremiumLoader";
-import { FunctionComponent, useEffect, useState } from "react";
-import { NewToolsDto } from "@/types/tools/new-tools-dto";
-import ToolModalDetails from "@/components/Modals/ToolModalDetails";
-import ModalPayment from "@/components/Modals/PaymentModal";
-import ReviewModal from "@/components/Modals/ReviewModal";
-import CihBankOrderDetailsInfoModal from "@/components/Modals/CihBankOrderDetailsInfoModal";
-import { useMyInfo } from "@/utils/user-info/getUserInfo";
-import TijariBankOrderDetailsInfoModal from "@/components/Modals/TijariBankOrderDetailsInfoModal";
-import { AlignJustify, Search, ShoppingCart, X } from "lucide-react";
-import Link from "next/link";
-import { useSearchToolByName } from "@/utils/tool/getToolByName";
-import { useTranslation } from "react-i18next";
-import axios from "@/utils/api";
-import i18n from "@/i18n";
-import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
+
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, Sparkles, Film, Type, Globe, ArrowUpLeft, Star } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Navigation, Pagination } from 'swiper/modules';
+import { Autoplay, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-
-interface Banner {
-  id: number;
-  image_url: string;
-  link_url?: string | null;
-  title?: string | null;
-}
+import { useMyInfo } from '@/utils/user-info/getUserInfo';
+import PremiumLoader from '@/components/PremiumLoader';
+import { NexusDashboardHero } from '@/components/nexus/NexusDashboardHero';
+import { AIToolCard } from '@/components/nexus/AIToolCard';
+import { WebToolCard } from '@/components/nexus/WebToolCard';
+import { CORE_AI_TOOLS, READY_AI_TOOLS, TREND_AI_TOOLS } from '@/lib/nexus-ai-catalog';
+import { NewToolsDto } from '@/types/tools/new-tools-dto';
+import ToolModalDetails from '@/components/Modals/ToolModalDetails';
+import ModalPayment from '@/components/Modals/PaymentModal';
+import CihBankOrderDetailsInfoModal from '@/components/Modals/CihBankOrderDetailsInfoModal';
+import TijariBankOrderDetailsInfoModal from '@/components/Modals/TijariBankOrderDetailsInfoModal';
+import ToolErrorExtention from '@/components/Modals/ToolErrorExtention';
+import ReviewModal from '@/components/Modals/ReviewModal';
 
 type Period = "month" | "year" | "day";
 
-const Dashboard: FunctionComponent = () => {
+const PLATFORM_AREAS = [
+  {
+    title: 'استوديو الذكاء الاصطناعي',
+    description: 'توليد وتعديل الصور، الفيديو السينمائي، والتعليق الصوتي والموسيقى بأحدث النماذج.',
+    href: '/ai',
+    cardBg: 'bg-gradient-to-br from-emerald-500/[0.09] via-[#0a0d18] to-[#070912] border-emerald-500/25 hover:border-emerald-500/45',
+    topGlow: 'via-emerald-400/40',
+    ambientGlow: 'bg-emerald-500/12',
+  },
+  {
+    title: 'مكتبة الميديا',
+    description: 'آلاف المؤثرات البصرية، القوالب الجاهزة، ومقاطع الفيديو بدقة 4K للمصممين.',
+    href: '/media-hub',
+    cardBg: 'bg-gradient-to-br from-violet-500/[0.09] via-[#0a0d18] to-[#070912] border-violet-500/25 hover:border-violet-500/45',
+    topGlow: 'via-violet-400/40',
+    ambientGlow: 'bg-violet-500/12',
+  },
+  {
+    title: 'مكتبة الخطوط',
+    description: 'أفخم الخطوط العربية والطباعية لتصميم الهويات الإعلانية ومحتوى السوشيال ميديا.',
+    href: '/fonts',
+    cardBg: 'bg-gradient-to-br from-sky-500/[0.09] via-[#0a0d18] to-[#070912] border-sky-500/25 hover:border-sky-500/45',
+    topGlow: 'via-sky-400/40',
+    ambientGlow: 'bg-sky-500/12',
+  },
+  {
+    title: 'أدوات المواقع',
+    description: 'اشتراكات فورية وحسابات سحابية مباشرة لأشهر المواقع العالمية والتصميم.',
+    href: '/dashboard/web-tools',
+    cardBg: 'bg-gradient-to-br from-amber-500/[0.09] via-[#0a0d18] to-[#070912] border-amber-500/25 hover:border-amber-500/45',
+    topGlow: 'via-amber-400/40',
+    ambientGlow: 'bg-amber-500/12',
+  },
+];
 
-  const { t } = useTranslation();
+const ACCOUNT_LINKS = [
+  { title: 'اشتراكاتي', href: '/subscriptions' },
+  { title: 'سجل الطلبات', href: '/orders' },
+  { title: 'الباقات والخطط', href: '/plans' },
+];
+
+export default function DashboardPage() {
   const { data } = useMyInfo();
   const [isLoadingPage, setIsLoadingPage] = useState(true);
-  const [openChatModal, setOpenChatModal] = useState<boolean>(false);
-  const [toolsData, setToolsData] = useState(global.globalToolsData);
-  const [toolData, setToolData] = useState<NewToolsDto>(null);
-  const [openReviewModal, setOpenReviewModal] = useState<boolean>(false);
+  const [customAssets, setCustomAssets] = useState<Record<string, string>>({});
+  const [mediaCategories, setMediaCategories] = useState<any[]>([]);
+
+  // Modals state for Web Tools
+  const [selectedTool, setSelectedTool] = useState<NewToolsDto | null>(null);
   const [openDetailModal, setOpenDetailModal] = useState<boolean>(false);
   const [openPaymentModal, setOpenPaymentModal] = useState<boolean>(false);
-  const [seachedTool, setSearchedTool] = useState<string>("");
-  const [stabilityFilter, setStabilityFilter] = useState<'all' | boolean>('all');
-  const [accessFilter, setAccessFilter] = useState<'all' | 'free' | 'pro'>('all');
+  const [openCihDetailsModal, setOpenCihDetailsModal] = useState<boolean>(false);
+  const [openTijariDetailsModal, setOpenTijariDetailsModal] = useState<boolean>(false);
+  const [openReviewModal, setOpenReviewModal] = useState<boolean>(false);
+  const [showExtensionModal, setShowExtensionModal] = useState<boolean>(false);
+  const [period, setPeriod] = useState<Period>("month");
   const [extensionDetected, setExtensionDetected] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return !!global.freeToolsExtensionDetected;
   });
-  const [showExtensionModal, setShowExtensionModal] = useState(false);
-  const [showCihBankOrderDetailsInfoModal, setShowCihBankOrderDetailsInfoModal] = useState<boolean>(false);
-  const [showTijariBankOrderDetailsInfoModal, setShowTijariBankOrderDetailsInfoModal] = useState<boolean>(false);
-  const [showNoResults, setShowNoResults] = useState(false);
-  const [showCategories, setShowCategories] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [bannerError, setBannerError] = useState<string | null>(null);
-  const [period, setPeriod] = useState<Period>("month");
-  const [openCihDetailsModal, setOpenCihDetailsModal] = useState<boolean>(false);
-  const [openTijariDetailsModal, setOpenTijariDetailsModal] = useState<boolean>(false);
-  
-  // Media Hub Visibility State
-  const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
-  const [isAiHubEnabled, setIsAiHubEnabled] = useState(true);
 
   useEffect(() => {
-    const fetchSettings = async () => {
+    document.title = 'NEXUS PRO | مركز العمل الإبداعي';
+    const fetchAssets = async () => {
       try {
-        const [mediaRes, aiRes] = await Promise.all([
-          axios.get("/api/admin/settings/media_hub_enabled"),
-          axios.get("/api/admin/settings/ai_hub_enabled")
-        ]);
-        setIsMediaHubEnabled(String(mediaRes.data.value) !== 'false');
-        setIsAiHubEnabled(String(aiRes.data.value) !== 'false');
-      } catch (error) {
-        console.error("Failed to fetch settings:", error);
-      }
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/settings/public/ai-assets`);
+        if (response.ok) setCustomAssets(await response.json());
+      } catch {}
     };
-    fetchSettings();
+    fetchAssets();
 
-    const handleSettingsChange = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail) {
-        if (customEvent.detail.key === 'media_hub_enabled') {
-          setIsMediaHubEnabled(customEvent.detail.value);
-        } else if (customEvent.detail.key === 'ai_hub_enabled') {
-          setIsAiHubEnabled(customEvent.detail.value);
+    const fetchMediaCats = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/categories`);
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            const withCovers = list.filter((c: any) => Boolean(c.cover_image || c.cover_image_url));
+            setMediaCategories(withCovers.slice(0, 15));
+          }
         }
-      }
+      } catch {}
     };
+    fetchMediaCats();
 
-    window.addEventListener('settingsChanged', handleSettingsChange);
-    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
-  }, []);
-
-  interface MediaCategoryDashboard {
-    category_id: number;
-    name: string;
-    description: string;
-    filesCount: number;
-    cover_image: string | null;
-  }
-  const [mediaCategories, setMediaCategories] = useState<MediaCategoryDashboard[]>([]);
-
-  useEffect(() => {
-    const fetchMediaCategories = async () => {
-      try {
-        const response = await axios.get(`/api/media/categories?t=${Date.now()}`);
-        setMediaCategories(response.data);
-      } catch (error) {
-        console.error("Failed to fetch media categories", error);
-      }
-    };
-    fetchMediaCategories();
-  }, []);
-
-  const {
-    isLoading: isSearching,
-    data: searchedData,
-  } = useSearchToolByName(seachedTool);
-  
-  // Filter tools based on search and stability, then deduplicate by name (trim trailing spaces)
-  const filteredToolsOriginal = (seachedTool.trim() !== "" ? (searchedData || []) : (toolsData || []))
-    .filter(tool => {
-      if (stabilityFilter !== 'all' && tool.isStable !== stabilityFilter) {
-        return false;
-      }
-      if (accessFilter === 'free' && !tool.isFree) {
-        return false;
-      }
-      if (accessFilter === 'pro' && tool.isFree) {
-        return false;
-      }
-      return true;
-    });
-
-  const seenTools = new Set();
-  const filteredTools = filteredToolsOriginal.filter((tool: any) => {
-    const cleanName = tool.tool_name.trim();
-    if (seenTools.has(cleanName)) return false;
-    seenTools.add(cleanName);
-    return true;
-  });
-
-  const shuffleArray = async (array: any) => {
-    let data = array;
-    for (let i = data.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [data[i], data[j]] = [data[j], data[i]];
-    }
-    return data;
-  };
-
-  if (data && !toolsData && !global.shuffleArray) {
-    if (!global.shuffleArray) {
-      const shuffleNow = async () => {
-        let shuffledData = await shuffleArray(data.toolsData);
-        global.globalToolsData = shuffledData;
-        setToolsData(shuffledData);
-      };
-      shuffleNow();
-      global.shuffleArray = true;
-    }
-  }
-
-  useEffect(() => {
     const handleExtensionPing = (event: MessageEvent) => {
       if (
-        (event.data?.type === "FROM_EXTENSION" &&
-        event.data?.data?.m === "Hello from the extension!") ||
-        event.data?.type === 'NT_NEW_EXT_DETECTED'
+        event.data?.type === "FREE_TOOLS_EXTENSION_PONG" ||
+        event.data?.type === "FROM_CONTENT_SCRIPT"
       ) {
-        setExtensionDetected(true);
         global.freeToolsExtensionDetected = true;
+        setExtensionDetected(true);
       }
     };
+    window.addEventListener("message", handleExtensionPing);
 
-    if (typeof window !== "undefined") {
-      window.addEventListener("message", handleExtensionPing);
-    }
-
+    const timer = window.setTimeout(() => setIsLoadingPage(false), 180);
     return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("message", handleExtensionPing);
-      }
+      window.clearTimeout(timer);
+      window.removeEventListener("message", handleExtensionPing);
     };
   }, []);
 
-  useEffect(() => {
-    document.title = 'Toolz & Apps';
-    if (global.shuffleArray) {
-      setToolsData(global.globalToolsData);
-    }
-  }, []);
+  const credits = useMemo(() => data?.userCreditsData?.reduce(
+    (total: number, credit: any) => total + Number(credit?.remaining_credits || 0), 0
+  ) || 0, [data]);
 
-  useEffect(() => {
-    const fetchActiveBanners = async () => {
-      try {
-        setBannerError(null);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/banners`);
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: response.statusText }));
-          throw new Error(`Failed to fetch banners: ${errorData.message || response.statusText}`);
-        }
-        const data: Banner[] = await response.json();
-        setBanners(data);
-      } catch (err: any) {
-        setBannerError(err.message);
-       
-      } finally {
-      }
-    };
-    fetchActiveBanners();
-  }, []);
+  const webTools = useMemo(() => {
+    const list: NewToolsDto[] = data?.toolsData || [];
+    const seen = new Set<string>();
+    return list.filter((tool: any) => {
+      if (!tool?.tool_name) return false;
+      const cleanName = tool.tool_name.trim();
+      if (seen.has(cleanName)) return false;
+      seen.add(cleanName);
+      return true;
+    });
+  }, [data]);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/tool-categories`, {
-          headers: {
-            Authorization: localStorage.getItem("a") || "",
-            "User-Client": global.clientId1328,          },
-        });
-        const data = await response.json();
-        setCategories(data);
-      } catch (error) {
-      }
-    };
+  const getToolImage = (id: string, fallback: string) => customAssets[id]
+    ? `${process.env.NEXT_PUBLIC_API_URL}${customAssets[id]}`
+    : fallback;
 
-    fetchCategories();
-  }, []);
-
-  const handleCategoryClick = async (category: string) => {
-    setSelectedCategory(category);
-    setShowCategories(false);
-    
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/search-tools-by-category`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: localStorage.getItem("a") || "",
-          "User-Client": global.clientId1328,
-        },
-        body: JSON.stringify({ category }),
-      });
-      
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        setToolsData(data);
-        setShowNoResults(false);
-      } else {
-        setToolsData([]);
-        setShowNoResults(true);
-      }
-    } catch (error) {
-      setToolsData([]);
-      setShowNoResults(true);
-    }
-  };
-//...........................................
-const placeholders  = [
-  t('dashboard.search'),
-  t('dashboard.searchSubscribe'),
-];
-
-
-
-
-
-const [displayedText, setDisplayedText] = useState("");
-const [placeholderIndex, setPlaceholderIndex] = useState(0);
-const [charIndex, setCharIndex] = useState(0);
-useEffect(() => {
-  const currentPhrase = placeholders[placeholderIndex];
-  
-  if (charIndex < currentPhrase.length) {
-    const timeout = setTimeout(() => {
-      setDisplayedText(currentPhrase.slice(0, charIndex + 1));
-      setCharIndex(charIndex + 1);
-    }, 100); // سرعة الكتابة
-
-    return () => clearTimeout(timeout);
-  } else {
-    // بعد كتابة الجملة كاملة، انتظر قليلاً ثم انتقل للجملة التالية
-    const pause = setTimeout(() => {
-      setCharIndex(0);
-      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
-      setDisplayedText("");
-    }, 2000); // مدة الانتظار بعد الكتابة الكاملة
-
-    return () => clearTimeout(pause);
-  }
-}, [charIndex, placeholderIndex]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoadingPage(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleToolCardClick = (item: NewToolsDto) => {
-    if (item?.isFree) {
-      if (!extensionDetected) {
+  const handleToolClick = (tool: NewToolsDto) => {
+    if (tool?.isFree) {
+      if (!extensionDetected && tool?.tool_mode !== "cloud") {
         setShowExtensionModal(true);
         return;
       }
-      if (item?.tool_url && typeof window !== "undefined") {
-        window.open(item.tool_url, "_blank", "noopener,noreferrer");
+      if (tool?.tool_url && typeof window !== "undefined") {
+        window.open(tool.tool_url, "_blank", "noopener,noreferrer");
       }
       return;
     }
     setPeriod("month");
-    setToolData(item);
+    setSelectedTool(tool);
     setOpenDetailModal(true);
   };
 
-  if (isLoadingPage) {
-    return <PremiumLoader />;
-  }
+  if (isLoadingPage) return <PremiumLoader />;
 
   return (
-    <>
+    <div className="nexus-page -mx-2 min-h-screen pb-6 sm:-mx-4 md:-mx-6 lg:-mx-8" dir="rtl">
+      <div className="mx-auto max-w-[1460px] space-y-14 px-4 pb-8 pt-5 sm:px-6 lg:px-8 lg:pt-8">
+        <NexusDashboardHero firstName={data?.userData?.firstName} credits={credits} />
 
-    <div className="mt-2 mb-0 xxl:mb-2 flex flex-col xl:flex-row items-center justify-between gap-2 lg:gap-0">
-          <div className="flex items-center mb-5 xl:mb-0 gap-10 lg:gap-2">
-           
-          <div onClick={() => setOpenReviewModal(true)} className={`cursor-pointer hidden md:flex ml-0 ${i18n.language === 'ar' ? 'lg:mr-7' :'lg:ml-7'} px-3 py-1.5 lg:px-6 lg:py-1.5 flex items-center justify-center gap-1 lg:gap-3 bg-[#35214f] inner-shadow rounded-xl`}>
-                <h1 className="text-white text-base lg:text-lg whitespace-nowrap">{t('dashboard.rateUs')}</h1>
-                <img className="w-6 md:w-8" src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdTl4czFqbnc2YjQyOXpjejU5NHZ6cnhka20yNGh3dWxldWttcXd0biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/C4b6GwFKbYxK8/giphy.gif" alt="rate us"/>
+        <section aria-labelledby="core-production-tools">
+          <div className="mb-6 flex items-end justify-between gap-4">
+            <div>
+              <h2 id="core-production-tools" className="inline-block text-2xl font-black sm:text-3xl animate-emerald-shimmer">أدوات الإنتاج الأساسية</h2>
             </div>
-    
-            <div className="flex items-center border-1 border-[#ff7702] bg-[#190237] rounded-xl cursor-pointer ">
-                <div 
-                  onClick={() => setStabilityFilter('all')} 
-                  className={`px-3 lg:px-4 py-2 lg:py-2 ${stabilityFilter === 'all' ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar'?" rounded-r-xl" :"rounded-l-xl"} cursor-pointer transition-colors duration-200 whitespace-nowrap`}>
-                  {t('dashboard.all')}
+            <Link href="/ai" className="hidden items-center gap-2 text-xs font-bold text-slate-400 transition hover:text-white sm:flex">كل أدوات AI <ChevronLeft size={14} /></Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {CORE_AI_TOOLS.map((tool) => <AIToolCard key={tool.id} tool={tool} image={getToolImage(tool.id, tool.image)} />)}
+          </div>
+        </section>
+
+        {/* Web Tools Section Slider - Right after Core Production Tools */}
+        {webTools.length > 0 && (
+          <section aria-labelledby="web-tools-section" className="border-t border-white/[0.07] pt-12">
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 id="web-tools-section" className="inline-block text-2xl font-black sm:text-3xl animate-gold-shimmer">
+                  أدوات المواقع وحسابات التصميم
+                </h2>
+                <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500">
+                  حسابات مباشرة واشتراكات مدفوعة لأشهر المواقع العالمية (Envato, Freepik, Canva, والمزيد) مع وصول سحابي فوري.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 self-end sm:self-auto">
+                <Link 
+                  href="/dashboard/web-tools" 
+                  className="hidden items-center gap-1.5 text-xs font-bold text-slate-400 transition hover:text-amber-300 md:flex"
+                >
+                  <span>كل الأدوات ({webTools.length})</span>
+                  <ChevronLeft size={14} />
+                </Link>
+
+                {/* Swiper Custom Navigation Buttons */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    id="web-tools-prev-btn"
+                    aria-label="السابق"
+                    className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-white/5 dark:bg-[#090d18] text-slate-300 dark:text-slate-400 transition hover:border-amber-400/40 hover:bg-white/10 dark:hover:bg-[#101626] hover:text-white active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                  <button
+                    id="web-tools-next-btn"
+                    aria-label="التالي"
+                    className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-white/5 dark:bg-[#090d18] text-slate-300 dark:text-slate-400 transition hover:border-amber-400/40 hover:bg-white/10 dark:hover:bg-[#101626] hover:text-white active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
                 </div>
-                <div 
-                  onClick={() => setStabilityFilter(false)} 
-                  className={`px-3 lg:px-4 py-2 lg:py-2 ${stabilityFilter === false ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-xs sm:text-base lg:text-lg cursor-pointer transition-colors duration-200 whitespace-nowrap`}>
-                  {t('dashboard.unstable')}
-                </div>
-                <div 
-                  onClick={() => setStabilityFilter(true)}
-                  className={`px-3 lg:px-4 py-2 lg:py-2 ${stabilityFilter === true ? 'bg-[#35214f]' : 'bg-[#190237]'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar'?" rounded-l-xl " :"rounded-r-xl"} cursor-pointer transition-colors duration-200 whitespace-nowrap`}>
-                  {t('dashboard.stable')}
-                </div>
+              </div>
             </div>
 
-            <div className="flex items-center border-1 border-[#00c48c] bg-[#190237] rounded-xl cursor-pointer ">
-                <div 
-                  onClick={() => setAccessFilter('all')} 
-                  className={`px-3 lg:px-4 py-2 lg:py-2 ${accessFilter === 'all' ? 'bg-[#123645]' : 'bg-transparent'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar' ? 'rounded-r-xl' : 'rounded-l-xl'} transition-colors duration-200 whitespace-nowrap`}>
-                  {t('dashboard.all')}
-                </div>
-                <div 
-                  onClick={() => setAccessFilter('free')} 
-                  className={`px-3 lg:px-4 py-2 lg:py-2 ${accessFilter === 'free' ? 'bg-[#00c48c]' : 'bg-transparent'} text-white text-xs sm:text-base lg:text-lg transition-colors duration-200 whitespace-nowrap`}>
-                  {t('dashboard.free')}
-                </div>
-                <div 
-                  onClick={() => setAccessFilter('pro')} 
-                  className={`px-3 lg:px-4 py-2 lg:py-2 ${accessFilter === 'pro' ? 'bg-[#ff7702]' : 'bg-transparent'} text-white text-xs sm:text-base lg:text-lg ${i18n.language === 'ar' ? 'rounded-l-xl' : 'rounded-r-xl'} transition-colors duration-200 whitespace-nowrap`}>
-                  {t('dashboard.pro')}
-                </div>
-            </div>
-           
-            </div>
-
-        <div className=" mx-7 px-2 md:px-0 w-full lg:w-[600px] xl:w-[700px]">
-            <div className="relative flex items-center w-full">
-            <Search className={`absolute text-white w-4 lg:w-5 h-4 lg:h-5 top-1/2 -translate-y-1/2 ${i18n.language === 'ar' ? 'right-3' : 'left-3'}`} />
-            <input
-            value={seachedTool}
-            onChange={(event) => {
-              setSearchedTool(event.target.value);
-            }}
-            className={`w-full bg-transparent placeholder:text-slate-400 text-white text-sm border border-white rounded-full py-2 lg:py-2.5 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow ${i18n.language === 'ar' ? 'pr-9 pl-3 text-right placeholder:text-right' : 'pl-9 pr-3 text-left placeholder:text-left'}`}
-            placeholder={displayedText}/>
-            </div>
-        </div>
-     
-    </div>
-
-
-{/* ............................... */}
- {/* Banner Slideshow Section */}
-      {bannerError && <p className="text-red text-center my-3">Error loading banners: {bannerError}</p>}
-      {banners.length > 0 ? (
-        <div  className="rounded-2xl mb-2 px-1 lg:px-5 mt-2">
-          <div className="overflow-hidden rounded-2xl">
             <Swiper
-              modules={[Autoplay, Navigation, Pagination]}
-              spaceBetween={20}
-              slidesPerView={1}
-              loop={true}
-              autoplay={{ delay: 3000, disableOnInteraction: false }}
-              // pagination={{ clickable: true }}
-              // navigation
-
-              dir={i18n.language === "ar" ? "rtl" : "rtl"}
-              
-              
-
-        
-
-              className="w-full h-full "
+              key={`web-tools-slider-${webTools.length}`}
+              modules={[Navigation, Autoplay]}
+              navigation={{
+                prevEl: '#web-tools-prev-btn',
+                nextEl: '#web-tools-next-btn',
+              }}
+              onBeforeInit={(swiper) => {
+                if (typeof swiper.params.navigation !== 'boolean' && swiper.params.navigation) {
+                  swiper.params.navigation.prevEl = '#web-tools-prev-btn';
+                  swiper.params.navigation.nextEl = '#web-tools-next-btn';
+                }
+              }}
+              spaceBetween={14}
+              slidesPerView={1.25}
+              loop={webTools.length >= 6}
+              speed={550}
+              autoplay={{
+                delay: 3500,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              dir="rtl"
+              breakpoints={{
+                480: {
+                  slidesPerView: 2,
+                  spaceBetween: 14,
+                },
+                640: {
+                  slidesPerView: 2.5,
+                  spaceBetween: 16,
+                },
+                768: {
+                  slidesPerView: 3,
+                  spaceBetween: 16,
+                },
+                1024: {
+                  slidesPerView: 4,
+                  spaceBetween: 16,
+                },
+                1280: {
+                  slidesPerView: 5,
+                  spaceBetween: 18,
+                },
+              }}
+              className="w-full !py-2"
             >
-              {banners.map(banner => (
-                <SwiperSlide className="pb-20w" key={banner.id}>
-                  {banner.link_url ? (
-                    <a href={banner.link_url} target="_blank" rel="noopener noreferrer">
-                      <img 
-                      
-                        className="w-full rounded-2xl h-full object-cover" 
-                        src={banner.image_url?.startsWith('http') ? banner.image_url : `${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} 
-                        alt={banner.title || 'Banner'} />
-                    </a>
-                  ) : (
-                    <img 
-                    
-                      className="w-full rounded-2xl h-full object-cover" 
-                      src={banner.image_url?.startsWith('http') ? banner.image_url : `${process.env.NEXT_PUBLIC_API_URL}${banner.image_url}`} 
-                      alt={banner.title || 'Banner'} />
-                  )}
+              {webTools.map((tool) => (
+                <SwiperSlide key={tool.tool_id} className="h-auto">
+                  <WebToolCard 
+                    tool={tool} 
+                    onClick={() => handleToolClick(tool)} 
+                    compact 
+                  />
                 </SwiperSlide>
               ))}
             </Swiper>
-          </div>
-        </div>
-      ) : (
-        !bannerError && <p className="text-center text-white my-3">{t('dashboard.loading')}</p>
-      )}
-      {/* ............................... */}
-
-      {/* AI Tools Hub Swiper Section */}
-      {(isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager") && (
-      <div className="mb-0 px-1 lg:px-5 mt-2">
-            {/* Swiper Loop Fix */}
-            {(() => {
-               const aiTools = [
-                   { id: 'image', name: 'انشاء صور احترافية', path: '/ai', img: '/images/انشاء الصور.png' },
-                   { id: 'video', name: 'انشاء فيديوهات احترافية', path: '/ai', img: '/images/تاثيرات الفيديو.png' },
-                   { id: 'chat', name: 'نيكسوس  GPT', path: '/ai', img: '/images/chat.jpg' },
-                   { id: 'image-to-text', name: 'استخراج النص من الصورة', path: '/ai', img: '/images/الصورة لنص.png' },
-                   { id: 'bg-remove', name: 'حذف الخلفية', path: '/ai', img: '/images/ازالة الخلفية.png' },
-                   { id: 'restore', name: 'ترميم الصور', path: '/ai', img: '/images/ترميم الصور.png' },
-                   { id: 'avatar', name: 'صانع الأفاتار', path: '/ai', img: '/images/انشاء افاتار.png' },
-                   { id: 'nano', name: 'نانو بانانا برو', path: '/ai', img: '/images/Whisk_d2a441bc8622fa5b2774cf54a715f70feg.png' },
-                   { id: 'product', name: 'نماذج لمنتجك', path: '/ai', img: '/images/نماذج لمنتجك.png' },
-                   { id: 'colorize', name: 'تلوين الصور', path: '/ai', img: '/images/تلوين الصورة.png' },
-                   { id: 'edit', name: 'المحرر الذكي', path: '/ai', img: '/images/تعديل الصور.png' },
-                   { id: 'long-video', name: 'تحريك الصور', path: '/ai', img: '/images/محاكاة الحركة.png' },
-                   { id: 'sketch', name: 'رسم إلى صورة', path: '/ai', img: '/images/رسم الصور.png' },
-                   { id: 'logo', name: 'صانع الشعارات', path: '/ai', img: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=1000' },
-               ];
-
-               // Ensure we have enough items for the largest breakpoint (6 slides)
-               let loopedTools = [...aiTools, ...aiTools];
-               
-               return (
-                <Swiper
-                  key={`ai-tools-${i18n.language}`} 
-                  dir={i18n.language === "ar" ? "rtl" : "ltr"}
-                  modules={[Navigation, Autoplay]}
-                  spaceBetween={15}
-                  slidesPerView={2}
-                  loop={true}
-                
-                  autoplay={{ delay: 2500, disableOnInteraction: false, reverseDirection: true }}
-                  breakpoints={{
-                    640: { slidesPerView: 3 },
-                    768: { slidesPerView: 4 },
-                    1024: { slidesPerView: 5 },
-                    1280: { slidesPerView: 6 },
-                  }}
-                  className="w-full py-4 pl-1"
-                >
-                  {loopedTools.map((tool, index) => (
-                    <SwiperSlide key={`${tool.id}-${index}`}>
-                      <Link href={tool.path}>
-                        <div 
-                          className="cursor-pointer h-40 rounded-2xl relative overflow-hidden group shadow-lg transition-all duration-300 hover:shadow-[#7c3aed]/30"
-                        >
-                          {/* Background Image */}
-                          <img 
-                            src={tool.img} 
-                            alt={tool.name} 
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
-                          
-                          {/* Overlay Gradient */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#4c00b080] via-black/20 to-transparent group-hover:via-black/50 transition-colors duration-300"></div>
-
-                          {/* Content */}
-                          <div className="absolute inset-0 flex flex-col justify-end p-4">
-                              <h3 className="text-white font-bold text-lg leading-tight drop-shadow-md transform translate-y-0 transition-transform duration-300">
-                                {tool.name}
-                              </h3>
-                              <div className="flex items-center gap-1 mt-1">
-                                <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse"></span>
-                                <p className="text-gray-200 text-[10px] font-bold">AI Powered</p>
-                              </div>
-                          </div>
-                        </div>
-                      </Link>
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-               );
-            })()}
-      </div>
-      )}
-
-      {/* Media Categories Swiper Section */}
-      {(isMediaHubEnabled || data?.userRole === "admin" || data?.userRole === "manager") && mediaCategories.length > 0 && (
-        <div className="mb-8 px-1 lg:px-5 mt-2">
-            {/* <div className="flex items-center gap-2 mb-4 px-2">
-               <div className="w-1 h-6 bg-[#ff7702] rounded-full"></div>
-               <h2 className="text-xl font-bold text-white">Media Categories</h2>
-            </div> */}
-            
-            {/* 
-              Swiper Loop Fix:
-              Swiper requires the number of slides to be >= slidesPerView * 2 (roughly) for loop to work smoothly without visual glitches.
-              We duplicate the array to ensure we have enough items.
-            */}
-            {(() => {
-               // Ensure we have enough items for the largest breakpoint (6 slides)
-               let loopedCategories = [...mediaCategories];
-               while (loopedCategories.length < 12 && loopedCategories.length > 0) {
-                 loopedCategories = [...loopedCategories, ...mediaCategories];
-               }
-               
-               return (
-                <Swiper
-                  key={`${loopedCategories.length}-${i18n.language}`} 
-                  dir={i18n.language === "ar" ? "rtl" : "ltr"}
-                  modules={[Navigation, Autoplay]}
-                  spaceBetween={15}
-                  slidesPerView={2}
-                  loop={true}
-                  autoplay={{ delay: 2000, disableOnInteraction: false }}
-                  breakpoints={{
-                    640: { slidesPerView: 3 },
-                    768: { slidesPerView: 4 },
-                    1024: { slidesPerView: 5 },
-                    1280: { slidesPerView: 6 },
-                  }}
-                  className="w-full py-4 pl-1"
-                >
-                  {loopedCategories.map((category, index) => (
-                    <SwiperSlide key={`${category.category_id}-${index}`}>
-                      <Link href={`/media-hub?cat=${category.category_id}`}>
-                        <div 
-                          className="cursor-pointer h-40 rounded-2xl relative overflow-hidden group shadow-lg transition-all duration-300  hover:shadow-[#ff7702]/30"
-                        >
-                          {/* Background Image */}
-                          {category.cover_image_url ? (
-                            <img 
-                              src={category.cover_image_url} 
-                              alt={category.name} 
-                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 "
-                            />
-                          ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#35214f] to-[#190237]"></div>
-                          )}
-                          
-                          {/* Overlay Gradient */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#00c48c40] via-black/40 to-transparent group-hover:via-black/60 transition-colors duration-300"></div>
-
-                          {/* Content */}
-                          <div className="absolute inset-0 flex flex-col justify-end p-4">
-                              <h3 className="text-white font-bold text-lg md:text-xl leading-tight drop-shadow-md transform translate-y-0 transition-transform duration-300">
-                                {category.name}
-                              </h3>
-                              {/* <p className="text-gray-300 text-xs mt-1 opacity-80">{category.filesCount || 0} items</p> */}
-                          </div>
-                        </div>
-                      </Link>
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-               );
-            })()}
-        </div>
-      )}
-
-
-
-      {/* <h2 className="text-title-sm2 px-3 pb-7 font-extrabold text-black dark:text-white">
-        Available Tools
-      </h2> */}
-      {/* <div className="w-full flex gap-0 lg:gap-0 flex items-center flex-wrap justify-center  mb-10 px-0 lg:px-5"> */}
-
-        {/* <div className="flex items-center border-2 border-[#ff7702] gap-3 rounded-full text-2xl px-2 py-1 text-white bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)]">
-          <p className="text-xs md:text-2xl cursor-pointer">التصنيفات</p>
-          <AlignJustify color="#ff7702" size={25}/>
-        </div> */}
-        <div className=" w-full  p-2 lg:p-4 flex items-center justify-between flex-wrap space-y-2 xl:space-y-0  mb-5 ">
-        <div  className="relative w-[45%]  xl:w-[19%] " >
-         <div className="absolute inset-0 animate-glow-shadow z-0 rounded-xl" />
-        <div   onClick={() => {
-    // Open the chat widget instead of TawkTo
-    const chatWidget = document.querySelector('[data-chat-widget-toggle]') as HTMLButtonElement;
-    if (chatWidget) {
-      chatWidget.click();
-    }
-  }} className={`flex   items-center justify-center gradient-border-Qs ${i18n.language ==='ar'? 'gap-5 lg:gap-0 xxl:gap-20' : 'gap-0'} rounded-full text-2xl px-2 py-1 lg:py-2 text-white bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] cursor-pointer`}>
-          <p className="text-sm font-bold md:text-lg xxl:text-xl ">{t('dashboard.technicalSupport')}</p>
-          <img className="w-7 md:w-10" src="/images/headphones.gif"/>
-        </div>
-        </div>
-        
-        <Link className="w-[45%]  xl:w-[19%]" href="/videos">
-        <div className="relative ">
-         <div className="absolute inset-0 animate-glow-shadow z-0 rounded-full" />
-        <div  className="flex items-center justify-center gradient-border-Qs xxl:gap-22 lg:gap-5 gap-10 rounded-full text-2xl px-3 py-1 lg:px-2 lg:py-2 text-white bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)]">
-          <p  className="text-sm font-bold md:text-xl cursor-pointer">{t('dashboard.tutorials')}</p>
-          <img className="w-7 md:w-10" src="/images/video.gif"/>
-        </div>
-        </div>
-        </Link>
-
-        <Link className="w-[45%]  xl:w-[19%]" href="https://wa.me/9647702930873" target="_blank">
-        <div className="relative ">
-         <div className="absolute inset-0 animate-glow-shadow z-0 rounded-full" />
-        <div className= {`flex items-center justify-center gradient-border-Qs ${i18n.language ==='ar'? 'xxl:gap-22 lg:gap-5 gap-3' : 'gap-6'} rounded-full text-2xl px-3 py-1 lg:px-2 lg:py-2 text-white bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)]`}>
-          <p className="text-sm font-bold md:text-xl cursor-pointer">{t('dashboard.whatsappChannel')}</p>
-          <img className="w-7 md:w-10" src="/images/phone-call.gif"/>
-        </div>
-        </div>
-        </Link>
-
-
-        <div className="relative w-[45%]  xl:w-[19%]">
-          <div className="relative">
-            <div className="absolute inset-0 animate-glow-shadow z-0 rounded-full" />
-            <div 
-              onClick={() => setShowCategories(!showCategories)}
-              className="flex items-center justify-center gradient-border-Qs xxl:gap-22 lg:gap-5 gap-10 rounded-full text-2xl px-3 py-1 lg:px-2 lg:py-2 text-white bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] cursor-pointer z-10 relative"
-            >
-              <p className="text-sm font-bold md:text-xl">{t('dashboard.categories')}</p>
-              <img className="w-7 md:w-10" src="/images/layout.gif"/>
-              </div>
-          </div>
-
-          {/* Categories Dropdown */}
-          {showCategories && (
-            <div className="absolute right-0 mt-2 w-56 origin-top-right bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 gradient-border-packet z-50">
-              <div className="py-1">
-                <button
-                  onClick={() => {
-                    setSelectedCategory('All');
-                    setToolsData(global.globalToolsData);
-                    setShowCategories(false);
-                    setShowNoResults(false);
-                  }}
-                  className="w-full text-right px-4 py-2 text-sm text-white hover:bg-[#6a00bf] transition-colors duration-200 font-bold"
-                >
-                  {t('dashboard.all') || 'ALL'}
-                </button>
-                {categories.length > 0 ? (
-                  categories.map((category, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        handleCategoryClick(category);
-                        setShowCategories(false);
-                      }}
-                      className="w-full text-right px-4 py-2 text-sm text-white hover:bg-[#6a00bf] transition-colors duration-200"
-                    >
-                      {category}
-                    </button>
-                  ))
-                ) : (
-                  <p className="px-4 py-2 text-sm text-white text-center">{t('dashboard.loading')}</p>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* Click outside handler */}
-        {showCategories && (
-          <div 
-            className="fixed inset-0 z-[9999999999] gradient-border-2" 
-            onClick={() => setShowCategories(false)}
-          />
+          </section>
         )}
 
+        <section aria-labelledby="trend-tools" className="border-y border-white/[0.07] py-10">
+          <div className="mb-6">
+            <h2 id="trend-tools" className="inline-block text-2xl font-black animate-fuchsia-shimmer">أدوات الترند </h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {TREND_AI_TOOLS.map((tool) => <AIToolCard key={tool.id} tool={tool} image={getToolImage(tool.id, tool.image)} compact />)}
+          </div>
+        </section>
 
-        <Link className="w-[45%]  xl:w-[19%]" href="/orders">
-        <div className="relative ">
-         <div className="absolute inset-0 animate-glow-shadow z-0 rounded-full" />
-        <div className="flex items-center justify-center gradient-border-Qs lg-gap-5 xxl:gap-29 gap-15 rounded-full text-2xl px-3 py-1 lg:px-2 lg:py-2 text-white bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)]">
-          <p className="text-sm font-bold md:text-xl cursor-pointer">{t('dashboard.orders')}</p>
-          <img className="w-7 md:w-10" src="/images/sale.gif"/>
-        </div>
-        </div>
-        </Link>
+        {/* Media Categories Slider Section - Only Existing Categories from DB */}
+        {mediaCategories.length > 0 && (
+          <section aria-labelledby="media-categories-section" className="space-y-4 pt-2">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 id="media-categories-section" className="inline-block text-2xl font-black sm:text-3xl animate-emerald-shimmer">
+                  تصنيفات مكتبة الميديا
+                </h2>
+                <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500">
+                  أحدث المؤثرات البصرية، القوالب الجاهزة، ومقاطع الفيديو بدقة 4K للمصممين.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <Link
+                  href="/media-hub"
+                  className="ml-2 inline-flex items-center gap-1 text-xs font-bold text-slate-400 transition hover:text-white"
+                >
+                  <span>مكتبة الميديا</span>
+                  <ChevronLeft size={14} />
+                </Link>
+                <button
+                  id="media-cats-prev-btn"
+                  aria-label="السابق"
+                  className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-400 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white active:scale-95"
+                >
+                  <ChevronRight size={16} />
+                </button>
+                <button
+                  id="media-cats-next-btn"
+                  aria-label="التالي"
+                  className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-400 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white active:scale-95"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+              </div>
+            </div>
 
+            <Swiper
+              modules={[Autoplay, Navigation]}
+              navigation={{
+                prevEl: '#media-cats-prev-btn',
+                nextEl: '#media-cats-next-btn',
+              }}
+              onBeforeInit={(swiper) => {
+                if (typeof swiper.params.navigation !== 'boolean' && swiper.params.navigation) {
+                  swiper.params.navigation.prevEl = '#media-cats-prev-btn';
+                  swiper.params.navigation.nextEl = '#media-cats-next-btn';
+                }
+              }}
+              spaceBetween={14}
+              slidesPerView={1.5}
+              loop={mediaCategories.length >= 6}
+              speed={550}
+              autoplay={{
+                delay: 3200,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              dir="rtl"
+              breakpoints={{
+                480: {
+                  slidesPerView: 2.2,
+                  spaceBetween: 14,
+                },
+                640: {
+                  slidesPerView: 3,
+                  spaceBetween: 16,
+                },
+                768: {
+                  slidesPerView: 3.5,
+                  spaceBetween: 16,
+                },
+                1024: {
+                  slidesPerView: 4.5,
+                  spaceBetween: 16,
+                },
+                1280: {
+                  slidesPerView: 5.5,
+                  spaceBetween: 18,
+                },
+              }}
+              className="w-full !py-2"
+            >
+              {mediaCategories.map((cat) => {
+                const cover = cat.cover_image || cat.cover_image_url;
+                if (!cover) return null;
+                return (
+                  <SwiperSlide key={cat.category_id} className="h-auto">
+                    <Link
+                      href={`/media-hub/category/${cat.category_id}`}
+                      className="group relative block aspect-[16/10] rounded-xl p-[1px] bg-white/[0.08] hover:bg-gradient-to-tr hover:from-emerald-500/80 hover:via-teal-400 hover:to-emerald-400 transition-all duration-300"
+                    >
+                      <div className="relative h-full w-full overflow-hidden rounded-[11px] bg-[#0A0D18]">
+                        <img
+                          src={cover}
+                          alt={cat.name || 'تصنيف ميديا'}
+                          className="h-full w-full object-cover opacity-72 transition duration-500 group-hover:opacity-85"
+                          loading="lazy"
+                        />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#070910] via-[#070910]/50 to-transparent" />
+                      </div>
+                    </Link>
+                  </SwiperSlide>
+                );
+              })}
+            </Swiper>
+          </section>
+        )}
 
-        </div>
-       
-      {/* </div> */}
+        {/* NEXUS Spaces Section */}
+        <section className="grid gap-5 overflow-hidden rounded-[26px] border border-white/10 dark:border-white/[0.08] bg-white/[0.03] dark:bg-[#080b13] backdrop-blur-md p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <p className="text-[10px] font-black tracking-[0.18em] text-emerald-300">NEXUS SPACES</p>
+            <h2 className="mt-2 inline-block text-2xl font-black animate-emerald-shimmer">حوّل أدواتك إلى خط إنتاج واحد</h2>
+            <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500">استخدم Spaces عندما تحتاج ربط أكثر من أداة وحفظ المسار لإعادة تشغيله، وليس كبديل عن الوصول السريع للأدوات الأساسية.</p>
+          </div>
+          <Link href="/ai/spaces" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-xs font-black text-[#06080e] transition hover:bg-emerald-300">افتح Spaces <ChevronLeft size={14} /></Link>
+        </section>
 
+        {/* Platform Sections - 4 Cards with Rich Ambient Gradient Glow */}
+        <section aria-labelledby="platform-sections" className="space-y-4">
+          <div>
+            <h2 id="platform-sections" className="inline-block text-xl font-black sm:text-2xl animate-sky-shimmer">
+              المكتبات والموارد الإضافية
+            </h2>
+          </div>
 
-      <div className="grid grid-cols-1 xsm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xxl:grid-cols-5 w-full gap-4 px-1 md:px-2">
-  {isSearching ? (
-    <div className="col-span-full text-center text-white">{t('dashboard.searching')}</div>
-  ) : showNoResults ? (
-    <div className="col-span-full text-center text-orange text-xl">
-      {t('dashboard.noToolsFound')} <span className="font-bold text-white">"{seachedTool}"</span>
-    </div>
-  ) : filteredTools && filteredTools.length > 0 ? (
-    filteredTools.map((item: NewToolsDto, index: number) => (
-      <CardItem
-        onClick={() => handleToolCardClick(item)}
-        key={`${item.tool_id}-${index}`} // Better key using item.id if available
-        toolData={item}
-      />
-    ))
-  ) : (
-    <div className="col-span-full text-center text-white">
-      {t('dashboard.noToolsAvailable')}
-    </div>
-  )}
-</div>
-      
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {PLATFORM_AREAS.map((area) => (
+              <Link
+                key={area.title}
+                href={area.href}
+                className={`group relative flex flex-col justify-between overflow-hidden rounded-[22px] border p-5 sm:p-6 transition-all duration-300 hover:-translate-y-1 ${area.cardBg}`}
+              >
+                {/* Permanent Ambient Corner Glow */}
+                <div
+                  className={`pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full ${area.ambientGlow} blur-2xl`}
+                />
 
+                {/* Permanent Top Shimmer Accent Line */}
+                <div
+                  className={`pointer-events-none absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent ${area.topGlow} to-transparent`}
+                />
 
-      
-      
-          
-         
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between gap-3 text-right">
+                    <h3 className="text-base font-black text-white transition-colors group-hover:text-white">
+                      {area.title}
+                    </h3>
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-slate-300 transition-all duration-300 group-hover:bg-white/10 group-hover:text-white">
+                      <ArrowUpLeft size={15} />
+                    </span>
+                  </div>
 
-         
+                  <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                    {area.description}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
-      {/* <DataStatsThree /> */}
+        <section className="flex flex-col gap-4 rounded-2xl border border-white/10 dark:border-white/[0.06] bg-white/[0.03] dark:bg-white/[0.02] backdrop-blur-md p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="inline-block text-sm font-black animate-emerald-shimmer">الحساب والدعم</h2>
+            <p className="mt-1 text-[11px] text-slate-500">إدارة الاشتراك والطلبات أو التواصل الفوري مع الدعم الفني.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {ACCOUNT_LINKS.map((item) => (
+              <Link key={item.title} href={item.href} className="rounded-lg border border-white/[0.07] px-3 py-2 text-[11px] font-bold text-slate-400 transition hover:bg-white/[0.05] hover:text-white">
+                {item.title}
+              </Link>
+            ))}
+            <a
+              href="https://wa.me/9647702930873"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-[11px] font-bold text-emerald-400 transition hover:bg-emerald-500/20 hover:text-emerald-300 shadow-sm"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.057 22l4.98-1.308A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.992 13.923c-.207.583-1.025 1.092-1.636 1.22-.418.087-.965.157-2.798-.605-2.347-.974-3.86-3.344-3.978-3.5-.115-.157-.946-1.26-.946-2.403 0-1.144.598-1.708.81-1.942.213-.234.464-.292.619-.292.155 0 .31.002.445.008.143.007.334-.055.522.398.193.465.658 1.605.716 1.722.058.117.097.253.02.408-.077.155-.116.252-.232.388-.116.136-.245.304-.35.408-.117.117-.238.243-.102.476.136.233.603.996 1.295 1.613.89.794 1.64 1.04 1.873 1.156.233.117.369.097.505-.058.136-.156.582-.68.737-.913.155-.233.31-.194.524-.116.213.077 1.357.64 1.59.757.233.116.388.174.446.271.058.098.058.563-.149 1.146z"
+                  fill="#25D366"
+                />
+              </svg>
+              <span>تواصل عبر واتساب</span>
+            </a>
+            <button
+              onClick={() => setOpenReviewModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-400 transition hover:bg-amber-500/20 hover:text-amber-300 shadow-sm"
+            >
+              <Star size={13} className="fill-amber-400 text-amber-400" />
+              <span>قيمنا</span>
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('open-support-chat'))}
+              className="rounded-lg border border-white/[0.07] px-3 py-2 text-[11px] font-bold text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+            >
+              الدعم المباشر
+            </button>
+          </div>
+        </section>
+      </div>
 
-      <ToolModalDetails
-        modalOpen={openDetailModal}
-        setModalOpen={setOpenDetailModal}
-        toolData={toolData}
-        onBuy={() => {
-          setOpenDetailModal(false);
-          setOpenPaymentModal(true);
-        }}
-        period={period}
-        setPeriod={setPeriod}
-      />
+      {/* Review Modal */}
       <ReviewModal
         modalOpen={openReviewModal}
         setModalOpen={setOpenReviewModal}
-        
       />
 
-      <ModalPayment
-        modalOpen={openPaymentModal}
-        setModalOpen={setOpenPaymentModal}
-        productId={toolData?.tool_id}
-        productData={toolData}
-        productType="tool"
-        period={period}
-        onBuySuccess={(bankName: "cih" | "tijari") => {
-          setOpenPaymentModal(false);
-          if (bankName === "cih") {
-            setOpenCihDetailsModal(true);
-          } else {
-            setOpenTijariDetailsModal(true);
-          }
-        }}
-      />
-
-      <CihBankOrderDetailsInfoModal
-        modalOpen={openCihDetailsModal}
-        setModalOpen={setOpenCihDetailsModal}
-        toolData={toolData}
-        period={period}
-      />
-
-      <TijariBankOrderDetailsInfoModal
-        modalOpen={openTijariDetailsModal}
-        setModalOpen={setOpenTijariDetailsModal}
-        toolData={toolData}
-        period={period}
-      />
+      {/* Modals for Web Tools */}
+      {selectedTool && (
+        <>
+          <ToolModalDetails
+            modalOpen={openDetailModal}
+            setModalOpen={setOpenDetailModal}
+            toolData={selectedTool}
+            onBuy={() => {
+              setOpenDetailModal(false);
+              setOpenPaymentModal(true);
+            }}
+            period={period}
+            setPeriod={setPeriod}
+          />
+          <ModalPayment
+            modalOpen={openPaymentModal}
+            setModalOpen={setOpenPaymentModal}
+            productId={selectedTool?.tool_id}
+            productData={selectedTool}
+            productType="tool"
+            period={period}
+            onBuySuccess={(bankName: "cih" | "tijari") => {
+              setOpenPaymentModal(false);
+              if (bankName === "cih") {
+                setOpenCihDetailsModal(true);
+              } else {
+                setOpenTijariDetailsModal(true);
+              }
+            }}
+          />
+          <CihBankOrderDetailsInfoModal
+            modalOpen={openCihDetailsModal}
+            setModalOpen={setOpenCihDetailsModal}
+            toolData={selectedTool}
+            period={period}
+          />
+          <TijariBankOrderDetailsInfoModal
+            modalOpen={openTijariDetailsModal}
+            setModalOpen={setOpenTijariDetailsModal}
+            toolData={selectedTool}
+            period={period}
+          />
+        </>
+      )}
       <ToolErrorExtention
         modalOpen={showExtensionModal}
         setModalOpen={setShowExtensionModal}
-        message={t('subscriptions.extensionNotDetected')}
-        title={t('subscriptions.extensionNotDetected')}
+        message="يرجى تثبيت إضافة المتصفح لتشغيل الأدوات المجانية"
+        title="الإضافة مطلوبة"
       />
-    </>
+    </div>
   );
-};
-
-export default Dashboard;
+}

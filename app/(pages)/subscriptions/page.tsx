@@ -191,45 +191,58 @@ const Dashboard: FunctionComponent = () => {
   );
 
   return (
-    <>
-       <h2 className="w-full mt-10 px-20 font-bold md:px-40 py-3 md:py-4 text-xl md:text-4xl text-white bg-[linear-gradient(135deg,#4f008c,#190237,#190237)] gradient-border-3 rounded-xl text-center">
-       {t("subscriptions.pageTitle")}
-      </h2>
+    <div className="w-full min-h-screen pb-16">
+      {/* Dark Mode Header */}
+      <div className="hidden dark:flex items-center gap-3 border-s-4 border-[#00c48c] ps-3 mb-8 mt-6">
+        <h1 className="text-xl md:text-2xl font-extrabold animate-emerald-shimmer">
+          {t("subscriptions.pageTitle")}
+        </h1>
+      </div>
+
+      {/* Light Mode Header */}
+      <div className="dark:hidden w-full mt-10 mb-6">
+        <h2 className="w-full px-20 font-bold md:px-40 py-3 md:py-4 text-xl md:text-4xl text-white bg-[linear-gradient(135deg,#4f008c,#190237,#190237)] gradient-border-3 rounded-xl text-center">
+          {t("subscriptions.pageTitle")}
+        </h2>
+      </div>
 
       {/* Extension Not Detected Banner */}
       {(!canLaunch && !(globalThis as any).NT_EXT_DETECTED) && (
-        <div className="w-full mt-8 px-4 md:px-10 animate-in fade-in slide-in-from-top duration-700">
-            <div className="relative overflow-hidden p-[2px] rounded-2xl bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.2)]">
-                <div className="relative bg-[#0f0221] p-6 rounded-[14px] flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
+        <div className="w-full my-6 animate-in fade-in slide-in-from-top duration-700">
+            <div className="relative overflow-hidden p-[1px] rounded-2xl bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.15)]">
+                <div className="relative bg-[#100c24] dark:bg-[#12141F] p-5 sm:p-6 rounded-[15px] flex flex-col md:flex-row items-center justify-between gap-5 overflow-hidden">
                     {/* Background Glow */}
                     <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none"></div>
                     
-                    <div className="flex items-center gap-5 text-center md:text-start z-10">
-                        <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30 shadow-[0_0_15px_rgba(217,119,6,0.1)]">
-                            <AlertTriangle className="text-amber-500" size={32} />
+                    <div className="flex items-center gap-4 text-center md:text-start z-10">
+                        <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/30 shadow-[0_0_15px_rgba(217,119,6,0.1)] shrink-0">
+                            <AlertTriangle className="text-amber-400" size={28} />
                         </div>
                         <div>
-                            <h3 className="text-xl md:text-2xl font-black text-amber-500 tracking-tight">
-                                إذا لم تكن قمت بتنزيل الإضافة، يرجى تنزيلها وتثبيتها أولاً
+                            <h3 className="text-base md:text-lg font-bold text-amber-400">
+                                إذا لم تكن قمت بتنزيل الإضافة، يرجى تنزيلها وتثبيتها أولاً لتشغيل الأدوات
                             </h3>
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                                تتطلب بعض الأدوات إضافة المتصفح الخاصة بنا للوصول المباشر والحماية
+                            </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 z-10">
+                    <div className="flex items-center gap-2.5 z-10 shrink-0">
                         <a 
                             href="/Nexustoolz.com.zip" 
                             download 
-                            className="group flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl transition-all duration-300 shadow-[0_5px_15px_rgba(217,119,6,0.3)] hover:scale-[1.05] active:scale-95"
+                            className="group flex items-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm rounded-xl transition-all duration-300 shadow-md hover:scale-[1.03] active:scale-95"
                         >
-                            <Download size={20} className="group-hover:animate-bounce" />
-                            DOWNLOAD EXTENSION
+                            <Download size={16} className="group-hover:animate-bounce" />
+                            <span>تنزيل الإضافة</span>
                         </a>
                         <button 
                             onClick={() => window.location.reload()}
-                            className="p-4 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/10 shadow-xl"
-                            title="Refresh Page"
+                            className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/10"
+                            title="إعادة الفحص"
                         >
-                            <RefreshCw size={20} className="active:rotate-180 transition-all duration-500" />
+                            <RefreshCw size={16} className="active:rotate-180 transition-all duration-500" />
                         </button>
                     </div>
                 </div>
@@ -684,9 +697,23 @@ const Dashboard: FunctionComponent = () => {
         </Panel>
       ) : (
         data?.userToolsData?.length === 0 && data?.userPlansData?.length === 0 && data?.userPacksData?.length === 0 && (
-          <p className="text-md text-center w-full  dark:text-white">
-            {t('subscriptions.noActiveTools')}
-          </p>
+          <div className="w-full flex flex-col items-center justify-center p-12 text-center rounded-3xl bg-[#12141F] border border-zinc-800/80 my-8">
+            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 text-[#00c48c]">
+              <ShipWheel size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">
+              {t('subscriptions.noActiveTools')}
+            </h3>
+            <p className="text-xs text-zinc-400 max-w-sm mb-6">
+              ليس لديك أي اشتراكات أو أدوات فعالة حالياً. يمكنك تصفح الباقات واختيار ما يناسبك للبدء فوراً.
+            </p>
+            <a
+              href="/plans"
+              className="px-6 py-2.5 rounded-xl bg-[#00c48c] hover:bg-[#00b07d] text-slate-950 font-bold text-xs shadow-md shadow-[#00c48c]/20 transition-all hover:scale-105"
+            >
+              تصفح باقات الاشتراك
+            </a>
+          </div>
         )
       )}
 
@@ -695,7 +722,7 @@ const Dashboard: FunctionComponent = () => {
         modalOpen={openErrorModal}
         setModalOpen={setIsOpenErrorModal}
       />
-    </>
+    </div>
   );
 };
 

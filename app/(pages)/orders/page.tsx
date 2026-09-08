@@ -1,20 +1,60 @@
 "use client";
 
-import React, { FunctionComponent, useEffect, useMemo } from "react";
-import Panel from "@/components/Panel";
+import React, { FunctionComponent, useMemo } from "react";
 import Table from "@/components/Table";
-import LinkButton from "@/components/buttons/LinkButton";
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
-import { fullDateTimeFormat, fullDateFormat} from "@/utils/timeFormatting";
-import LoadingButton from "@/components/LoadingButton";
+import { fullDateFormat } from "@/utils/timeFormatting";
 import { useTranslation } from "react-i18next";
+import { Package, Calendar, CreditCard, CheckCircle2 } from "lucide-react";
 
 type Props = {
   params: { clientId: string };
 };
 
-const OrdersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
-  const { data, isLoading, isFetching, isError, refetch } = useMyInfo();
+const methodLogos: Record<string, string> = {
+  'Zain': "https://www2.0zz0.com/2025/07/02/21/357173052.png",
+  'FastPay': "https://stock-pik.com/tools/unnamed%20(3).png",
+  'AsiaSel': "https://www2.0zz0.com/2025/07/02/22/684653137.png",
+  'Alrafedeen': "https://stock-pik.com/tools/unnamed%20(2).webp",
+  'IraqBank': "https://www2.0zz0.com/2025/07/02/22/627573215.jpg",
+  'AsiaPay': "https://www2.0zz0.com/2025/07/02/21/255630149.png",
+  'paytabs': "/images/visa-master.png"
+};
+
+// Helper to translate and format subscription periods clearly in Arabic
+const formatSubscriptionPeriod = (period?: string): string => {
+  if (!period) return "اشتراك";
+  const p = period.toLowerCase().trim();
+  
+  if (p.includes("month") || p === "1_month" || p === "30" || p === "monthly") {
+    return "اشتراك شهري (30 يوم)";
+  }
+  if (p.includes("year") || p === "1_year" || p === "365" || p === "yearly" || p === "annual") {
+    return "اشتراك سنوي (365 يوم)";
+  }
+  if (p.includes("day") || p === "1_day" || p === "daily" || p === "1" || p.includes("trial")) {
+    return "تجربة يومية (1 يوم)";
+  }
+  if (p.includes("3_month") || p === "90") {
+    return "اشتراك 3 أشهر";
+  }
+  if (p.includes("6_month") || p === "180") {
+    return "اشتراك 6 أشهر";
+  }
+  if (p === "vip" || p === "gold") {
+    return "باقة VIP الذهبية";
+  }
+  if (p === "premium") {
+    return "باقة بريميوم";
+  }
+  if (p === "standard") {
+    return "باقة ستاندرد";
+  }
+  return `اشتراك ${period}`;
+};
+
+const OrdersPage: FunctionComponent<Props> = () => {
+  const { data, isLoading, isError } = useMyInfo();
   const { t } = useTranslation();
 
   // Filter successful orders only
@@ -29,51 +69,54 @@ const OrdersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
       {
         accessorKey: "product_name",
         header: () => t("orders.productName"),
-        cell: (info) =>
-          (
-            <div className="font-bold">
-              {info?.row?.original?.product_name}
-              <span className="text-[10px] block opacity-50 font-normal">
-                {info?.row?.original?.period} subscription
+        cell: (info: any) => {
+          const order = info?.row?.original;
+          const periodLabel = formatSubscriptionPeriod(order?.period);
+          return (
+            <div className="flex flex-col items-center md:items-start text-center md:text-right py-1">
+              <span className="font-bold text-white text-sm">
+                {order?.product_name || "منتج"}
+              </span>
+              <span className="text-[11px] text-[#00c48c] font-semibold mt-0.5">
+                {periodLabel}
               </span>
             </div>
-          ),
+          );
+        },
       },
       {
         accessorKey: "payment_method",
         header: () => t("orders.paymentMethod"),
-        cell: (info) => {
+        cell: (info: any) => {
           const paymentMethod = info.getValue();
-          const methodLogos: Record<string, string> = {
-            'Zain': "https://www2.0zz0.com/2025/07/02/21/357173052.png",
-            'FastPay': "https://stock-pik.com/tools/unnamed%20(3).png",
-            'AsiaSel': "https://www2.0zz0.com/2025/07/02/22/684653137.png",
-            'Alrafedeen': "https://stock-pik.com/tools/unnamed%20(2).webp",
-            'IraqBank': "https://www2.0zz0.com/2025/07/02/22/627573215.jpg",
-            'AsiaPay': "https://www2.0zz0.com/2025/07/02/21/255630149.png",
-            'paytabs': "/images/visa-master.png"
-          };
-          
           if (methodLogos[paymentMethod]) {
-            return <img className="bg-white/5 rounded-lg p-1 border border-white/5" src={methodLogos[paymentMethod]} alt={paymentMethod} style={{width:"45px"}} />;
+            return (
+              <div className="flex justify-center items-center">
+                <img 
+                  className="bg-white/5 rounded-md p-1 border border-zinc-800 object-contain h-7 w-auto" 
+                  src={methodLogos[paymentMethod]} 
+                  alt={paymentMethod} 
+                />
+              </div>
+            );
           }
-          return <span className="text-gray-500 font-mono text-xs uppercase">{paymentMethod || 'Online'}</span>;
+          return <span className="text-zinc-400 font-mono text-xs uppercase">{paymentMethod || 'Online'}</span>;
         },
       },
       {
         accessorKey: "amount",
         header: () => t("orders.amount"),
-        cell: (info) => (
-          <span className="font-mono text-[#00c48c] font-bold">
-            {info.getValue()} IQD
+        cell: (info: any) => (
+          <span className="font-mono text-[#00c48c] font-bold text-sm">
+            {Number(info.getValue() || 0).toLocaleString()} IQD
           </span>
         ),
       },
       {
         accessorKey: "createdAt",
         header: () => t("orders.orderedAt"),
-        cell: (info) => (
-          <div className="text-xs opacity-60">
+        cell: (info: any) => (
+          <div className="text-xs text-zinc-400">
             {fullDateFormat(info.getValue())}
           </div>
         ),
@@ -81,12 +124,13 @@ const OrdersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
       {
         accessorKey: "status",
         header: () => t("orders.status"),
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            <div className="px-3 py-1 rounded-full bg-[#00c48c]/10 border border-[#00c48c]/20 text-[#00c48c] text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(0,196,140,0.1)]">
-              نشط
-            </div>
-            <div className="w-2 h-2 rounded-full bg-[#00c48c] animate-pulse shadow-[0_0_10px_#00c48c]" />
+        cell: () => (
+          <div className="flex justify-center items-center">
+            {/* Clean Professional Status Badge without excessive glow */}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>نشط</span>
+            </span>
           </div>
         ),
       },
@@ -94,36 +138,125 @@ const OrdersPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
   }, [t]);
 
   return (
-    <Panel
-      title={t("orders.ordersList")}
-      sideActions={<></>}
-    >
-      {isLoading && <div className="p-8 text-center text-white/40 italic">جاري تحميل طلباتك...</div>}
-      
-      {!isLoading && successfulOrders.length === 0 && (
-        <div className="p-12 text-center">
-          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10">
-            <svg className="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-          </div>
-          <p className="text-white/40 font-medium">لا توجد اشتراكات نشطة حالياً</p>
-        </div>
-      )}
+    <div className="w-full min-h-screen pb-16">
+      {/* Dark Mode Header */}
+      <div className="hidden dark:flex items-center gap-3 border-s-4 border-[#00c48c] ps-3 mb-8 mt-6">
+        <h1 className="text-xl md:text-2xl font-extrabold animate-emerald-shimmer">
+          {t("orders.ordersList")}
+        </h1>
+      </div>
 
-      {!isLoading && successfulOrders.length !== 0 && (
-        <Table
-          onRowClick={() => { }}
-          data={successfulOrders}
-          columns={columnDef}
-        />
-      )}
-      {isError && (
-        <p role="alert" className="text-red text-sm p-5 font-bold">
-          Cannot get data for some reason :(
-        </p>
-      )}
-    </Panel>
+      {/* Light Mode Header */}
+      <div className="dark:hidden w-full mt-10 mb-6">
+        <h2 className="w-full px-20 font-bold md:px-40 py-3 md:py-4 text-xl md:text-4xl text-white bg-[linear-gradient(135deg,#4f008c,#190237,#190237)] gradient-border-3 rounded-xl text-center">
+          {t("orders.ordersList")}
+        </h2>
+      </div>
+
+      {/* Orders Content Container */}
+      <div className="w-full">
+        {isLoading && (
+          <div className="p-12 text-center text-zinc-400 text-sm">
+            جاري تحميل سجل طلباتك...
+          </div>
+        )}
+        
+        {!isLoading && successfulOrders.length === 0 && (
+          <div className="p-12 text-center flex flex-col items-center justify-center rounded-2xl bg-[#12141F] border border-zinc-800/80 my-4">
+            <div className="w-16 h-16 bg-[#181B29] border border-zinc-800 rounded-2xl flex items-center justify-center mb-4 text-zinc-500">
+              <Package size={28} />
+            </div>
+            <h3 className="text-base font-bold text-white mb-1">
+              لا توجد طلبات سابقة
+            </h3>
+            <p className="text-xs text-zinc-400">
+              عندما تقوم بالاشتراك في أي أداة أو باقة، ستظهر تفاصيل طلبك هنا.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && successfulOrders.length !== 0 && (
+          <>
+            {/* ==================== DESKTOP TABLE VIEW (MD & UP) ==================== */}
+            <div className="hidden md:block">
+              <Table
+                onRowClick={() => { }}
+                data={successfulOrders}
+                columns={columnDef}
+              />
+            </div>
+
+            {/* ==================== MOBILE CARDS VIEW (SMALL SCREENS) ==================== */}
+            <div className="md:hidden space-y-3.5">
+              {successfulOrders.map((order: any, idx: number) => {
+                const paymentMethod = order.payment_method;
+                const periodLabel = formatSubscriptionPeriod(order.period);
+                
+                return (
+                  <div 
+                    key={order.order_id || idx}
+                    className="p-4 rounded-2xl bg-[#12141F] border border-zinc-800/80 shadow-md flex flex-col gap-3"
+                  >
+                    {/* Top Row: Product Title & Status Badge */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col">
+                        <h4 className="font-bold text-white text-sm">
+                          {order.product_name || "طلب اشتراك"}
+                        </h4>
+                        <span className="text-[11px] font-semibold text-[#00c48c] mt-0.5">
+                          {periodLabel}
+                        </span>
+                      </div>
+                      
+                      {/* Clean Non-Glowing Status Pill */}
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span>نشط</span>
+                      </span>
+                    </div>
+
+                    {/* Middle Row: Payment Method & Amount */}
+                    <div className="flex items-center justify-between pt-2.5 border-t border-zinc-800/60 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-zinc-400">وسيلة الدفع:</span>
+                        {methodLogos[paymentMethod] ? (
+                          <img 
+                            className="h-5 w-auto rounded bg-white/5 p-0.5 border border-zinc-800 object-contain" 
+                            src={methodLogos[paymentMethod]} 
+                            alt={paymentMethod} 
+                          />
+                        ) : (
+                          <span className="font-mono text-zinc-300 font-semibold uppercase">{paymentMethod || 'Online'}</span>
+                        )}
+                      </div>
+
+                      <div className="font-mono font-bold text-[#00c48c] text-sm">
+                        {Number(order.amount || 0).toLocaleString()} IQD
+                      </div>
+                    </div>
+
+                    {/* Bottom Row: Ordered Date */}
+                    <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-1">
+                      <div className="flex items-center gap-1">
+                        <Calendar size={12} className="text-zinc-500" />
+                        <span>تاريخ الطلب:</span>
+                      </div>
+                      <span>{fullDateFormat(order.createdAt)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {isError && (
+          <p role="alert" className="text-rose-400 text-xs p-5 font-bold text-center">
+            حدث خطأ أثناء جلب بيانات الطلبات
+          </p>
+        )}
+      </div>
+    </div>
   );
 };
 

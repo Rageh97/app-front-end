@@ -41,18 +41,16 @@ const PackCard: FunctionComponent<PackCardProps> = ({
   return (
     <div className="relative">
       <div className="absolute w-25 h-25 z-0 top-25 left-1/2 -translate-x-1/2 rounded-full bg-[linear-gradient(130deg,_#ff7702,_#ffffff,_#00c48c)] opacity-100 blur-2xl "></div>
-    <div className="w-[280px] overflow-visible relative z-10 mt-30 h-min font-extrabold text-black pb-1 px-3 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] border-[#ff7702] border-[2px] rounded-[40px] shadow-2xl">
-     {/* <img className="absolute w-70 h-22 z-10 -top-40 left-1/2 -translate-x-1/2" src="/images/shadow-light.png" alt="" /> */}
+    <div className="w-[280px] overflow-visible relative z-10 mt-30 h-min font-extrabold text-black pb-1 px-3 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] dark:bg-none dark:bg-[#12141C] border-[#ff7702] dark:border-zinc-800 border-[2px] rounded-[40px] shadow-2xl">
       <div style={{clipPath: "polygon(25% 0%, 70% 0%, 90% 100%, 5% 100%"}} className={`absolute bg-[#ff7702] py-1 px-7 top-4 -left-8 -rotate-45 rounded-sm text-xs ${discountPercentage > 0 ? '' : 'hidden'}`}>Discount {discountPercentage}%</div>
       {packData.pack_name.trim().toUpperCase() === "AI PLAN" && <img className="absolute w-40 z-20 -top-36 left-1/2 -translate-x-1/2" src="/images/plus (2).png" alt="AI Plan" />}
     {packData.pack_name.trim().toUpperCase() === "DESIGNERS PLAN" && <img className="absolute w-40 z-20 -top-36 left-1/2 -translate-x-1/2" src="/images/pro.png" alt="Designers Plan" />}
     {packData.pack_name.trim().toUpperCase() === "ALL IN ONE PLAN" && <img className="absolute w-40 z-20 -top-36 left-1/2 -translate-x-1/2" src="/images/vip.png" alt="All in One Plan" />}
      
-      {/* <img className="absolute w-40 z-20 -top-28 left-1/2 -translate-x-1/2" src="/images/crown.png" alt="" /> */}
       <p className="text-[21px] py-6 text-white text-center">{title}</p>
       <div className="flex pb-3 pt-4">
         <div className="text-[20px] text-white text-center">
-         <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD </span>{Number(discountedPrice).toLocaleString('en-US')}
+         <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] dark:from-emerald-400 dark:via-white dark:to-slate-300 bg-clip-text text-transparent font-bold">IQD </span>{Number(discountedPrice).toLocaleString('en-US')}
           {discountPercentage > 0 && (
             <span className="text-[15px] text-[#ACADB1] line-through ml-2">IQD{Number(originalPrice).toLocaleString('en-US')}</span>
           )}
@@ -62,11 +60,8 @@ const PackCard: FunctionComponent<PackCardProps> = ({
           <p className="text-[18px] px-1 font-bold text-[#00c48c]">/ {period === 'month' ? t("packs.month") : t("packs.year")}</p>
         </div>
       </div>
-      {/* <p className="text-[17px] pb-[4px] pt-[20px] font-semibold text-[#6E6F77]">
-        {packTitle}
-      </p> */}
 
-<div className="relative overflow-visible z-10 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] p-4 pb-20 rounded-[28px] gradient-border-2">
+<div className="relative overflow-visible z-10 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] dark:bg-none dark:bg-[#161824] dark:border dark:border-zinc-800 p-4 pb-20 rounded-[28px] gradient-border-2 dark:gradient-none">
         {/* Wrapper div for height control and transition */}
         <div className={`transition-all duration-300 ease-in-out ${!isExpanded ? 'h-60 overflow-hidden' : 'h-auto'}`}>
           {/* Credit Plan Section */}
@@ -95,9 +90,9 @@ const PackCard: FunctionComponent<PackCardProps> = ({
             return (
               <>
               {packCredits > 0 && (
-                <div className="pb-3 mb-3 border-b border-[#ff7702]/30">
+                <div className="pb-3 mb-3 border-b border-[#ff7702]/30 dark:border-zinc-700/60">
                   <p className="text-[#00c48c] text-sm font-bold mb-2">{t('credits.credits') || "Credits"}:</p>
-                  <div className="bg-[#190237]/60 rounded-lg p-2">
+                  <div className="bg-[#190237]/60 dark:bg-zinc-900/60 rounded-lg p-2">
                     <div className="flex items-center justify-between">
                        <span className="text-[#ff7702] text-sm font-semibold">{t('chat.aiCredits') || "AI Credits"}</span>
                        <span className="text-white text-xs">
@@ -109,9 +104,9 @@ const PackCard: FunctionComponent<PackCardProps> = ({
               )}
               
               {selectedCreditPlan ? (
-              <div className="pb-3 mb-3 border-b border-[#ff7702]/30">
+              <div className="pb-3 mb-3 border-b border-[#ff7702]/30 dark:border-zinc-700/60">
                 <p className="text-[#00c48c] text-sm font-bold mb-2">{planLabel}:</p>
-                <div className="bg-[#190237]/60 rounded-lg p-2">
+                <div className="bg-[#190237]/60 dark:bg-zinc-900/60 rounded-lg p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[#ff7702] text-sm font-semibold">{selectedCreditPlan.plan_name}</span>
                     <span className="text-white text-xs">
@@ -201,10 +196,10 @@ const PackCard: FunctionComponent<PackCardProps> = ({
         </div>
 
         {/* Read More/Read Less Button */}
-        <div className="flex  justify-center mt-2">
+        <div className="flex justify-center mt-2">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center bg-[#35214f] gradient-border-Qs inner-shadow gap-2  text-[#00c48c] rounded-lg p-1 hover:text-[#00a070] transition-colors duration-200 text-sm font-semibold"
+            className="flex items-center bg-[#35214f] dark:bg-zinc-800 gradient-border-Qs dark:gradient-none dark:border dark:border-zinc-700 inner-shadow dark:inner-shadow-none gap-2 text-[#00c48c] rounded-lg p-1 hover:text-[#00a070] transition-colors duration-200 text-sm font-semibold"
           >
             {isExpanded ? (
               <>
@@ -224,8 +219,8 @@ const PackCard: FunctionComponent<PackCardProps> = ({
         onClick={() => {
           onClick();
         }}
-         className="absolute flex items-center justify-center w-50 bottom-0 right-5 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] skew-x-[-50deg] rounded-[15px] gradient-border-packet text-white">
-       <p className="skew-x-[50deg] px-2 py-3"> <span className="text-[#00c48c] mx-2">{t("packs.buyNow")}</span><span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD</span>{Number(discountedPrice).toLocaleString('en-US')}</p>
+         className="absolute flex items-center justify-center w-50 bottom-0 right-5 bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] dark:bg-none dark:bg-[#1C1F2E] dark:border dark:border-zinc-700 skew-x-[-50deg] rounded-[15px] gradient-border-packet dark:gradient-none text-white">
+       <p className="skew-x-[50deg] px-2 py-3"> <span className="text-[#00c48c] mx-2">{t("packs.buyNow")}</span><span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] dark:from-emerald-400 dark:via-white dark:to-slate-300 bg-clip-text text-transparent font-bold">IQD</span>{Number(discountedPrice).toLocaleString('en-US')}</p>
     
       </LoadingButton>
  </div>

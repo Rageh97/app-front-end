@@ -12,6 +12,7 @@ import ChatWidget from "@/components/ChatWidget";
 import { Toaster } from "react-hot-toast";
 import { useTranslation } from 'react-i18next';
 import { I18nextProvider } from 'react-i18next';
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { i18n } = useTranslation();
@@ -86,12 +87,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     }
   }, []);
 // ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-const [lang, setLang] = useState("en");
-const [dir, setDir] = useState<"rtl" | "ltr">("ltr");
+const [lang, setLang] = useState("ar");
+const [dir, setDir] = useState<"rtl" | "ltr">("rtl");
 
 useEffect(() => {
-  const storedLang = localStorage.getItem("i18nextLng") || "en";
-  const isRTL = storedLang.startsWith("ar");
+  const storedLang = localStorage.getItem("i18nextLng") || "ar";
+  const isRTL = !storedLang.startsWith("en");
 
   document.documentElement.lang = storedLang;
   document.documentElement.dir = isRTL ? "rtl" : "ltr";
@@ -120,11 +121,15 @@ useEffect(() => {
             {/* <!-- ===== Sidebar End ===== --> */}
 
             {/* <!-- ===== Content Area Start ===== --> */}
-            <main className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar md:ms-40 xl:ms-44">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar md:ms-40 xl:ms-44 dark:ms-0 transition-all duration-300">
               <div className="px-2 sm:px-4 md:px-6 lg:px-8"> 
                 {children}
-                <MostQuestions/>
-                <ClientReviews/>
+                <div className="-mx-2 sm:-mx-4 md:-mx-6 lg:-mx-8">
+                  <div className="mx-auto max-w-[1460px] px-4 sm:px-6 lg:px-8">
+                    <ClientReviews/>
+                    <MostQuestions/>
+                  </div>
+                </div>
               </div>
               <Footer/>
             </main>

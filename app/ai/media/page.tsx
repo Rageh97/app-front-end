@@ -36,9 +36,21 @@ import { BorderBeam } from "@/components/ui/border-beam";
 
 const IMAGE_TOOLS = [
   {
+    id: 'gpt-image',
+    title: 'توليد الصور بـ GPT',
+    description: 'أنشئ صوراً مذهلة مع استدلال بصري متقدم ونصوص عربية دقيقة عبر OpenAI GPT',
+    icon: Sparkles,
+    category: 'image',
+    gradient: 'from-emerald-600/80 to-teal-600/80',
+    image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
+    href: '/ai/gpt-image',
+    featured: true,
+    isNew: true
+  },
+  {
     id: 'image',
     title: 'انشاء صور احترافية',
-    description: 'أنشئ صوراً مذهلة من النصوص باستخدام Imagen 4.0',
+    description: 'أنشئ صوراً مذهلة من النصوص باستخدام Gemini 3 Pro & Imagen 4',
     icon: ImageIcon,
     category: 'image',
     gradient: 'from-violet-600/80 to-indigo-600/80',
@@ -186,15 +198,14 @@ const IMAGE_TOOLS = [
 const VIDEO_TOOLS = [
   {
     id: 'video',
-    title: 'انشاء فيديوهات احترافية',
-    description: 'اصنع فيديوهات رائعة من النصوص باستخدام Veo 2.0',
+    title: 'استوديو الفيديو الذكي',
+    description: 'اصنع وعدل فيديوهات سينمائية مع صوت متزامن عبر Gemini Omni و Veo 3.1',
     icon: Video,
     category: 'video',
-    gradient: 'from-blue-600/80 to-cyan-600/80',
+    gradient: 'from-blue-600/80 to-indigo-600/80',
     image: '/images/تاثيرات الفيديو.png',
     href: '/ai/video',
     featured: true,
-    // maintenance: true
   },
   {
     id: 'motion',
@@ -318,117 +329,83 @@ export default function MediaPage() {
   }, [searchParams]);
 
   const currentTools = activeCategory === 'image' ? IMAGE_TOOLS : VIDEO_TOOLS;
-  const featuredTools = currentTools.filter(tool => tool.featured);
+  const featuredTools = (currentTools as any[]).filter((tool: any) => tool.featured);
 
   return (
-    <div className="h-full bg-[#000000] text-white selection:bg-blue-500/30 font-sans" dir="rtl">
+    <div className="h-full bg-[#06070B] text-white selection:bg-emerald-500/30 font-sans" dir="rtl">
       {/* Dynamic Background */}
-      <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-900/20 blur-[140px] rounded-full pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-900/20 blur-[140px] rounded-full pointer-events-none"></div>
+      <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
 
       {/* Modern Header */}
-      <header className={`sticky top-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-black/80 backdrop-blur-2xl py-3' : 'bg-transparent py-6'}`}>
+      <header className={`sticky top-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-[#0B0D14]/90 backdrop-blur-2xl py-3 border-b border-white/[0.08]' : 'bg-[#0B0D14] py-5 border-b border-white/[0.08]'}`}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between">
             
             <Link 
-              href="/dashboard" 
-              className="px-6 py-2 rounded-full bg-white text-black text-sm font-black transition-all duration-300 hover:shadow-[0_15px_30px_-10px_rgba(255,255,255,0.4)] hover:scale-[1.03] active:scale-95 flex items-center gap-3 group relative overflow-hidden shadow-xl"
+              href="/ai" 
+              className="px-4 py-2 rounded-lg bg-[#121520] border border-white/[0.08] text-gray-300 hover:text-white text-xs font-bold transition-all duration-300 hover:bg-[#161a27] flex items-center gap-2"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              <span className="relative z-10">عودة للرئيسية</span>
-              <div className="relative z-10 flex items-center justify-center w-7 h-7 bg-black/[0.04] rounded-full group-hover:bg-black group-hover:text-white transition-all duration-300">
-                <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform duration-300" />
-              </div>
+              <ArrowLeft size={14} />
+              <span>عودة لإستوديو الذكاء الاصطناعي</span>
             </Link>
 
-            <nav className="relative hidden lg:flex items-center gap-1 p-1.5 bg-black/60 backdrop-blur-3xl border border-white/10 rounded-full shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+            <nav className="relative hidden lg:flex items-center gap-1 p-1 bg-[#121520] border border-white/[0.08] rounded-full shadow-lg">
                 {[
-                    { name: 'الرئيسية', path: '/dashboard', icon: Sparkles, color: 'text-purple-400' },
-                    { name: 'المحادثة', path: '/ai/chat', icon: MessageSquare, color: 'text-blue-400' },
-                    { name: 'الميديا', path: '/ai/media', icon: Wand2, color: 'text-pink-400' },
+                    { name: 'الرئيسية', path: '/ai', icon: Sparkles, color: 'text-emerald-400' },
+                    { name: 'المحادثة', path: '/ai/chat', icon: MessageSquare, color: 'text-emerald-400' },
+                    { name: 'الميديا', path: '/ai/media', icon: Wand2, color: 'text-emerald-400' },
                     { name: 'الخطط', path: '/ai/plans', icon: CreditCard, color: 'text-emerald-400' }
                 ].map((item, idx) => (
                     <Link 
                         key={idx}
                         href={item.path}
-                        className={`group relative px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2 overflow-hidden ${
-                            (item.path === '/ai/media') ? 'bg-white/10 text-white shadow-inner' : 'text-gray-300 hover:text-white hover:bg-white/5'
+                        className={`group relative px-5 py-2 rounded-full text-xs font-bold transition-all duration-300 flex items-center gap-2 overflow-hidden ${
+                            (item.path === '/ai/media') ? 'bg-emerald-600 text-white shadow-inner' : 'text-gray-400 hover:text-white hover:bg-white/5'
                         }`}
                     >
-                        <item.icon size={16} className={`transition-all duration-300 ${item.color} ${item.path === '/ai/media' ? 'opacity-100 scale-110' : 'opacity-80 group-hover:opacity-100 group-hover:scale-110'}`} />
+                        <item.icon size={14} className={`transition-all duration-300 ${item.color} ${item.path === '/ai/media' ? 'opacity-100 scale-110 text-white' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
                         <span className="relative z-10">{item.name}</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     </Link>
                 ))}
-                
-                <div className="absolute -bottom-[1px] left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/50 to-transparent shadow-[0_0_15px_rgba(255,255,255,0.4)]"></div>
             </nav>
-            <Link href="/dashboard" className="flex items-center gap-3 group">
-                            <span className="text-2xl font-black tracking-tighter">NEXUS TOOLZ AI</span>
-
-             <div className="relative w-fit rounded-full overflow-hidden">
-               <Image
-                src="/images/icon.png.png"
-                alt="Logo"
-                width={50}
-                height={50}
-                className="rounded-full"
-              />
-              <BorderBeam size={50} duration={1} className="rounded-full" />
-             </div>
-            </Link>
+            <div className="flex items-center gap-3">
+                <span className="text-lg font-bold tracking-tight text-white">نيكسوس ميديا</span>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative   overflow-hidden">
+      <section className="relative overflow-hidden pt-8">
         <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
           
-
-          <h1 className="text-5xl  font-black mb-8 leading-[1.1] tracking-tight">
-           
-            <span className="bg-gradient-to-r py-10 from-blue-600 via-purple-400 to-emerald-700 bg-clip-text text-transparent bg-300% animate-gradient block">
-                {activeCategory === 'image' ? ' أنشئ الصور بواسطة أحدث موديلات الذكاء الاصطناعي' : ' صناعة الفيديو بواسطة أحدث موديلات الذكاء الاصطناعي'}
-            </span>
+          <h1 className="text-3xl md:text-5xl font-black mb-4 leading-[1.2] tracking-tight text-white">
+            {activeCategory === 'image' ? 'أنشئ وعدّل الصور بأحدث موديلات الذكاء الاصطناعي' : 'صناعة وتحريك الفيديو بالذكاء الاصطناعي'}
           </h1>
 
-          <div className="text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto mb-12 h-16">
-            {/* @ts-ignore */}
-            <TextType 
-                text={[
-                    activeCategory === 'image' ? "أدوات احترافية لتوليد وتعديل الصور" : "حوّل نصوصك إلى فيديوهات سينمائية",
-                    "مستقبل الإبداع الرقمي بين يديك الآن"
-                ]}
-                typingSpeed={50}
-                loop={true}
-            />
+          <div className="text-base md:text-lg text-gray-400 max-w-2xl mx-auto mb-8">
+            {activeCategory === 'image' ? 'أدوات احترافية متكاملة لتوليد وتعديل الصور بدقة فائقة' : 'حوّل أفكارك وصورك إلى فيديوهات سينمائية مميزة'}
           </div>
 
           {/* Category Switcher */}
-          <div className="relative inline-flex items-center gap-1 p-1.5 bg-black/60 backdrop-blur-3xl border border-white/10 rounded-full shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+          <div className="relative inline-flex items-center gap-1 p-1 bg-[#121520] border border-white/[0.08] rounded-xl shadow-lg">
                 {[
-                    { id: 'image', name: 'أدوات الصور', icon: ImageIcon, color: 'text-blue-400' },
-                    { id: 'video', name: 'أدوات الفيديو', icon: Video, color: 'text-pink-400' }
+                    { id: 'image', name: 'أدوات الصور', icon: ImageIcon },
+                    { id: 'video', name: 'أدوات الفيديو', icon: Video }
                 ].map((cat) => (
                     <button
                         key={cat.id}
                         onClick={() => setActiveCategory(cat.id as any)}
-                        className={`group relative px-8 py-3 rounded-full text-sm font-bold transition-all duration-500 flex items-center gap-2 overflow-hidden ${
+                        className={`group relative px-6 py-2.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center gap-2 ${
                             activeCategory === cat.id
-                                ? 'bg-white/10 text-white shadow-inner'
+                                ? 'bg-emerald-600 text-white shadow-sm'
                                 : 'text-gray-400 hover:text-white'
                         }`}
                     >
-                        <cat.icon size={18} className={`transition-all duration-300 ${cat.color} ${activeCategory === cat.id ? 'opacity-100 scale-110' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
-                        <span className="relative z-10">{cat.name}</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                        <cat.icon size={16} />
+                        <span>{cat.name}</span>
                     </button>
                 ))}
-                
-                <div className="absolute -bottom-[1px] left-1/2 -translate-x-1/2 w-1/2 h-[2px] bg-gradient-to-r from-transparent via-white/50 to-transparent shadow-[0_0_15px_rgba(255,255,255,0.4)]"></div>
           </div>
         </div>
       </section>

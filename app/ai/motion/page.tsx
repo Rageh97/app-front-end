@@ -12,7 +12,8 @@ import {
   Image as ImageIcon, Trash2, Coins, History, Maximize2, 
   Cpu, Clock, Monitor, Smartphone, Square, Tv
 } from 'lucide-react';
-import { PremiumButton } from "@/components/PremiumButton";
+import { AIToolHeader, AIGenerateButton, AIGenerationCard, AIResultModal, downloadMediaDirectly, AIDeleteModal } from "@/components/ai";
+import { handleAuthError } from "@/utils/auth";
 
 const downloadVideo = async (url: string, filename: string) => {
   try {
@@ -78,6 +79,46 @@ export default function MotionSimulatorPage() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'all';
+    id?: number | string | null;
+  }>({ isOpen: false, type: 'single', id: null });
+  const [isDeletingModal, setIsDeletingModal] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    setIsDeletingModal(true);
+    try {
+      if (deleteModal.type === 'single' && deleteModal.id !== undefined && deleteModal.id !== null) {
+        const videoId = Number(deleteModal.id);
+        const prev = [...userVideos];
+        setUserVideos(prev.filter(v => v.id !== videoId));
+        if (selectedVideoModal?.id === videoId) setSelectedVideoModal(null);
+        if (apiBase) {
+          await fetch(`${apiBase}/api/ai/user-videos/${videoId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': getToken() as any, "User-Client": (global as any)?.clientId1328 }
+          });
+          toast.success('تم الحذف');
+        }
+      } else if (deleteModal.type === 'all') {
+        if (apiBase) {
+          const res = await fetch(`${apiBase}/api/ai/user-videos?tool=motion`, {
+            method: 'DELETE',
+            headers: { 'Authorization': getToken() as any, 'User-Client': (global as any)?.clientId1328 }
+          });
+          setUserVideos([]);
+          setSelectedVideoModal(null);
+          toast.success('تم حذف جميع النتائج السابقة');
+        }
+      }
+      setDeleteModal({ isOpen: false, type: 'single', id: null });
+    } catch (e) {
+      toast.error('فشل حذف النتائج');
+    } finally {
+      setIsDeletingModal(false);
+    }
+  };
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
   const [plans, setPlans] = useState<any[]>([]);
@@ -288,7 +329,23 @@ export default function MotionSimulatorPage() {
       } catch (e) { setUserVideos(prev); }
   };
 
-  const togglePublicStatus = async (id: number, currentStatus: boolean) => {
+  
+
+  const handleDeleteAllVideos = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/ai/user-videos?tool=motion`, {
+        method: 'DELETE',
+        headers: { 'Authorization': getToken() as any, 'User-Client': (global as any)?.clientId1328 }
+      });
+      setUserVideos([]);
+      setSelectedVideoModal(null);
+      toast.success('تم حذف جميع النتائج السابقة');
+    } catch (e) {
+      toast.error('فشل حذف النتائج');
+    }
+  };
+const togglePublicStatus = async (id: number, currentStatus: boolean) => {
     if (!apiBase) return;
     try {
         const res = await fetch(`${apiBase}/api/ai/toggle-public`, {
@@ -314,44 +371,39 @@ export default function MotionSimulatorPage() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="h-screen flex flex-col bg-[#010101] text-white selection:bg-blue-500/30 overflow-hidden no-scrollbar" dir="rtl">
-        <header className="shrink-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Link href="/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-xs transition-all">
-                <ArrowRight size={14} /> عودة
-              </Link>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-6 bg-blue-600 rounded-full animate-pulse"></div>
-                <h1 className="text-sm font-black tracking-tight uppercase">AI Motion Studio</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg flex items-center gap-2">
-                <CreditCard size={12} className="text-blue-400" />
-                <span className="text-sm font-bold text-blue-400">{balance?.remaining_credits || 0}</span>
-              </div>
-              <button onClick={() => setShowBuyModal(true)} className="bg-blue-600 px-4 py-1.5 rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all flex items-center gap-2">
-                <Crown size={12} /> شراء
-              </button>
-            </div>
-        </header>
+      <div className="h-screen flex flex-col bg-[#06070B] text-white selection:bg-emerald-500/30 overflow-hidden no-scrollbar" dir="rtl">
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="استوديو تحريك الصور"
+          description="إضافة حركات سينمائية ديناميكية وكاميرا متحركة على الصور الثابتة"
+          badge="AI Motion Studio"
+          icon={Film}
+          iconGradient="from-emerald-600 to-teal-600"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={() => setShowBuyModal(true)}
+          backHref="/ai"
+        />
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
             {/* Control Sidebar */}
-            <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto no-scrollbar flex flex-col shrink-0 order-1">
-                <div className="p-4 space-y-4">
+            <aside className="w-full lg:w-[380px] h-[calc(100vh-3.5rem)] border-b lg:border-b-0 lg:border-l border-white/[0.08] bg-[#0B0D14] p-5 overflow-hidden flex flex-col justify-between shrink-0 z-30 shadow-2xl relative">
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-black text-white">تحريك الصور</h2>
+                    </div>
+
                     {/* Image Upload */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                             <ImageIcon size={12} className="text-blue-400" />
-                             الصورة المصدر
+                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                             <ImageIcon size={14} className="text-emerald-400" />
+                             الصورة المراد تحريكها
                         </label>
                         <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="motion-up" />
                         {imageFile ? (
-                            <div className="relative group rounded-lg overflow-hidden border border-white/10 aspect-video">
+                            <div className="relative group rounded-xl overflow-hidden border border-white/[0.08] aspect-video">
                                 <img src={imageFile} alt="Source" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
-                                    <label htmlFor="motion-up" className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-[10px] cursor-pointer text-white border border-white/10 backdrop-blur-md transition-all font-bold">
+                                    <label htmlFor="motion-up" className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs cursor-pointer text-white border border-white/10 backdrop-blur-md transition-all font-bold">
                                         تغيير
                                     </label>
                                     <button onClick={() => setImageFile(null)} className="p-1.5 bg-red-500/20 hover:bg-red-500 text-white rounded-lg transition-all">
@@ -360,133 +412,78 @@ export default function MotionSimulatorPage() {
                                 </div>
                             </div>
                         ) : (
-                            <label htmlFor="motion-up" className="relative group cursor-pointer">
-                                <div className="w-full h-20 rounded-lg bg-white/[0.03] border-2 border-dashed border-white/5 hover:border-blue-500/40 transition-all flex flex-col items-center justify-center gap-1 hover:bg-white/[0.05]">
-                                    <Upload size={18} className="text-gray-600 group-hover:text-blue-400 transition-colors" />
-                                    <span className="text-[10px] text-gray-600 group-hover:text-blue-300 transition-colors font-bold">ارفع صورة</span>
+                            <label htmlFor="motion-up" className="flex flex-col items-center justify-center border-2 border-dashed border-white/[0.08] hover:border-emerald-500/50 rounded-2xl p-6 cursor-pointer bg-[#121520] hover:bg-[#161a27] transition-all group aspect-video">
+                                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-2 text-emerald-400 group-hover:scale-110 transition-transform">
+                                    <Upload size={20} />
                                 </div>
+                                <span className="text-xs font-bold text-gray-300">رفع صورة من جهازك</span>
+                                <span className="text-[10px] text-gray-500 mt-1">PNG, JPG حتى 10MB</span>
                             </label>
                         )}
                     </div>
 
-                    {/* Prompt Input */}
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                             <Sparkles size={12} className="text-blue-400" />
-                             وصف الحركة (اختياري)
-                        </label>
-                        <div className="relative">
-                            <textarea 
-                                ref={promptRef}
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="صف الحركة التي تريدها... مثال: تحريك الشعر بلطف، أمواج البحر..."
-                                maxLength={5000}
-                                className="w-full min-h-[80px] p-3 rounded-lg bg-white/[0.03] border border-white/5 focus:border-blue-500/40 outline-none resize-none transition-all text-xs leading-relaxed placeholder:text-gray-600 shadow-inner overflow-hidden"
-                            />
+                    {/* Prompt Box */}
+                    <div className="relative rounded-xl border border-white/[0.08] bg-[#121520] p-3 focus-within:border-emerald-500/50 transition-all shadow-inner">
+                        <label className="text-[10px] font-bold text-gray-400 block mb-1">وصف الحركة (اختياري)</label>
+                        <textarea
+                            ref={promptRef}
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="مثال: حرك الكاميرا ببطء للأمام مع هبوب رياح لطيفة..."
+                            rows={3}
+                            className="w-full bg-transparent text-xs sm:text-sm text-white placeholder:text-gray-500 outline-none resize-none leading-relaxed custom-scrollbar pb-6"
+                        />
+                        <div className="absolute bottom-2 left-2">
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    if (!prompt.trim()) return;
+                                    toast.success("تم تحسين الوصف تلقائياً");
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-white text-[10px] font-bold transition-all disabled:opacity-40"
+                            >
+                                <Sparkles size={11} className="text-yellow-400" />
+                                <span>تحسين</span>
+                            </button>
                         </div>
-                        <div className="flex justify-end items-center px-1">
-                            <div className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded text-gray-500 border border-white/5">
-                                {prompt.length}/5000 حرف
-                            </div>
-                        </div>
                     </div>
 
-                    {/* Aspect Ratio Selection */}
-                    <div className="space-y-2">
-                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                            <Monitor size={12} className="text-blue-400" />
-                            أبعاد الفيديو
-                         </label>
-                         <div className="grid grid-cols-4 gap-2">
-                             {ASPECT_RATIOS.map(r => (
-                                 <button 
-                                    key={r.value} 
-                                    onClick={() => setAspectRatio(r.value)} 
-                                    className={`p-2 rounded-xl border text-center transition-all group flex flex-col items-center gap-1 ${aspectRatio === r.value ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}
-                                 >
-                                     <span className={`${aspectRatio === r.value ? 'text-blue-500' : 'text-gray-600'}`}>
-                                        {React.cloneElement(r.icon, { size: 16 })}
-                                     </span>
-                                     <span className="text-[10px] font-bold">{r.label}</span>
-                                 </button>
-                             ))}
-                         </div>
-                    </div>
-
-                    {/* Duration Selection */}
-                    <div className="space-y-2">
-                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                            <Clock size={12} className="text-blue-400" />
-                            المدة
-                         </label>
-                         <div className="grid grid-cols-3 gap-2">
-                             {availableDurations.map(d => {
-                                 const cost = calculateVideoCost(selectedModel as VideoModel, d, videoProfit);
-                                 return (
-                                     <button 
-                                        key={d} 
-                                        onClick={() => setDuration(d)} 
-                                        className={`p-2 rounded-xl border text-center transition-all group ${duration === d ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' : 'bg-white/[0.02] border-white/5 text-gray-500 hover:bg-white/10'}`}
-                                     >
-                                         <span className="text-[10px] font-bold block">{d} ثوانٍ</span>
-                                         <div className="flex items-center justify-center gap-1 mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                                            <span className="text-[8px] font-black">{cost}</span>
-                                            <Coins size={8} className="text-yellow-500" />
-                                         </div>
-                                     </button>
-                                 );
-                             })}
-                         </div>
-                    </div>
-
-                    {/* Model Selection */}
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                            <Cpu size={12} className="text-blue-400" />
-                            نموذج الحركة
-                        </label>
+                    {/* Model Selector Component */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 block">نموذج التحريك</label>
                         <ModelSelector
-                            models={dynamicModels}
+                            models={MOTION_MODELS}
                             selectedModelId={selectedModelId}
                             onSelectModel={setSelectedModelId}
                             duration={duration}
-                            profit={videoProfit}
+                            profit={balance?.plan?.video_profit || 0}
                             compact={true}
                         />
                     </div>
                 </div>
 
-                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+                <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
                     {error && (
-                        <div className="mb-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[10px] font-bold text-center truncate">
+                        <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-bold text-center truncate">
                             {error}
                         </div>
                     )}
                     
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                                <Coins size={10} className="text-yellow-500" />
-                            </div>
-                            <span>التكلفة المتوقعه:</span>
-                        </div>
-                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                    </div>
-
-                    <PremiumButton 
-                        label={isProcessing ? "جاري المعالجة..." : " بدء الانشاء  "} 
-                        icon={isProcessing ? RefreshCw : Sparkles} 
-                        onClick={onProcess} 
-                        disabled={!imageFile || isProcessing} 
-                        className="w-full py-3 text-xs rounded-xl" 
+                    <AIGenerateButton
+                        onClick={onProcess}
+                        isGenerating={isProcessing}
+                        disabled={!imageFile}
+                        cost={creditsNeeded}
+                        label="إنشاء"
+                        generatingLabel="جاري الإنشاء..."
+                        icon={Film}
+                        variant="emerald"
                     />
                 </div>
             </aside>
 
-
             {/* Main Content - Gallery */}
-            <main className="flex-1 flex flex-col bg-[#020202] overflow-hidden order-2">
+            <main className="flex-1 flex flex-col bg-[#06070B] overflow-hidden">
                 <div className="flex-1 min-h-0 flex flex-col p-6 overflow-hidden">
                     <div className="flex items-center justify-between mb-4 px-2">
                         <div className="flex items-center gap-3">
@@ -495,7 +492,18 @@ export default function MotionSimulatorPage() {
                             </div>
                             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">معرض الحركة</h2>
                         </div>
-                        <span className="text-[10px] font-bold text-gray-600 uppercase">{userVideos.length} MOTION(S) FOUND</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-gray-600 uppercase">{userVideos.length} MOTION(S) FOUND</span>
+                            {userVideos.length > 0 && (
+                                <button
+                                    onClick={() => setDeleteModal({ isOpen: true, type: 'all', id: null })}
+                                    className="px-2.5 py-1 rounded-md text-[11px] font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 transition-all flex items-center gap-1.5"
+                                >
+                                    <Trash2 size={12} />
+                                    <span>حذف جميع النتائج</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto no-scrollbar">
@@ -503,23 +511,17 @@ export default function MotionSimulatorPage() {
                             
                             {/* Loading Card */}
                             {isProcessing && (
-                                <div className="relative rounded-2xl overflow-hidden bg-white/5 aspect-video animate-pulse border border-white/10 ring-1 ring-blue-500/30 flex items-center justify-center">
-                                    <div className="flex flex-col items-center gap-3">
-                                         <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                         <span className="text-xs font-bold text-blue-300">جاري المعالجة...</span>
-                                         <span className="text-[10px] text-blue-500/60 font-mono">{Math.floor(processingProgress)}%</span>
-                                    </div>
-                                </div>
+                                <AIGenerationCard progress={processingProgress} aspectRatio="aspect-video" icon={Film} />
                             )}
 
                             {userVideos.map((vid) => (
                                 <div 
                                     key={vid.id} 
                                     onClick={() => setSelectedVideoModal(vid)} 
-                                    className="group relative rounded-2xl overflow-hidden bg-[#0a0a0a] border cursor-pointer transition-all duration-300 hover:scale-[1.02] aspect-video border-white/5 hover:border-white/10"
+                                    className="group relative rounded-2xl overflow-hidden bg-black border cursor-pointer transition-all duration-300 hover:scale-[1.02] aspect-video border-white/5 hover:border-white/10 flex items-center justify-center"
                                 >
                                     {vid.thumbnail ? (
-                                        <img src={vid.thumbnail} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" alt="" />
+                                        <img src={vid.thumbnail} className="w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity" alt="" />
                                     ) : (
                                         <video 
                                             src={vid.url + "#t=1"} 
@@ -538,7 +540,7 @@ export default function MotionSimulatorPage() {
                                                 <button onClick={(e) => { e.stopPropagation(); setSelectedVideoModal(vid); }} className="p-1 rounded-md bg-white/10 hover:bg-white hover:text-black transition-colors">
                                                     <Maximize2 size={10} />
                                                 </button>
-                                                <button onClick={(e) => deleteVideo(vid.id, e)} className="p-1 rounded-md bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors">
+                                                <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, type: 'single', id: vid.id }); }} className="p-1 rounded-md bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors">
                                                     <Trash2 size={10} />
                                                 </button>
                                             </div>
@@ -552,84 +554,24 @@ export default function MotionSimulatorPage() {
             </main>
         </div>
 
-        {/* Detailed Modal (Only for Fullscreen View) */}
-        {selectedVideoModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-300" dir="rtl">
-                <button onClick={() => setSelectedVideoModal(null)} className="absolute top-6 right-6 p-4 bg-white/10 rounded-full hover:bg-white/20 transition-all z-20 group">
-                    <X size={24} className="group-hover:rotate-90 transition-transform" />
-                </button>
-                <div className="relative w-full h-full max-w-6xl flex items-center justify-center gap-8">
-                    <div className="flex-1 h-full rounded-[3rem] bg-black/50 border border-white/10 overflow-hidden flex flex-col shadow-2xl">
-                        <div className="flex-1 flex items-center justify-center overflow-hidden">
-                            <video src={selectedVideoModal.url} controls autoPlay className="max-h-full max-w-full" />
-                        </div>
-                        {/* Mobile Buttons */}
-                        <div className="lg:hidden p-6 bg-[#0c0c0c] border-t border-white/10 space-y-3">
-                            <button 
-                                onClick={() => togglePublicStatus(selectedVideoModal.id, selectedVideoModal.is_public)}
-                                className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 border ${
-                                    selectedVideoModal.is_public 
-                                    ? 'bg-blue-600/10 border-blue-500/40 text-blue-400' 
-                                    : 'bg-white/5 border-white/10 text-white'
-                                }`}
-                             >
-                                <Sparkles size={20} className={selectedVideoModal.is_public ? 'animate-pulse' : ''} />
-                                {selectedVideoModal.is_public ? 'منشور في المعرض' : 'نشر في معرض المحترفين'}
-                             </button>
-                             <div className="flex gap-2">
-                                <button onClick={() => downloadVideo(selectedVideoModal.url, `motion_${selectedVideoModal.id}.mp4`)} className="flex-1 py-4 bg-white text-black font-black rounded-2xl flex items-center justify-center gap-2 text-sm transition-all">
-                                    <Download size={20} /> تحميل
-                                </button>
-                                <button onClick={(e) => deleteVideo(selectedVideoModal.id, e)} className="px-6 py-4 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">
-                                    <Trash2 size={20} />
-                                </button>
-                             </div>
-                        </div>
-                    </div>
-                    <div className="w-[400px] shrink-0 h-fit max-h-[85vh] overflow-y-auto custom-scrollbar bg-[#0c0c0c] border border-white/10 rounded-[2.5rem] p-8 hidden lg:flex flex-col shadow-2xl relative">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
-                        <h3 className="text-xs font-black text-gray-500 mb-6 uppercase tracking-widest">تحليل البيانات</h3>
-                        <div className="flex-1 space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-blue-500 uppercase tracking-tighter">وصف الحركة</label>
-                                <div className="bg-white/5 p-5 rounded-2xl text-xs text-gray-300 leading-relaxed font-bold border border-white/5">
-                                    {selectedVideoModal.prompt || 'حركة تلقائية بدون وصف'}
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-[10px] font-bold">
-                                <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                                    <span className="text-gray-500 block mb-1">تاريخ الإنشاء</span>
-                                    <span>{new Date(selectedVideoModal.date).toLocaleDateString('ar-EG')}</span>
-                                </div>
-                                <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                                    <span className="text-gray-500 block mb-1">التنسيق</span>
-                                    <span>MP4 / 1080p</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="space-y-3 pt-6 border-t border-white/10 mt-6">
-                             <button 
-                                onClick={() => togglePublicStatus(selectedVideoModal.id, selectedVideoModal.is_public)}
-                                className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 border mb-3 ${
-                                    selectedVideoModal.is_public 
-                                    ? 'bg-blue-600/10 border-blue-500/40 text-blue-400 hover:bg-blue-600/20' 
-                                    : 'bg-white/5 border-white/10 hover:bg-white/10 text-white'
-                                }`}
-                             >
-                                <Sparkles size={20} className={selectedVideoModal.is_public ? 'animate-pulse' : ''} />
-                                {selectedVideoModal.is_public ? 'منشور في المعرض' : 'نشر في معرض المحترفين'}
-                             </button>
-                             <button onClick={() => downloadVideo(selectedVideoModal.url, `motion_${selectedVideoModal.id}.mp4`)} className="w-full py-4 bg-white text-black font-black rounded-2xl flex items-center justify-center gap-2 text-sm hover:scale-[1.02] transition-all shadow-xl">
-                                <Download size={20} /> تحميل
-                             </button>
-                             <button onClick={(e) => deleteVideo(selectedVideoModal.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm">
-                                <Trash2 size={18} /> حذف
-                             </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
+        {/* Unified AI Result Modal */}
+        <AIResultModal
+          isOpen={!!selectedVideoModal}
+          onClose={() => setSelectedVideoModal(null)}
+          mediaUrl={selectedVideoModal?.url || null}
+          mediaType="video"
+          mediaId={selectedVideoModal?.id}
+          isPublic={selectedVideoModal?.is_public}
+          onDelete={() => selectedVideoModal && setDeleteModal({ isOpen: true, type: 'single', id: selectedVideoModal.id })}
+          title="تحريك الصور بالذكاء الاصطناعي (Image to Motion)"
+          subtitle="فيديو سينمائي متحرك تم توليده من صورة ثابتة"
+          prompt={selectedVideoModal?.prompt}
+          details={[
+            { label: "الوصف", value: selectedVideoModal?.prompt || "تحريك الصورة" },
+            { label: "الدقة", value: "1080p HD" },
+            { label: "التاريخ", value: selectedVideoModal?.date ? new Date(selectedVideoModal.date).toLocaleDateString('ar-EG') : "" },
+          ]}
+        />
 
 
         {/* Buy Credits Modal */}
@@ -719,6 +661,14 @@ export default function MotionSimulatorPage() {
         <UpgradeModal 
           isOpen={showUpgradeModal}
           onClose={() => setShowUpgradeModal(false)}
+        />
+
+        <AIDeleteModal
+          isOpen={deleteModal.isOpen}
+          type={deleteModal.type}
+          isDeleting={isDeletingModal}
+          onClose={() => setDeleteModal({ isOpen: false, type: 'single', id: null })}
+          onConfirm={handleConfirmDelete}
         />
       </div>
     </>

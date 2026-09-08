@@ -1,621 +1,474 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { 
+  Sparkles, 
+  Download, 
+  Video, 
+  CheckCircle2, 
+  X,
+  Play,
+  Film,
+  Users,
+  Smartphone
+, Trash2 } from "lucide-react";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import PaymentModal from "@/components/Modals/PaymentModal";
+import { toast, Toaster } from "react-hot-toast";
 import UpgradeModal from "@/components/Modals/UpgradeModal";
-import Link from "next/link";
-import { toast, Toaster } from 'react-hot-toast';
-import { ArrowRight, Users, Download, X, RefreshCw, CreditCard, Crown, ArrowLeft, Play, Layers, Heart, MessageCircle, Share2, Trash2, Film, Coins, Sparkles } from 'lucide-react';
-import { PremiumButton } from "@/components/PremiumButton";
+import { 
+  AIToolHeader, 
+  AIGenerateButton, 
+  AIGenerationCard, 
+  AIResultModal, 
+  downloadMediaDirectly,
+  AIDeleteModal
+} from "@/components/ai";
+import { handleAuthError } from "@/utils/auth";
+import { useAiPricing } from '@/hooks/useAiPricing';
 
-type CreditsRecord = {
-  users_credits_id: number;
-  user_id: number;
-  plan_id: number;
-  plan_name: string;
-  period: "day" | "month" | "year" | string;
-  total_credits: number;
-  remaining_credits: number;
-  endedAt: string;
-  createdAt: string;
-  plan?: { 
-    plan_id: number; 
-    plan_name: string; 
-    period: string; 
-    video_profit: number;
-  };
-};
+interface GenerationResult {
+  id?: number;
+  url: string;
+  prompt: string;
+  styleName: string;
+  time: string;
+}
 
 const UGC_STYLES = [
-    { id: 'authentic', name: 'أصيل', iconType: 'heart', desc: 'محتوى طبيعي وحقيقي' },
-    { id: 'trendy', name: 'عصري', iconType: 'share2', desc: 'يواكب الترندات الحالية' },
-    { id: 'casual', name: 'عادي', iconType: 'message', desc: 'بسيط ومريح يومي' },
+  { id: 'authentic', name: 'عفوي وطبيعي (Authentic)', desc: 'تصوير كاميرا هاتف واقعي كأن مستخدم حقيقي يتحدث' },
+  { id: 'trendy', name: 'تريند تيك توك (Trendy Viral)', desc: 'إيقاع سريع مع مؤثرات حركية مشجعة للتفاعل' },
+  { id: 'casual', name: 'يوميات وفلوق (Casual Vlog)', desc: 'مراجعة وتجربة حية للمنتج بأسلوب فلوج' },
 ];
 
-const getUgcIcon = (iconType: string) => {
-    switch(iconType) {
-        case 'heart': return <Heart size={16} />;
-        case 'share2': return <Share2 size={16} />;
-        case 'message': return <MessageCircle size={16} />;
-        default: return <Heart size={16} />;
-    }
-};
-
 export default function UGCPage() {
-  const [balance, setBalance] = useState<CreditsRecord | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(false);
-  const [prompt, setPrompt] = useState('');
-  const [style, setStyle] = useState('authentic');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [userMedia, setUserMedia] = useState<Array<{ id: number; url: string; prompt: string }>>([]);
-  const [loadingMedia, setLoadingMedia] = useState(false);
+  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4560', []);
+  const getToken = useCallback(() => typeof window !== 'undefined' ? localStorage.getItem("a") : null, []);
+  
+  // State
+  const [prompt, setPrompt] = useState<string>('');
+  const [style, setStyle] = useState<string>('authentic');
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  
+  const [history, setHistory] = useState<GenerationResult[]>([]);
+  const [selectedModalItem, setSelectedModalItem] = useState<GenerationResult | null>(null);
+  const [balance, setBalance] = useState<any>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'all';
+    id?: number | string | null;
+  }>({ isOpen: false, type: 'single', id: null });
+  const [isDeletingModal, setIsDeletingModal] = useState(false);
 
-  const [plans, setPlans] = useState<Array<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string }>>([]);
-  const [loadingPlans, setLoadingPlans] = useState(false);
-  const [openPaymentModal, setOpenPaymentModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
-
-  const [clientReady, setClientReady] = useState(false);
-  const promptRef = useRef<HTMLTextAreaElement>(null);
-
-  // Auto-resize prompt textarea
-  useEffect(() => {
-    if (promptRef.current) {
-      promptRef.current.style.height = '80px'; 
-      const scrollHeight = promptRef.current.scrollHeight;
-      if (scrollHeight > 80) {
-        promptRef.current.style.height = `${scrollHeight}px`;
+  const handleConfirmDelete = async () => {
+    setIsDeletingModal(true);
+    try {
+      if (deleteModal.type === 'single' && deleteModal.id !== undefined && deleteModal.id !== null) {
+        await handleDeleteSingle(deleteModal.id, true);
+      } else if (deleteModal.type === 'all') {
+        await handleDeleteAll();
       }
+      setDeleteModal({ isOpen: false, type: 'single', id: null });
+    } finally {
+      setIsDeletingModal(false);
     }
-  }, [prompt]);
+  };
 
-  const baseCredits = 20;
-  const videoProfit = balance?.plan?.video_profit ?? 0;
-  const creditsNeeded = baseCredits + videoProfit;
-
-  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
-
-  const getToken = useCallback(() => {
-    if (typeof window !== 'undefined') return localStorage.getItem("a");
-    return null;
-  }, []);
+  const { operationPrice } = useAiPricing();
+  const creditsNeeded = operationPrice('ugc', 13);
 
   const fetchBalance = useCallback(async () => {
     if (!apiBase) return;
-    const token = getToken();
-    setLoadingBalance(true);
     try {
-      const res = await fetch(`${apiBase}/api/credits/me/balance`, { 
+      const res = await fetch(`${apiBase}/api/credits/me/balance`, {
         headers: { 
-          'Authorization': token || '', 
-          'Content-Type': 'application/json', 
-          "User-Client": (window as any)?.clientId1328 || "" 
-        } 
+          'Authorization': getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        }
       });
-      if (res.ok) {
-        const data = (await res.json()) as CreditsRecord | null;
-        setBalance(data);
+      if (res.status === 401 || res.status === 403) {
+        handleAuthError(res.status);
+        return;
       }
-    } catch (e: any) {
-      console.error("Balance fetch error:", e);
-    } finally {
-      setLoadingBalance(false);
-    }
+      if (res.ok) setBalance(await res.json());
+    } catch (e) {}
   }, [apiBase, getToken]);
 
-  const loadPlans = useCallback(async () => {
+  const fetchHistory = useCallback(async () => {
     if (!apiBase) return;
-    setLoadingPlans(true);
     try {
-      const res = await fetch(`${apiBase}/api/credits/plans`);
+      const res = await fetch(`${apiBase}/api/ai/user-videos?tool=ugc&limit=50`, {
+        headers: { 
+          'Authorization': getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        }
+      });
+      if (res.status === 401 || res.status === 403) {
+        handleAuthError(res.status);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
-        setPlans(data);
+        if (data.success && Array.isArray(data.videos)) {
+          const mapped: GenerationResult[] = data.videos.map((v: any) => ({
+            id: v.id || v.video_id,
+            url: v.video_url || v.cloudinary_url,
+            prompt: v.prompt || 'فيديو إعلاني UGC',
+            styleName: v.style || 'UGC Authentic',
+            time: v.created_at ? new Date(v.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : ''
+          }));
+          setHistory(mapped);
+        }
+      }
+    } catch (e) {}
+  }, [apiBase, getToken]);
+
+  const handleDeleteSingle = async (idOrIdx: number | string, isVideo = true) => {
+    if (!apiBase) return;
+    try {
+      const endpoint = isVideo
+        ? `${apiBase}/api/ai/user-videos/${idOrIdx}`
+        : `${apiBase}/api/ai/user-images/${idOrIdx}`;
+      await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': getToken() || '',
+          'User-Client': (global as any)?.clientId1328 || ''
+        }
+      });
+      setHistory(prev => prev.filter((item: any) => (item.id || item.time) !== idOrIdx));
+      toast.success('تم حذف النتيجة بنجاح');
+      if (selectedModalItem && ((selectedModalItem as any).id === idOrIdx || selectedModalItem.time === idOrIdx)) {
+        setSelectedModalItem(null);
       }
     } catch (e) {
-      console.error("Plans load error:", e);
-    } finally {
-      setLoadingPlans(false);
+      toast.error('فشل حذف النتيجة');
     }
-  }, [apiBase]);
+  };
+
+  const handleDeleteAll = async () => {
+    if (!apiBase) return;
+    try {
+      await fetch(`${apiBase}/api/ai/user-videos?tool=ugc`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': getToken() || '',
+          'User-Client': (global as any)?.clientId1328 || ''
+        }
+      });
+      setHistory([]);
+      toast.success('تم حذف جميع النتائج السابقة');
+      setSelectedModalItem(null);
+    } catch (e) {
+      toast.error('فشل حذف النتائج');
+    }
+  };
+
 
   useEffect(() => {
     let cancelled = false;
-    const ensureClientId = async () => {
+    const init = async () => {
       try {
-        if (!(window as any)?.clientId1328) {
+        if (!(global as any)?.clientId1328) {
           const fp = await FingerprintJS.load();
           const result = await fp.get();
-          (window as any).clientId1328 = result.visitorId;
+          (global as any).clientId1328 = result.visitorId;
         }
         if (!cancelled) {
-          setClientReady(true);
           fetchBalance();
-          loadPlans();
+          fetchHistory();
         }
-      } catch (_) {
-        if (!cancelled) setClientReady(true); // Still set ready to allow basic interactions
-      }
+      } catch (e) {}
     };
-    ensureClientId();
+    init();
     return () => { cancelled = true; };
-  }, [fetchBalance, loadPlans]);
+  }, [fetchBalance, fetchHistory]);
 
-  const fetchUserMedia = useCallback(async () => {
-    if (!apiBase) return;
-    const token = getToken();
-    setLoadingMedia(true);
-    try {
-      const res = await fetch(`${apiBase}/api/ai/user-media?limit=12&type=video`, {
-        headers: { 
-          'Authorization': token || '', 
-          'Content-Type': 'application/json', 
-          "User-Client": (window as any)?.clientId1328 || "" 
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-            setUserMedia(data.media.map((v: any) => ({
-                id: v.media_id,
-                url: v.video_url || v.media_url || v.cloudinary_url,
-                prompt: v.prompt
-            })));
-        }
-      }
-    } catch (e) {
-      console.error("Media fetch error:", e);
-    } finally { 
-      setLoadingMedia(false); 
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast.error("يرجى كتابة سيناريو أو فكرة الفيديو");
+      return;
     }
-  }, [apiBase, getToken]);
 
-  const onGenerate = async () => {
-    if (!apiBase || !prompt.trim() || !clientReady) return;
-    
-    if (!balance || balance.remaining_credits < creditsNeeded) {
+    if (balance && balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
-    
+
     setIsGenerating(true);
-    setError('');
-    setResult(null);
-    setProcessingProgress(0);
-    
-    let progressValue = 0;
-    const progressInterval = setInterval(() => {
-      progressValue += Math.random() * 1.5 + 0.5;
-      if (progressValue >= 98) {
-        progressValue = 98;
-        clearInterval(progressInterval);
-      }
-      setProcessingProgress(progressValue);
-    }, 1000);
-    
+
     try {
-      const token = getToken();
-      const res = await fetch(`${apiBase}/api/ai/ugc-video`, {
+      const response = await fetch(`${apiBase}/api/ai/ugc-create`, {
         method: "POST",
-        headers: { 
-          'Authorization': token || '', 
-          'Content-Type': 'application/json', 
-          "User-Client": (window as any)?.clientId1328 || "" 
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
         },
-        body: JSON.stringify({ prompt: prompt.trim(), style: style }),
+        body: JSON.stringify({
+          prompt: prompt,
+          style: style
+        })
       });
-      
-      clearInterval(progressInterval);
-      
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'حدث خطأ أثناء الإنشاء');
+
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status);
+        return;
       }
 
-      const data = await res.json();
-      if (data.success) {
-        setProcessingProgress(100);
-        setResult({
-          video_url: data.video_url || data.media_url || data.cloudinary_url
-        });
-        await fetchBalance();
-        fetchUserMedia();
-        toast.success('تم إنشاء فيديو UGC بنجاح!');
-      } else {
-        setError(data.message || 'فشل إنشاء الفيديو');
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "فشلت عملية إنشاء فيديو UGC");
       }
-    } catch (e: any) {
-      clearInterval(progressInterval);
-      setError(e.message || 'خطأ في الاتصال بالخادم');
-      toast.error(e.message || 'حدث خطأ');
+
+      const activeStyleObj = UGC_STYLES.find(s => s.id === style) || UGC_STYLES[0];
+
+      const newResult: GenerationResult = {
+        id: data.video_id || data.id,
+        url: data.video_url,
+        prompt: prompt,
+        styleName: activeStyleObj.name,
+        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setHistory(prev => [newResult, ...prev]);
+      setSelectedModalItem(newResult);
+      toast.success("تم إنشاء فيديو UGC بنجاح!");
+      fetchBalance();
+
+    } catch (err: any) {
+      console.error("UGC creation error:", err);
+      toast.error(err.message || "حدث خطأ أثناء التوليد");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const deleteMedia = useCallback(async (mediaId: number) => {
-      if (!apiBase) return;
-      const token = getToken();
-      const previousMedia = [...userMedia];
-      setUserMedia(userMedia.filter(v => v.id !== mediaId));
-      try {
-          const res = await fetch(`${apiBase}/api/ai/user-media/${mediaId}`, {
-              method: 'DELETE',
-              headers: { 
-                'Authorization': token || '', 
-                "User-Client": (window as any)?.clientId1328 || "" 
-              }
-          });
-          if (!res.ok) throw new Error();
-          toast.success('تم الحذف');
-      } catch (e) {
-          setUserMedia(previousMedia);
-          toast.error('فشل الحذف');
-      }
-  }, [apiBase, getToken, userMedia]);
-
-  const deleteAllMedia = useCallback(async () => {
-      if (!confirm('حذف السجل بالكامل؟')) return;
-      if (!apiBase) return;
-      const token = getToken();
-      const previousMedia = [...userMedia];
-      setUserMedia([]);
-      try {
-          const res = await fetch(`${apiBase}/api/ai/user-media?type=video`, {
-              method: 'DELETE',
-              headers: { 
-                'Authorization': token || '', 
-                "User-Client": (window as any)?.clientId1328 || "" 
-              }
-          });
-          if (!res.ok) throw new Error();
-          toast.success('تم مسح السجل');
-      } catch (e) {
-          setUserMedia(previousMedia);
-          toast.error('فشل مسح السجل');
-      }
-  }, [apiBase, getToken, userMedia]);
-
-  const downloadVideo = async (url: string) => {
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = `nexus_ugc_video_${Date.now()}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-      toast.success('بدأ التحميل');
-    } catch (err) {
-      window.open(url, '_blank');
-    }
-  };
-
-  const [showBuyModal, setShowBuyModal] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
-  useEffect(() => {
-     if (clientReady) {
-         fetchUserMedia();
-     }
-  }, [clientReady, fetchUserMedia]);
-
-  function convertToSlug(text: string) { return text.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-'); }
-
   return (
     <>
       <Toaster position="top-right" />
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
 
-      <div className="min-h-screen bg-[#000000] text-white selection:bg-pink-500/30 font-sans no-scrollbar" dir="rtl">
-        {/* Background Ambient */}
-        <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
-        <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-pink-900/5 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-rose-900/5 blur-[120px] rounded-full pointer-events-none"></div>
+      {/* Unified AI Result Modal */}
+      <AIResultModal
+        isOpen={!!selectedModalItem}
+        onClose={() => setSelectedModalItem(null)}
+        mediaUrl={selectedModalItem?.url || null}
+        mediaType="video"
+        title="فيديوهات UGC الإعلانية (User-Generated Content)"
+        subtitle={selectedModalItem?.prompt}
+        prompt={selectedModalItem?.prompt}
+        details={[
+          { label: "الوصف والسيناريو", value: selectedModalItem?.prompt || "" },
+          { label: "النمط الإعلاني", value: selectedModalItem?.styleName || "" },
+          { label: "الرصيد المستخدم", value: `${creditsNeeded} رصيد` },
+        ]}
+        timestamp={selectedModalItem?.time}
+        creditsUsed={creditsNeeded}
+      />
 
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-          <div className="max-w-[1600px] mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/ai" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/10">
-                  <ArrowRight size={18} />
-                  <span>عودة</span>
-                </Link>
-                <span className="text-xl font-bold">فيديوهات UGC التفاعلية</span>
+      <div className="h-screen flex flex-col bg-[#06070B] text-white selection:bg-teal-500/30 overflow-hidden font-sans" dir="rtl">
+        
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="صانع فيديوهات UGC التسويقية"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={() => setShowUpgradeModal(true)}
+          backHref="/ai"
+        />
+
+        {/* ─── Studio 2-Column Layout ─── */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          
+          {/* ─── Right Column: Control Sidebar (Compact, No Scrollbar) ─── */}
+          <aside className="w-full lg:w-[360px] xl:w-[380px] h-[calc(100vh-3.5rem)] bg-[#0B0D14] border-b lg:border-b-0 lg:border-l border-white/[0.08] p-4 flex flex-col justify-between shrink-0 overflow-hidden z-30 shadow-2xl relative">
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+              
+              <div>
+                <h2 className="text-sm font-bold text-white tracking-wide">إعدادات فيديو UGC</h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">توليد مقاطع تيك توك وريلز واقعية تحاكي مراجعات وتجارب المستخدمين</p>
               </div>
 
-               <div className="flex items-center gap-4">
-                 <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
-                  {loadingBalance ? (
-                    <span className="text-xs text-gray-400">جاري التحميل...</span>
-                  ) : balance ? (
-                    <div className="flex items-center gap-2">
-                       <CreditCard size={14} className="text-pink-400" />
-                      <span className={`text-sm font-bold ${balance.remaining_credits === 0 ? 'text-red-400' : 'text-pink-400'}`}>
-                        {balance.remaining_credits}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-red-400">لا يوجد رصيد</span>
-                  )}
-                </div>
-                
-                <button
-                   onClick={() => setShowBuyModal(true)}
-                  className="relative inline-flex h-10 active:scale-95 transition overflow-hidden rounded-lg p-[1px] focus:outline-none"
-                >
-                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#ec4899_0%,#f43f5e_50%,#ec4899_100%)]"></span>
-                  <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-lg bg-[#050505] px-4 text-xs font-black text-white backdrop-blur-3xl gap-2 transition-all hover:bg-black/40">
-                    <Crown size={14} className="text-pink-500" />
-                    شراء رصيد
-                  </span>
-                </button>
+              {/* 1. Prompt / Script Input */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 block text-right">
+                  فكرة الإعلان أو سيناريو المقطع:
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="اكتب وصف المنتج وما الذي يجب أن يقوله أو يفعله الشخص في الفيديو..."
+                  rows={4}
+                  className="w-full p-3 rounded-xl bg-[#121520] border border-white/[0.08] text-xs text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/50 transition-all text-right resize-none custom-scrollbar"
+                />
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="max-w-[1600px] mx-auto p-6 pt-8">
-          <div className="grid lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Panel */}
-            <div className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-28">
-               <div className="bg-[#0c0c0c] rounded-3xl p-5 border border-white/5 relative group shadow-2xl overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-rose-600 to-red-600 opacity-50"></div>
-                
-                <div className="relative space-y-4">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest flex items-center gap-2">
-                        <Sparkles size={12} className="text-pink-400" /> موضوع الفيديو
-                    </span>
-                    <textarea 
-                        ref={promptRef}
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="صف محتوى الفيديو التفاعلي..."
-                        className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-pink-500/50 outline-none text-white text-xs font-bold transition-all placeholder:text-gray-700 min-h-[80px] resize-none overflow-hidden"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                     <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block mb-1">طابع المحتوى</span>
-                     <div className="grid grid-cols-1 gap-1.5">
-                         {UGC_STYLES.map((s) => (
-                             <button
-                                key={s.id}
-                                onClick={() => setStyle(s.id)}
-                                className={`flex items-center gap-3 p-2 rounded-xl transition-all duration-300 border ${
-                                    style === s.id
-                                    ? 'bg-pink-500/10 border-pink-500/50 text-pink-300'
-                                    : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'
-                                }`}
-                             >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${style === s.id ? 'bg-pink-500/20' : 'bg-white/5'}`}>
-                                    {getUgcIcon(s.iconType)}
-                                </div>
-                                <div className="text-right truncate">
-                                    <div className="text-[10px] font-bold">{s.name}</div>
-                                    <div className="text-[8px] text-gray-600 truncate">{s.desc}</div>
-                                </div>
-                             </button>
-                         ))}
-                     </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-white/5 space-y-3">
-                     <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                                <Coins size={10} className="text-yellow-500" />
-                            </div>
-                            <span>التكلفة المتوقعه:</span>
+              {/* 2. Style Selector */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 block text-right">
+                  نمط التصوير والإخراج:
+                </label>
+                <div className="space-y-1.5">
+                  {UGC_STYLES.map((st) => {
+                    const isSelected = style === st.id;
+                    return (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => setStyle(st.id)}
+                        className={`w-full p-2.5 rounded-xl border text-right transition-all flex items-start justify-between gap-2.5 ${
+                          isSelected
+                            ? 'bg-teal-500/15 border-teal-500/50 shadow-sm'
+                            : 'bg-[#121520] border-white/[0.08] hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-right">
+                          <span className={`text-xs font-bold ${isSelected ? 'text-teal-300' : 'text-white'}`}>
+                            {st.name}
+                          </span>
+                          <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{st.desc}</p>
                         </div>
-                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                     </div>
-
-                    <PremiumButton 
-                        label={isGenerating ? "جاري الإنشاء..." : "إنشاء فيديو UGC"}
-                        icon={isGenerating ? RefreshCw : Users}
-                        onClick={onGenerate}
-                        disabled={!prompt.trim() || isGenerating}
-                        className="w-full py-3 text-xs rounded-xl"
-                    />
-                  </div>
+                        {isSelected && (
+                          <div className="w-2 h-2 rounded-full bg-teal-400 shrink-0 mt-1.5 animate-pulse" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center flex items-center justify-center gap-2 truncate">
-                  <X size={14} />
-                  {error}
-                </div>
+            </div>
+
+            {/* Bottom Generate Action */}
+            <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
+              <AIGenerateButton
+                onClick={handleGenerate}
+                isGenerating={isGenerating}
+                disabled={!prompt.trim()}
+                cost={creditsNeeded}
+                label="إنشاء فيديو UGC"
+                generatingLabel="جاري التوليد والإنتاج..."
+                icon={Smartphone}
+                variant="emerald"
+              />
+            </div>
+          </aside>
+
+          {/* ─── Left Column: Gallery Studio Grid (Slot 1 Loading & Results) ─── */}
+          <main className="flex-1 overflow-y-auto no-scrollbar bg-[#06070B] p-4 lg:p-6 flex flex-col justify-start">
+            
+            {/* Gallery Header */}
+            <div className="flex items-center justify-between mb-4 w-full">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white tracking-wide">النتائج والمعرض</h2>
+                <span className="text-[11px] font-bold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">
+                  {history.length} {history.length === 1 ? 'نتيجة' : 'نتائج'}
+                </span>
+              </div>
+              {history.length > 0 && (
+                <button
+                  onClick={() => setDeleteModal({ isOpen: true, type: 'all', id: null })}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 transition-colors px-2.5 py-1 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
+                  title="مسح سجل UGC بالكامل"
+                >
+                  <Trash2 size={13} />
+                  <span>مسح السجل</span>
+                </button>
               )}
             </div>
 
-            {/* Right Panel */}
-            <div className="lg:col-span-8 order-2 space-y-6">
-              <div className="bg-[#080808] rounded-[3rem] border border-white/5 min-h-[500px] lg:min-h-[850px] flex items-center justify-center relative overflow-hidden group shadow-inner">
-                {result ? (
-                  <div className="relative w-full h-full p-8 flex flex-col items-center justify-center group/vid">
-                    <div className="absolute top-6 left-6 z-20">
+            {/* Gallery Grid starting at Slot 1 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full">
+              
+              {/* 1. Ghost Loading Card in Slot 1 while generating */}
+              {isGenerating && (
+                <AIGenerationCard
+                  aspectRatio="aspect-[9/16]"
+                  icon={Smartphone}
+                  className="border-teal-500/30"
+                />
+              )}
+
+              {/* 2. Results Cards */}
+              {history.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  onClick={() => setSelectedModalItem(item)}
+                  className="group relative rounded-2xl overflow-hidden bg-black border border-white/[0.08] hover:border-teal-500/50 transition-all duration-300 shadow-lg cursor-pointer aspect-[9/16] flex items-center justify-center"
+                >
+                  <video
+                    src={item.url}
+                    muted
+                    loop
+                    playsInline
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    onMouseEnter={(e) => e.currentTarget.play()}
+                    onMouseLeave={(e) => e.currentTarget.pause()}
+                  />
+
+                  {/* Floating Setting Badge */}
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-bold text-teal-300 shadow-md flex items-center gap-1">
+                    <Film size={10} />
+                    <span>{item.styleName}</span>
+                  </div>
+
+                  {/* Hover Overlay & Direct Download / Delete */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex items-end justify-between">
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-white block line-clamp-1 max-w-[140px]">{item.prompt}</span>
+                      <span className="text-[10px] text-gray-300 block">{item.time}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => setResult(null)}
-                        className="p-3 bg-black/40 backdrop-blur-xl border border-white/10 text-white rounded-full hover:bg-white/10 transition-all shadow-lg group-hover/vid:scale-110"
-                        title="إغلاق المعاينة"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteModal({ isOpen: true, type: 'single', id: item.id || idx });
+                        }}
+                        className="p-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-white shadow-lg transition-transform active:scale-95"
+                        title="حذف الفيديو"
                       >
-                        <X size={20} />
+                        <Trash2 size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadMediaDirectly(item.url, `ugc-${Date.now()}.mp4`);
+                        }}
+                        className="p-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white shadow-lg transition-transform active:scale-95"
+                        title="تحميل مباشر دون فتح صفحة جديدة"
+                      >
+                        <Download size={14} />
                       </button>
                     </div>
-
-                    <video src={result.video_url} controls className="max-h-[650px] w-full max-w-sm rounded-[2.5rem] shadow-2xl border border-white/10 animate-fade-in aspect-[9/16] bg-black" />
-                    <div className="mt-8 flex items-center gap-3">
-                        <button onClick={() => downloadVideo(result.video_url)} className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition-all font-black text-sm">
-                            <Download size={18} />
-                            <span>تحميل الفيديو</span>
-                        </button>
-                        <button onClick={() => setPrompt('')} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/10" title="مسح الموضع">
-                            <RefreshCw size={20} />
-                        </button>
-                    </div>
                   </div>
-                ) : isGenerating ? (
-                  <div className="text-center relative z-10 w-full max-w-sm px-8">
-                    <div className="w-24 h-24 relative mx-auto mb-8">
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-pink-500/10 scale-125"></div>
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-t-pink-500 animate-spin"></div>
-                        <Users className="absolute inset-0 m-auto text-pink-400 animate-pulse" size={40} />
-                    </div>
-                    <h3 className="text-2xl font-black mb-2">جاري محاكاة المحتوى...</h3>
-                    <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden mt-6 relative">
-                      <div 
-                        className="bg-gradient-to-r from-pink-500 via-rose-500 to-pink-500 h-full transition-all duration-700 shadow-[0_0_15px_rgba(236,72,153,0.5)]" 
-                        style={{ width: `${processingProgress}%` }}
-                      ></div>
-                    </div>
-                    <div className="mt-2 text-pink-400 font-mono text-xs font-bold">{Math.floor(processingProgress)}%</div>
-                  </div>
-                ) : (
-                  <div className="text-center relative z-10 p-12">
-                     <div className="w-32 h-32 bg-white/[0.02] rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-white/5 group-hover:scale-105 transition-all duration-700 shadow-inner">
-                      <Users size={64} className="text-white/5 group-hover:text-pink-500/10 transition-colors" />
-                    </div>
-                    <p className="text-gray-600 max-w-xs mx-auto font-bold text-lg leading-relaxed">اكتب القصة التي تريد أن يرويها المستخدم، وسيقوم النظام بتوليد الفيديو التفاعلي.</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              ))}
 
-               {/* Previous Works Section - UGC */}
-               <div className="mt-12 lg:col-span-12 border-t border-white/5 pt-8">
-                     <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 bg-pink-500/10 rounded-xl flex items-center justify-center text-pink-400 border border-pink-500/20">
-                              <Users size={20} />
-                           </div>
-                           <div>
-                              <h3 className="text-lg font-bold text-white">أعمالك السابقة</h3>
-                              <p className="text-xs text-gray-500 font-medium">سجل بمقاطع الفيديو التفاعلية التي قمت بإنشائها</p>
-                           </div>
-                        </div>
-                        
-                        {userMedia.length > 0 && (
-                            <button 
-                              onClick={deleteAllMedia}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs font-bold transition-all"
-                            >
-                               <Trash2 size={14} />
-                               <span>مسح السجل</span>
-                            </button>
-                        )}
-                     </div>
-
-                     {loadingMedia ? (
-                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 animate-pulse">
-                             {[...Array(6)].map((_, i) => (
-                                 <div key={i} className="aspect-video bg-white/5 rounded-2xl"></div>
-                             ))}
-                         </div>
-                     ) : userMedia.length > 0 ? (
-                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {userMedia.map((v: any) => (
-                                <div key={v.id} className="group relative aspect-video rounded-2xl overflow-hidden border border-white/5 bg-white/[0.02]">
-                                   <video 
-                                      src={v.url} 
-                                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                   />
-                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                       <button 
-                                          onClick={() => deleteMedia(v.id)}
-                                          className="p-2 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all"
-                                          title="حذف"
-                                       >
-                                           <Trash2 size={16} />
-                                       </button>
-                                       <button 
-                                          onClick={() => {
-                                              setResult({ video_url: v.url });
-                                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                                          }}
-                                          className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all"
-                                          title="فتح"
-                                       >
-                                           <Play size={16} />
-                                       </button>
-                                   </div>
-                                </div>
-                            ))}
-                         </div>
-                     ) : (
-                        <div className="py-12 text-center border border-dashed border-white/10 rounded-2xl bg-white/[0.02]">
-                           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
-                              <Layers size={24} />
-                           </div>
-                           <p className="text-gray-400 font-bold text-sm">لا توجد أعمال سابقة</p>
-                        </div>
-                     )}
+              {/* 3. Clean Empty State if no history and not generating */}
+              {history.length === 0 && !isGenerating && (
+                <div className="col-span-full py-16 flex flex-col items-center justify-center text-center p-6 rounded-2xl border border-dashed border-white/[0.08] bg-[#0B0D14]/50">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-teal-400 mb-3">
+                    <Smartphone size={26} />
                   </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {showBuyModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#111] rounded-3xl w-full max-w-lg border border-white/10 overflow-hidden relative" dir="rtl">
-            <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-pink-500 to-rose-500"></div>
-            
-            <div className="p-6 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Crown size={20} className="text-pink-400" />
-                <h2 className="text-xl font-bold text-white">إضافة رصيد</h2>
-              </div>
-              <button onClick={() => setShowBuyModal(false)} className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
-                <X size={20} className="text-gray-400" />
-              </button>
-            </div>
-            
-            <div className="p-6 max-h-[60vh] overflow-y-auto">
-              {loadingPlans ? <div className="text-center py-12 animate-pulse text-gray-500">جاري التحميل...</div> : (
-                <div className="space-y-4">
-                  {plans.map((p) => (
-                    <button key={p.plan_id} onClick={() => { setSelectedPlan(p as any); setShowBuyModal(false); setOpenPaymentModal(true); }} className="w-full p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-right transition-all border border-white/5 hover:border-pink-500/50 group flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-white group-hover:text-pink-400 transition-colors">{p.plan_name}</div>
-                        <div className="text-gray-400 text-xs mt-1">{p.credits_per_period} نقطة / {p.period}</div>
-                      </div>
-                      <div className="text-white font-bold text-xl bg-white/10 px-3 py-1 rounded-lg group-hover:bg-pink-500">${p.amount}</div>
-                    </button>
-                  ))}
+                  <h3 className="text-sm font-bold text-white">لا توجد نتائج سابقة بعد</h3>
                 </div>
               )}
+
             </div>
-          </div>
-        </div>
-      )}
 
-      {openPaymentModal && selectedPlan && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100]">
-          <div className="w-full max-w-[1200px]">
-            <PaymentModal
-              modalOpen={openPaymentModal} setModalOpen={setOpenPaymentModal}
-              productType="credits" period={selectedPlan.period as any} productId={selectedPlan.plan_id}
-              productData={{ tool_name: selectedPlan.plan_name, pack_name: selectedPlan.plan_name, monthly_price: selectedPlan.amount, yearly_price: selectedPlan.amount, tool_day_price: selectedPlan.amount, amount: selectedPlan.amount }}
-              onBuySuccess={() => { setOpenPaymentModal(false); fetchBalance(); }}
-            />
-          </div>
-        </div>
-      )}
+          </main>
 
-      <UpgradeModal 
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
+        </div>
+      </div>
+      <AIDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        type={deleteModal.type}
+        itemType="فيديو UGC"
+        isDeleting={isDeletingModal}
       />
     </>
   );

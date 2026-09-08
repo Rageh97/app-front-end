@@ -43,15 +43,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   }, []);
 
   // Use default language until component is mounted
-  const language = mounted ? i18n.language : 'en';
-  const direction = mounted ? (i18n.language === 'ar' ? 'rtl' : 'ltr') : 'ltr';
+  const language = mounted ? i18n.language : 'ar';
+  const direction = mounted ? (i18n.language === 'ar' ? 'rtl' : 'ltr') : 'rtl';
 
   return (
-    <html lang={language} dir={direction}>
+    <html lang={language} dir={direction} className="dark">
       <Head>
         <title>Nexus Toolz</title>
       </Head>
-      <body>
+      <body className="dark">
         <I18nextProvider i18n={i18n}>
           <Providers>{children}</Providers>
         </I18nextProvider>

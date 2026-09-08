@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/utils/api";
 import {
-  MessageSquare,
   X,
   Check,
-  Image as ImageIcon,
+  CheckCheck,
   Smile,
   Send,
   Paperclip,
   Headphones,
-  ExternalLink,
+  ArrowDown,
+  Loader2,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,6 +30,12 @@ type Message = {
   is_read_by_admin?: boolean;
 };
 
+const EMOJI_LIST = [
+  "👋", "👍", "❤️", "🔥", "✨", "🚀", "😊", "🙏",
+  "💯", "⚡", "💡", "🎯", "🎉", "👌", "🤝", "🤩",
+  "🤔", "😅", "🙌", "😎", "💪", "💐", "🌟", "✅"
+];
+
 export default function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,14 +45,17 @@ export default function ChatWidget() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [showWelcome, setShowWelcome] = useState<boolean>(false);
   const [stickToBottom, setStickToBottom] = useState<boolean>(true);
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
+
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const { t, i18n } = useTranslation();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const { i18n } = useTranslation();
 
   const isRtl = i18n.language === "ar";
+  const whatsappUrl = "https://wa.me/9647702930873";
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -68,50 +79,51 @@ export default function ChatWidget() {
     if (!open) return;
     fetchMessages();
     setUnreadCount(0);
-    const id = setInterval(fetchMessages, 5000);
+    const id = setInterval(fetchMessages, 4000);
     return () => clearInterval(id);
   }, [open, fetchMessages]);
 
   useEffect(() => {
     if (open) return;
     fetchUnreadCount();
-    const id = setInterval(fetchUnreadCount, 30000);
+    const id = setInterval(fetchUnreadCount, 25000);
     return () => clearInterval(id);
   }, [open, fetchUnreadCount]);
 
   useEffect(() => {
-    if (!open) return;
-    try {
-      const stored = typeof window !== 'undefined' ? window.localStorage.getItem('chatWelcomeShown') : '1';
-      if (!stored) {
-        setShowWelcome(true);
-      } else {
-        setShowWelcome(false);
-      }
-    } catch (_) {
-      setShowWelcome(false);
-    }
-  }, [open]);
+    const handleOpenChat = () => setOpen(true);
+    window.addEventListener("open-support-chat", handleOpenChat);
+    return () => window.removeEventListener("open-support-chat", handleOpenChat);
+  }, []);
 
-  useEffect(() => {
-    if (!open) return;
+  const scrollToBottom = useCallback((smooth = true) => {
     const el = messagesContainerRef.current;
-    if (el && stickToBottom) {
+    if (el) {
       el.scrollTo({
         top: el.scrollHeight,
-        behavior: 'smooth'
+        behavior: smooth ? "smooth" : "auto",
       });
     }
-  }, [messages, open, stickToBottom]);
+  }, []);
 
   useEffect(() => {
-    if (open) setStickToBottom(true);
-  }, [open]);
+    if (!open) return;
+    if (stickToBottom) {
+      scrollToBottom(true);
+    }
+  }, [messages, open, stickToBottom, scrollToBottom]);
+
+  useEffect(() => {
+    if (open) {
+      setStickToBottom(true);
+      setTimeout(() => scrollToBottom(false), 100);
+    }
+  }, [open, scrollToBottom]);
 
   const onMessagesScroll = useCallback(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
-    const threshold = 60;
+    const threshold = 70;
     const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
     setStickToBottom(atBottom);
   }, []);
@@ -128,6 +140,27 @@ export default function ChatWidget() {
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          setSelectedImage(file);
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setImagePreview(event.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    }
+  };
+
   const removeImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
@@ -137,21 +170,15 @@ export default function ChatWidget() {
   };
 
   const addEmoji = (emoji: string) => {
-    setInput(prev => prev + emoji);
+    setInput((prev) => prev + emoji);
     setShowEmojiPicker(false);
-  };
-
-  const openImageModal = (imageUrl: string) => {
-    setSelectedImageUrl(imageUrl);
-  };
-
-  const closeImageModal = () => {
-    setSelectedImageUrl(null);
+    textareaRef.current?.focus();
   };
 
   const onSend = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed && !selectedImage) return;
+
     setIsSending(true);
     try {
       const formData = new FormData();
@@ -167,12 +194,7 @@ export default function ChatWidget() {
           "Content-Type": "multipart/form-data",
         },
       });
-      try {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('chatWelcomeShown', '1');
-        }
-      } catch (_) {}
-      setShowWelcome(false);
+
       setInput("");
       setSelectedImage(null);
       setImagePreview(null);
@@ -180,32 +202,29 @@ export default function ChatWidget() {
         fileInputRef.current.value = "";
       }
       await fetchMessages();
+      setStickToBottom(true);
+      scrollToBottom(true);
     } finally {
       setIsSending(false);
     }
-  }, [input, selectedImage, fetchMessages]);
+  }, [input, selectedImage, fetchMessages, scrollToBottom]);
 
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        onSend();
-      }
-    },
-    [onSend]
-  );
-
-  const headerTitle = useMemo(() => t("chat.supportChat"), [t]);
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSend();
+    }
+  };
 
   return (
-    <div className={`fixed bottom-6 right-2 z-[1000] font-cairo`}>
-      {/* Toggle Button */}
+    <div className="fixed bottom-6 right-6 z-[1000] font-sans select-none" dir={isRtl ? "rtl" : "ltr"}>
+      {/* Floating Trigger Button */}
       <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         onClick={() => setOpen((v) => !v)}
-        className="group relative flex items-center justify-center transition-all focus:outline-none"
-        aria-label={open ? "Close chat" : "Open chat"}
+        className="group relative flex h-14 w-14 items-center justify-center rounded-2xl bg-[#141b2d] border border-white/20 text-white shadow-[0_12px_35px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-emerald-400 hover:shadow-[0_12px_40px_rgba(0,196,140,0.3)] focus:outline-none"
+        aria-label={open ? "إغلاق المحادثة" : "فتح محادثة الدعم"}
       >
         <AnimatePresence mode="wait">
           {open ? (
@@ -214,226 +233,255 @@ export default function ChatWidget() {
               initial={{ rotate: -90, opacity: 0 }}
               animate={{ rotate: 0, opacity: 1 }}
               exit={{ rotate: 90, opacity: 0 }}
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-[#190237] text-white shadow-xl"
+              className="text-slate-300 group-hover:text-white"
             >
-              <X size={24} />
+              <X size={22} />
             </motion.div>
           ) : (
             <motion.div
               key="open"
-              initial={{ scale: 0.5, opacity: 0 }}
+              initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.5, opacity: 0 }}
+              exit={{ scale: 0.7, opacity: 0 }}
+              className="relative flex items-center justify-center"
             >
-              <img src="/images/support.gif" alt="chat" className="w-15 h-15 object-contain" />
+              <Headphones size={24} className="text-emerald-400 transition-transform duration-300 group-hover:scale-110" />
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400 border-2 border-[#141b2d]"></span>
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Unread Messages Badge */}
         {unreadCount > 0 && !open && (
-          <span className="absolute right-2 top-2 flex h-6 w-6 animate-bounce items-center justify-center rounded-full bg-[#ef4444] text-[10px] font-bold text-white shadow-lg ring-2 ring-white">
-            {unreadCount > 10 ? '10+' : unreadCount}
+          <span className="absolute -top-2 -right-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-black text-white shadow-lg ring-2 ring-[#141b2d] animate-bounce">
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </motion.button>
 
-      {/* Chat Panel */}
+      {/* Chat Window Panel (High Contrast Elevated Clean Surface) */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9, transformOrigin: "bottom right" }}
+            initial={{ opacity: 0, y: 25, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className={`absolute bottom-20 right-0 flex h-[500px] w-[320px] sm:w-[380px] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:bg-[#150a24]`}
+            exit={{ opacity: 0, y: 25, scale: 0.95 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className={`absolute bottom-18 right-0 flex flex-col overflow-hidden rounded-[22px] border border-white/20 bg-[#141a2c] text-slate-100 shadow-[0_25px_70px_rgba(0,0,0,0.85)] transition-all duration-300 ${
+              isExpanded
+                ? "h-[620px] w-[95vw] sm:w-[520px] max-h-[88vh]"
+                : "h-[540px] w-[92vw] sm:w-[390px] max-h-[82vh]"
+            }`}
           >
             {/* Header */}
-            <div className="relative overflow-hidden bg-gradient-to-r from-[#190237] to-[#4f008c] px-6 py-5 text-white">
-              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/5 blur-2xl" />
-              <div className="relative flex items-center gap-3">
-                <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-md">
-                    <Headphones size={20} className="text-[#00c48c]" />
-                  </div>
-                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#190237] bg-[#00c48c]" />
+            <div className="relative z-10 flex items-center justify-between border-b border-white/10 bg-[#1c243c] px-4 py-3.5 shadow-sm">
+              <div className="flex items-center gap-3">
+                {/* Support Icon */}
+                <div className="relative grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                  <Headphones size={18} />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#1c243c]"></span>
                 </div>
+
                 <div>
-                  <h3 className="text-sm font-bold leading-none">{headerTitle}</h3>
-                  <p className="mt-1 text-[10px] text-white/60">
-                    {isRtl ? "نحن متصلون لمساعدتك" : "We are online to help you"}
-                  </p>
+                  <h3 className="text-sm font-bold text-white">الدعم الفني المباشر</h3>
+                  <p className="text-[10px] text-emerald-400 font-medium">متصل الآن لمساعدتك</p>
                 </div>
+              </div>
+
+              {/* Header Actions */}
+              <div className="flex items-center gap-1.5">
+                {/* Direct WhatsApp Link */}
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="تواصل عبر واتساب"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition hover:bg-emerald-500/20 active:scale-95"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.057 22l4.98-1.308A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.992 13.923c-.207.583-1.025 1.092-1.636 1.22-.418.087-.965.157-2.798-.605-2.347-.974-3.86-3.344-3.978-3.5-.115-.157-.946-1.26-.946-2.403 0-1.144.598-1.708.81-1.942.213-.234.464-.292.619-.292.155 0 .31.002.445.008.143.007.334-.055.522.398.193.465.658 1.605.716 1.722.058.117.097.253.02.408-.077.155-.116.252-.232.388-.116.136-.245.304-.35.408-.117.117-.238.243-.102.476.136.233.603.996 1.295 1.613.89.794 1.64 1.04 1.873 1.156.233.117.369.097.505-.058.136-.156.582-.68.737-.913.155-.233.31-.194.524-.116.213.077 1.357.64 1.59.757.233.116.388.174.446.271.058.098.058.563-.149 1.146z"
+                      fill="#25D366"
+                    />
+                  </svg>
+                </a>
+
+                {/* Expand / Minimize */}
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  title={isExpanded ? "تصغير" : "تكبير"}
+                  className="hidden sm:grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                >
+                  {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+
+                {/* Close Button */}
                 <button
                   onClick={() => setOpen(false)}
-                  className={`${isRtl ? 'mr-auto' : 'ml-auto'} rounded-full p-2 text-white/50 transition-colors hover:bg-white/10 hover:text-white`}
+                  title="إغلاق"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-slate-300 transition hover:bg-white/10 hover:text-white"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Messages Container */}
+            {/* Messages Container (Clean High-Contrast Background) */}
             <div
               ref={messagesContainerRef}
               onScroll={onMessagesScroll}
-              className="flex-1 space-y-4 overflow-y-auto p-6 scroll-smooth scrollbar-hide dark:bg-[#0d011d]/50"
+              className="relative flex-1 space-y-3 overflow-y-auto p-4 bg-[#0e1322] scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10"
             >
-              {showWelcome && messages.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl border border-[#ff7702]/20 bg-[#ff7702]/5 p-4 text-center"
-                >
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#ff7702]/10">
-                    <Smile className="text-[#ff7702]" size={24} />
+              {/* Empty / Clean Welcome State */}
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center text-center h-full py-8">
+                  <div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-sm">
+                    <Headphones size={24} />
                   </div>
-                  <h4 className="text-sm font-bold text-gray-800 dark:text-white">
-                    {isRtl ? "مرحباً بك في NEXUS Support" : "Welcome to NEXUS Support"}
+                  <h4 className="text-sm font-bold text-white">
+                    أهلاً بك في الدعم المباشر
                   </h4>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {isRtl ? "كيف يمكننا مساعدتك اليوم؟ سنقوم بالرد عليك خلال دقائق." : "How can we help you today? We will respond within minutes."}
+                  <p className="mt-1 text-xs text-slate-400 max-w-[260px] leading-relaxed">
+                    كيف يمكننا مساعدتك اليوم؟ اترك رسالتك وسنرد عليك فوراً.
                   </p>
-                </motion.div>
+                </div>
               )}
 
-              {messages.map((m) => {
+              {/* Messages Feed */}
+              {messages.map((m, idx) => {
                 const isUser = m.sender_role === "user";
+                const isRead = m.is_read_by_admin || m.is_read_by_user;
+
                 return (
-                  <motion.div
-                    key={m.message_id}
-                    initial={{ opacity: 0, x: isUser ? 20 : -20, y: 10 }}
-                    animate={{ opacity: 1, x: 0, y: 0 }}
-                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                  <div
+                    key={m.message_id || idx}
+                    className={`flex items-end gap-2 ${isUser ? "justify-start flex-row-reverse" : "justify-start"}`}
                   >
-                    <div className={`group relative flex max-w-[85%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+                    <div className={`flex max-w-[84%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+                      {/* Bubble */}
                       <div
-                        className={`overflow-hidden px-4 py-2.5 shadow-sm ${
+                        className={`overflow-hidden rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed select-text ${
                           isUser
-                            ? `bg-gradient-to-br from-[#190237] to-[#4f008c] text-white ${isRtl ? 'rounded-2xl rounded-tl-none' : 'rounded-2xl rounded-tr-none'}`
-                            : `bg-gray-100 dark:bg-white/5 text-gray-800 dark:text-white ${isRtl ? 'rounded-2xl rounded-tr-none' : 'rounded-2xl rounded-tl-none'}`
+                            ? "bg-[#00c48c] text-slate-950 font-semibold rounded-br-xs shadow-sm"
+                            : "bg-[#1c243c] border border-white/10 text-slate-100 rounded-bl-xs shadow-sm"
                         }`}
                       >
+                        {/* Attached Image */}
                         {m.image_url && (
-                          <div className="mb-2 relative group/img overflow-hidden rounded-lg">
+                          <div className="mb-2 overflow-hidden rounded-xl border border-black/20 bg-black/40">
                             <img
                               src={`${process.env.NEXT_PUBLIC_API_URL}${m.image_url}`}
-                              alt="Chat attachment"
-                              className="max-h-[200px] w-full object-cover transition-transform duration-500 group-hover/img:scale-105 cursor-pointer"
-                              onClick={() => openImageModal(`${process.env.NEXT_PUBLIC_API_URL}${m.image_url}`)}
+                              alt="مرفق"
+                              className="max-h-[220px] w-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                              onClick={() => setSelectedImageUrl(`${process.env.NEXT_PUBLIC_API_URL}${m.image_url}`)}
                             />
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                               <ExternalLink size={18} className="text-white" />
-                            </div>
                           </div>
                         )}
+
+                        {/* Text */}
                         {m.content && (
-                          <div className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
+                          <div className="whitespace-pre-wrap break-words">
                             {m.content}
                           </div>
                         )}
                       </div>
-                      
-                      <div className="mt-1 flex items-center gap-1.5 px-1">
-                        <span className="text-[9px] text-gray-400 dark:text-gray-500">
-                          {new Date(m.createdAt).toLocaleTimeString(isRtl ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+
+                      {/* Timestamp & Status */}
+                      <div className="mt-1 flex items-center gap-1 px-1 text-[10px] text-slate-400 font-medium">
+                        <span>
+                          {new Date(m.createdAt).toLocaleTimeString(isRtl ? "ar-EG" : "en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
                         {isUser && (
-                          <div className="flex items-center">
-                            <Check size={10} className={m.is_read_by_admin ? "text-[#00c48c]" : "text-gray-300"} />
-                            {m.is_read_by_admin && <Check size={10} className="-ml-1 text-[#00c48c]" />}
-                          </div>
+                          <span className="flex items-center">
+                            {isRead ? (
+                              <CheckCheck size={13} className="text-emerald-400" />
+                            ) : (
+                              <Check size={13} className="text-slate-400" />
+                            )}
+                          </span>
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
 
-            {/* Input Area */}
-            <div className="border-t border-gray-100 active:p-4 bg-gray-50/50 p-4 dark:border-white/5 dark:bg-white/5">
-              {/* Image Preview Overlay */}
+            {/* Scroll Down Pill */}
+            {!stickToBottom && (
+              <button
+                onClick={() => {
+                  setStickToBottom(true);
+                  scrollToBottom(true);
+                }}
+                className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full border border-white/20 bg-[#1c243c] px-3 py-1 text-[11px] font-bold text-white shadow-lg transition hover:bg-[#252f4c]"
+              >
+                <ArrowDown size={12} className="text-emerald-400" />
+                <span>الرسائل الأخيرة</span>
+              </button>
+            )}
+
+            {/* Input Bar */}
+            <div className="border-t border-white/10 bg-[#161d31] p-3">
+              {/* Image Preview */}
               <AnimatePresence>
                 {imagePreview && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="mb-3 relative inline-block group"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 5 }}
+                    className="mb-2 inline-flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-[#0e1322] p-1.5 pr-2.5"
                   >
-                    <div className="relative h-16 w-16 overflow-hidden rounded-xl border-2 border-[#ff7702]/30 shadow-lg">
+                    <div className="h-9 w-9 overflow-hidden rounded-lg border border-emerald-400/40">
                       <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                      <button
-                        onClick={removeImage}
-                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-colors hover:bg-red-500"
-                      >
-                        <X size={10} />
-                      </button>
                     </div>
+                    <span className="text-[11px] font-bold text-emerald-300">صورة مرفقة</span>
+                    <button
+                      onClick={removeImage}
+                      className="grid h-5 w-5 place-items-center rounded-full bg-white/10 text-white hover:bg-red-500 transition"
+                    >
+                      <X size={11} />
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                   <div className={`flex items-center gap-1 rounded-2xl bg-white px-2 py-1 shadow-sm transition-all focus-within:shadow-md dark:bg-white/5 border border-gray-200 dark:border-white/10 focus-within:border-[#4f008c]/30`}>
-                    <button
-                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="p-1.5 text-gray-400 transition-colors hover:text-[#ff7702]"
-                      type="button"
-                    >
-                      <Smile size={18} />
-                    </button>
-                    <input
-                      className="flex-1 bg-transparent px-2 py-1.5 text-[13px] outline-none placeholder:text-gray-400 dark:text-white"
-                      placeholder={t("chat.Type")}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={onKeyDown}
-                      disabled={isSending}
-                    />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-1.5 text-gray-400 transition-colors hover:text-blue-500"
-                      type="button"
-                    >
-                      <Paperclip size={18} />
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                      className="hidden"
-                    />
-                   </div>
-                </div>
-
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={onSend}
-                  disabled={isSending || (!input.trim() && !selectedImage)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#190237] to-[#4f008c] text-white shadow-lg transition-all disabled:opacity-50 disabled:grayscale`}
-                >
-                  <Send size={16} className={isRtl ? "rotate-180" : ""} />
-                </motion.button>
-              </div>
 
               {/* Emoji Picker Popover */}
               <AnimatePresence>
                 {showEmojiPicker && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute bottom-[80px] left-4 right-4 z-10 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl dark:border-white/10 dark:bg-gray-800"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 5 }}
+                    className="absolute bottom-full mb-2 left-3 right-3 z-20 overflow-hidden rounded-2xl border border-white/20 bg-[#1c243c] p-2.5 shadow-2xl"
                   >
-                    <div className="grid grid-cols-8 gap-1 p-2 max-h-[140px] overflow-y-auto scrollbar-hide">
-                      {['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '😎', '🤩', '🥳', '😏', '😒', '😔', '😟', '😕', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😴', '🤤', '🤒', '😷', '💩', '👻', '💀', '👽', '🤖', '🎃', '😺', '🤲', '👍', '👎', '👊', '👌', '🙌', '🙏', '🤝', '🔥', '⚡', '✨', '🎈', '🎉', '❤️', '💔', '❣️', '💯'].map((emoji, index) => (
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-white/10 text-[11px] font-bold text-slate-300">
+                      <span>إيموجي</span>
+                      <button onClick={() => setShowEmojiPicker(false)} className="text-slate-400 hover:text-white">
+                        <X size={13} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-8 gap-1">
+                      {EMOJI_LIST.map((emoji, idx) => (
                         <button
-                          key={index}
+                          key={idx}
+                          type="button"
                           onClick={() => addEmoji(emoji)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors hover:bg-gray-100 dark:hover:bg-white/5"
+                          className="grid h-8 w-8 place-items-center rounded-lg text-base transition hover:bg-white/10"
                         >
                           {emoji}
                         </button>
@@ -442,12 +490,68 @@ export default function ChatWidget() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Input Row */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative flex items-center gap-1 rounded-xl border border-white/15 bg-[#0e1322] px-2 py-1 focus-within:border-emerald-400 transition">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:text-amber-300"
+                    title="إيموجي"
+                  >
+                    <Smile size={17} />
+                  </button>
+
+                  <textarea
+                    ref={textareaRef}
+                    rows={1}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    onPaste={handlePaste}
+                    placeholder="اكتب رسالتك... (أو الصق صورة)"
+                    className="flex-1 max-h-24 resize-none bg-transparent px-1 py-1 text-xs sm:text-[13px] text-white outline-none placeholder:text-slate-500 scrollbar-none"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:text-sky-400"
+                    title="إرفاق صورة"
+                  >
+                    <Paperclip size={16} />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Send Button */}
+                <button
+                  type="button"
+                  onClick={() => onSend()}
+                  disabled={isSending || (!input.trim() && !selectedImage)}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#00c48c] text-slate-950 font-bold shadow-md transition hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
+                  title="إرسال"
+                >
+                  {isSending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Send size={15} className={isRtl ? "rotate-180" : ""} />
+                  )}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Image Modal */}
+      {/* Image Modal Lightbox */}
       <AnimatePresence>
         {selectedImageUrl && (
           <motion.div
@@ -455,27 +559,21 @@ export default function ChatWidget() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
-            onClick={closeImageModal}
+            onClick={() => setSelectedImageUrl(null)}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-h-full max-w-full overflow-hidden rounded-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="relative max-h-full max-w-full overflow-hidden rounded-2xl border border-white/20" onClick={(e) => e.stopPropagation()}>
               <img
                 src={selectedImageUrl}
-                alt="Full size"
-                className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl"
+                alt="معاينة"
+                className="max-h-[85vh] max-w-[90vw] object-contain shadow-2xl"
               />
               <button
-                onClick={closeImageModal}
-                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-transform hover:scale-110"
+                onClick={() => setSelectedImageUrl(null)}
+                className="absolute top-3 right-3 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-white transition hover:bg-red-500"
               >
-                <X size={20} />
+                <X size={16} />
               </button>
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -9,6 +9,8 @@ import { toast, Toaster } from 'react-hot-toast';
 import { ArrowRight, Maximize, Upload, Download, X, RefreshCw, Wand2, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Play, Video, Smartphone, Monitor, Square, Trash2, Coins } from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
+import { AIToolHeader, AIGenerateButton, AILoadingOverlay, AIDeleteModal } from "@/components/ai";
+import { useAiPricing } from '@/hooks/useAiPricing';
 
 const downloadVideo = async (url: string, filename: string) => {
   try {
@@ -85,9 +87,49 @@ export default function VideoResizePage() {
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'all';
+    id?: number | string | null;
+  }>({ isOpen: false, type: 'single', id: null });
+  const [isDeletingModal, setIsDeletingModal] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    setIsDeletingModal(true);
+    try {
+      if (deleteModal.type === 'single' && deleteModal.id !== undefined && deleteModal.id !== null) {
+        const videoId = Number(deleteModal.id);
+        if (apiBase) {
+          const token = getToken();
+          setUserVideos(prev => prev.filter(v => v.id !== videoId));
+          await fetch(`${apiBase}/api/ai/user-videos/${videoId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
+          });
+          toast.success('تم الحذف');
+        }
+      } else if (deleteModal.type === 'all') {
+        if (apiBase) {
+          const token = getToken();
+          setUserVideos([]);
+          await fetch(`${apiBase}/api/ai/user-videos?tool=video_resize`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
+          });
+          toast.success('تم مسح السجل');
+        }
+      }
+      setDeleteModal({ isOpen: false, type: 'single', id: null });
+    } catch (e) {
+      toast.error('حدث خطأ أثناء الحذف');
+    } finally {
+      setIsDeletingModal(false);
+    }
+  };
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
-  const baseCredits = 5;
+  const { operationPrice } = useAiPricing();
+  const baseCredits = operationPrice('resize', 12);
   const videoProfit = balance?.plan?.video_profit ?? 0;
   const creditsNeeded = baseCredits + videoProfit;
 
@@ -230,32 +272,7 @@ export default function VideoResizePage() {
     } catch (e) {} finally { setLoadingVideos(false); }
   };
 
-  const deleteVideo = async (videoId: number) => {
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos(userVideos.filter(v => v.id !== videoId));
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos/${videoId}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم الحذف');
-      } catch (e) {}
-  };
 
-  const deleteAllVideos = async () => {
-      if (!confirm('حذف السجل بالكامل؟')) return;
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos([]);
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم مسح السجل');
-      } catch (e) {}
-  };
 
   useEffect(() => {
      if (typeof window !== 'undefined') {
@@ -267,100 +284,61 @@ export default function VideoResizePage() {
     <>
       <Toaster position="top-right" />
 
-      <div className="min-h-screen bg-[#000000] text-white selection:bg-emerald-500/30 font-sans" dir="rtl">
+      <div className="min-h-screen bg-[#06070B] text-white selection:bg-emerald-500/30 font-sans" dir="rtl">
         {/* Background Ambient */}
         <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
-        <div className="fixed top-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-900/5 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="fixed bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-teal-900/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-          <div className="max-w-[1600px] mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/ai" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/10">
-                  <ArrowRight size={18} />
-                  <span>عودة</span>
-                </Link>
-                <span className="text-xl font-bold">تغيير أبعاد الفيديو Video Resize</span>
-              </div>
-
-               <div className="flex items-center gap-4">
-                 <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
-                  {loadingBalance ? (
-                    <span className="text-xs text-gray-400">جاري التحميل...</span>
-                  ) : balance ? (
-                    <div className="flex items-center gap-2">
-                       <CreditCard size={14} className="text-emerald-400" />
-                      <span className={`text-sm font-bold ${balance.remaining_credits === 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {balance.remaining_credits}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-red-400">لا يوجد رصيد</span>
-                  )}
-                </div>
-                
-                <button
-                   onClick={() => setOpenPaymentModal(true)}
-                  className="relative inline-flex h-10 active:scale-95 transition overflow-hidden rounded-lg p-[1px] focus:outline-none"
-                >
-                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#10b981_0%,#059669_50%,#10b981_100%)]"></span>
-                  <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-lg bg-[#050505] px-4 text-xs font-black text-white backdrop-blur-3xl gap-2 transition-all hover:bg-black/40">
-                    <Crown size={14} className="text-emerald-500" />
-                    شراء رصيد
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="تغيير أبعاد الفيديو"
+          description="تكييف وقص أبعاد الفيديوهات لتناسب منصات تيك توك، ريلز، ويوتيوب"
+          badge="Video Resizer"
+          icon={Maximize}
+          iconGradient="from-emerald-600 to-teal-600"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={() => setOpenPaymentModal(true)}
+          backHref="/ai"
+        />
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           
-          {/* Sidebar */}
-          <aside className="w-full lg:w-[300px] h-auto max-h-[35vh] lg:max-h-full lg:h-full flex flex-col border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0 order-1">
-            <div className="p-4 space-y-4">
-               <div>
-                <div className="flex items-center gap-2 mb-1">
-                    <div className="w-5 h-[1px] bg-emerald-500"></div>
-                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-emerald-400">Layout Studio</span>
-                </div>
-                <div className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                   حوّل الفيديو الخاص بك ليتناسب مع أي منصة تواصل اجتماعي بذكاء واحترافية.
-                </div>
+          {/* Sidebar - Controls */}
+          <aside className="w-full lg:w-[380px] xl:w-[420px] bg-[#0B0D14] border-b lg:border-b-0 lg:border-l border-white/[0.08] p-5 flex flex-col justify-between shrink-0 h-[calc(100vh-3.5rem)] z-30 shadow-2xl relative">
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+               <div className="flex items-center justify-between">
+                <h2 className="text-lg font-black text-white">تغيير أبعاد الفيديو</h2>
               </div>
 
-               <div className="space-y-4">
+               <div className="space-y-3">
                   <div className="space-y-2">
-                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest block">ملف الفيديو</span>
+                    <span className="text-xs font-bold text-gray-400 block">ملف الفيديو</span>
                     <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="hidden" id="v-res-up" />
-                    <label htmlFor="v-res-up" className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-emerald-500/30 transition-all">
-                        <span className="text-[10px] text-gray-400 max-w-[150px] truncate">{videoFile ? videoFile.name : "ارفع الفيديو هنا..."}</span>
-                        <Video size={14} className="text-emerald-500" />
+                    <label htmlFor="v-res-up" className="flex items-center justify-between p-3.5 rounded-xl bg-[#121520] border border-white/[0.08] cursor-pointer hover:border-emerald-500/40 transition-all">
+                        <span className="text-xs text-gray-300 max-w-[220px] truncate">{videoFile ? videoFile.name : "اختر ملف فيديو..."}</span>
+                        <Video size={16} className="text-emerald-400" />
                     </label>
                   </div>
 
                   <div className="space-y-2">
-                     <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest block">الأبعاد المطلوبة</span>
-                     <div className="grid grid-cols-1 gap-1.5">
+                     <span className="text-xs font-bold text-gray-400 block">الأبعاد المطلوبة</span>
+                     <div className="grid grid-cols-1 gap-2 max-h-[220px] overflow-y-auto custom-scrollbar">
                          {RESIZE_OPTIONS.map((opt) => (
                              <button
                                 key={opt.id}
                                 onClick={() => setDimensions(opt.id)}
-                                className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 border ${
+                                className={`flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
                                     dimensions === opt.id
-                                    ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 backdrop-blur-xl'
-                                    : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'
+                                    ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300 font-bold'
+                                    : 'bg-[#121520] border-white/[0.08] text-gray-400 hover:bg-[#161a27]'
                                 }`}
                              >
-                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${dimensions === opt.id ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${dimensions === opt.id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-gray-400'}`}>
                                     {getResizeIcon(opt.iconType)}
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-[10px] font-black">{opt.name}</div>
-                                    <div className="text-[8px] text-gray-600 font-bold">{opt.desc}</div>
+                                <div className="text-right flex-1 min-w-0">
+                                    <div className="text-xs font-bold truncate">{opt.name}</div>
+                                    <div className="text-[10px] text-gray-500 truncate">{opt.desc}</div>
                                 </div>
                              </button>
                          ))}
@@ -369,42 +347,41 @@ export default function VideoResizePage() {
                 </div>
             </div>
 
-            <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+            <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
                 {error && (
-                    <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">
+                    <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-bold text-center truncate">
                         {error}
                     </div>
                 )}
 
-                <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                            <Coins size={10} className="text-yellow-500" />
-                        </div>
-                        <span>التكلفة المتوقعه:</span>
-                    </div>
-                    <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                </div>
-
-                <PremiumButton 
-                    label={isProcessing ? "جاري إعادة التشكيل..." : "تطبيق الأبعاد الجديدة"}
-                    icon={isProcessing ? RefreshCw : Maximize}
+                <AIGenerateButton
                     onClick={onProcess}
-                    disabled={!videoFile || isProcessing}
-                    className="w-full py-3 text-xs rounded-xl"
+                    isGenerating={isProcessing}
+                    disabled={!videoFile}
+                    cost={creditsNeeded}
+                    label="إنشاء"
+                    generatingLabel="جاري الإنشاء..."
+                    icon={Maximize}
+                    variant="emerald"
                 />
             </div>
           </aside>
 
           {/* Main Area */}
-          <main className="flex-1 overflow-y-auto bg-[#020202] custom-scrollbar p-6 order-2">
+          <main className="flex-1 overflow-y-auto bg-[#06070B] custom-scrollbar p-6">
             <div className="max-w-5xl mx-auto space-y-8">
-              <div className="bg-[#080808] rounded-[2rem] border border-white/5 min-h-[500px] flex items-center justify-center relative overflow-hidden group shadow-inner">
+              <div className="bg-[#0B0D14] rounded-[2rem] border border-white/[0.08] min-h-[500px] flex items-center justify-center relative overflow-hidden group shadow-inner">
+                <AILoadingOverlay
+                  isGenerating={isProcessing}
+                  progress={processingProgress}
+                  icon={Maximize}
+                />
+
                 {result ? (
                   <div className="relative w-full h-full p-8 flex flex-col items-center justify-center group/vid">
-                    <video src={result.video_url} controls className="max-h-[600px] w-full max-w-2xl rounded-[2rem] shadow-2xl border border-white/10 animate-fade-in" />
+                    <video src={result.video_url} controls autoPlay loop playsInline className="max-h-[75vh] max-w-full w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/10 animate-fade-in" />
                     <div className="mt-8 flex items-center gap-3">
-                        <button onClick={() => downloadVideo(result.video_url, `resized_video.mp4`)} className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition-all font-black text-sm">
+                        <button onClick={() => downloadVideo(result.video_url, `resized_video.mp4`)} className="flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all font-black text-sm">
                             <Download size={18} />
                             <span>تحميل الفيديو المعدل</span>
                         </button>
@@ -413,31 +390,18 @@ export default function VideoResizePage() {
                         </button>
                     </div>
                   </div>
-                ) : isProcessing ? (
-                  <div className="text-center relative z-10 w-full max-w-sm px-8">
-                    <div className="w-24 h-24 relative mx-auto mb-8">
-                        <div className="absolute inset-0 rounded-[2rem] border-4 border-emerald-500/10 scale-125"></div>
-                        <div className="absolute inset-0 rounded-[2rem] border-4 border-t-emerald-500 animate-spin"></div>
-                        <Maximize className="absolute inset-0 m-auto text-emerald-400 animate-pulse" size={40} />
-                    </div>
-                    <h3 className="text-xl font-black mb-2">جاري إعادة هيكلة الفيديو...</h3>
-                    <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mt-6">
-                      <div className="bg-emerald-500 h-full transition-all duration-700 shadow-[0_0_15px_rgba(16,185,129,0.5)]" style={{ width: `${processingProgress}%` }}></div>
-                    </div>
-                    <div className="text-emerald-400 font-mono text-xs mt-2 font-bold">{Math.floor(processingProgress)}%</div>
-                  </div>
                 ) : (
                   <div className="text-center relative z-10 p-12">
                      <div className="w-24 h-24 bg-white/[0.02] rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-white/5 group-hover:scale-105 transition-all duration-700 shadow-inner">
                       <Maximize size={48} className="text-white/5 group-hover:text-emerald-500/10 transition-colors" />
                     </div>
-                    <p className="text-gray-600 max-w-xs mx-auto font-bold text-base leading-relaxed">ارفع الفيديو الخاص بك، اختر المنصة التي ستنشر عليها، وسيقوم النظام بتعديل الأبعاد فوراً.</p>
+                    <p className="text-gray-400 max-w-xs mx-auto font-bold text-base leading-relaxed">ارفع الفيديو الخاص بك، اختر المنصة التي ستنشر عليها، وسيقوم النظام بتعديل الأبعاد فوراً.</p>
                   </div>
                 )}
               </div>
 
                {/* Previous Works Section - Video Resize */}
-               <div className="mt-12 border-t border-white/5 pt-8">
+               <div className="mt-12 border-t border-white/[0.08] pt-8">
                      <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                            <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 border border-emerald-500/20">
@@ -451,7 +415,7 @@ export default function VideoResizePage() {
                         
                         {userVideos.length > 0 && (
                             <button 
-                              onClick={deleteAllVideos}
+                              onClick={() => setDeleteModal({ isOpen: true, type: 'all', id: null })}
                               className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs font-bold transition-all"
                             >
                                <Trash2 size={14} />
@@ -469,14 +433,14 @@ export default function VideoResizePage() {
                      ) : userVideos.length > 0 ? (
                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                             {userVideos.map((v: any) => (
-                                <div key={v.id} className="group relative aspect-square rounded-2xl overflow-hidden border border-white/5 bg-[#0c0c0c]">
+                                <div key={v.id} className="group relative aspect-square rounded-2xl overflow-hidden border border-white/5 bg-black flex items-center justify-center">
                                    <video 
                                       src={v.url} 
-                                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                      className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
                                    />
                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                        <button 
-                                          onClick={() => deleteVideo(v.id)}
+                                          onClick={() => setDeleteModal({ isOpen: true, type: 'single', id: v.id })}
                                           className="p-2 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all"
                                           title="حذف"
                                        >
@@ -512,6 +476,14 @@ export default function VideoResizePage() {
         <UpgradeModal 
           isOpen={showUpgradeModal}
           onClose={() => setShowUpgradeModal(false)}
+        />
+
+        <AIDeleteModal
+          isOpen={deleteModal.isOpen}
+          type={deleteModal.type}
+          isDeleting={isDeletingModal}
+          onClose={() => setDeleteModal({ isOpen: false, type: 'single', id: null })}
+          onConfirm={handleConfirmDelete}
         />
       </div>
     </>

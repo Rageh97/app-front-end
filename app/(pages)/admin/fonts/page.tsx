@@ -76,10 +76,10 @@ const Modal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className={`gradient-border-analysis  rounded-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col`}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80  p-4">
+      <div className={`bg-[#0F121C] border border-white/10 rounded-lg w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col font-cairo`}>
         <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
+          <h2 className="text-base font-bold text-emerald-400">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <X size={24} />
           </button>
@@ -155,7 +155,7 @@ const CategoryForm = ({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors"
+            className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors"
             placeholder={t('fonts.nameEn')}
           />
         </div>
@@ -165,7 +165,7 @@ const CategoryForm = ({
             type="text"
             value={nameAr}
             onChange={(e) => setNameAr(e.target.value)}
-            className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors"
+            className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors"
             placeholder={t('fonts.nameAr')}
             dir="rtl"
           />
@@ -178,7 +178,7 @@ const CategoryForm = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors resize-none"
+          className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors resize-none"
           placeholder={t('fonts.descriptionEn')}
         />
       </div>
@@ -189,7 +189,7 @@ const CategoryForm = ({
           type="number"
           value={displayOrder}
           onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
-          className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors"
+          className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none transition-colors"
         />
       </div> */}
 
@@ -199,7 +199,7 @@ const CategoryForm = ({
           {previewUrl && (
             <img src={previewUrl} alt="Preview" className="w-20 h-14 object-cover rounded-lg " />
           )}
-          <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#190237] border border-dashed border-white/20 rounded-xl text-gray-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
+          <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#0B0E17] border border-dashed border-white/20 rounded-md text-slate-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
             <Upload size={20} />
             <span>{t('fonts.uploadImage')}</span>
             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
@@ -412,7 +412,7 @@ const FontForm = ({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
                 placeholder={t('fonts.nameEn')}
                 required
               />
@@ -423,7 +423,7 @@ const FontForm = ({
                 type="text"
                 value={nameAr}
                 onChange={(e) => setNameAr(e.target.value)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
                 placeholder={t('fonts.nameAr')}
                 dir="rtl"
               />
@@ -436,7 +436,7 @@ const FontForm = ({
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
                 required
               >
                 <option value="">{t('fonts.allCategories')}</option>
@@ -451,7 +451,7 @@ const FontForm = ({
                 type="text"
                 value={designer}
                 onChange={(e) => setDesigner(e.target.value)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
                 placeholder={t('fonts.designer')}
               />
             </div>
@@ -463,7 +463,7 @@ const FontForm = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none resize-none"
+              className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none resize-none"
               placeholder={t('fonts.descriptionEn')}
             />
           </div>
@@ -474,7 +474,7 @@ const FontForm = ({
               <select
                 value={fontStyle}
                 onChange={(e) => setFontStyle(e.target.value)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
               >
                 <option value="">{t('fonts.fontStyle')}</option>
                 <option value="Serif">Serif</option>
@@ -490,7 +490,7 @@ const FontForm = ({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
               >
                 <option value="draft">{t('fonts.draft')}</option>
                 <option value="active">{t('fonts.active')}</option>
@@ -506,7 +506,7 @@ const FontForm = ({
                 type="text"
                 value={supportedLanguages}
                 onChange={(e) => setSupportedLanguages(e.target.value)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
                 placeholder="Arabic, English"
               />
             </div>
@@ -516,7 +516,7 @@ const FontForm = ({
                 type="text"
                 value={licenseType}
                 onChange={(e) => setLicenseType(e.target.value)}
-                className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+                className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
                 placeholder="Personal & Commercial"
               />
             </div> */}
@@ -528,7 +528,7 @@ const FontForm = ({
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="w-full bg-[#190237]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
+              className="w-full bg-[#0B0E17]  rounded-xl px-4 py-3 text-white border border-[#00c48c] focus:outline-none"
               placeholder="modern, arabic, clean"
             />
           </div>
@@ -539,7 +539,7 @@ const FontForm = ({
                 type="checkbox"
                 checked={isFree}
                 onChange={(e) => setIsFree(e.target.checked)}
-                className="w-5 h-5 rounded border-white/20 bg-[#190237] text-[#00c48c] focus:ring-[#00c48c]"
+                className="w-5 h-5 rounded border-white/20 bg-[#0B0E17] text-[#00c48c] focus:ring-[#00c48c]"
               />
               <span className="text-white">{t('fonts.freeFont')}</span>
             </label>
@@ -548,7 +548,7 @@ const FontForm = ({
                 type="checkbox"
                 checked={featured}
                 onChange={(e) => setFeatured(e.target.checked)}
-                className="w-5 h-5 rounded border-white/20 bg-[#190237] text-[#00c48c] focus:ring-[#00c48c]"
+                className="w-5 h-5 rounded border-white/20 bg-[#0B0E17] text-[#00c48c] focus:ring-[#00c48c]"
               />
               <span className="text-white">{t('fonts.featured')}</span>
             </label>
@@ -561,7 +561,7 @@ const FontForm = ({
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">{t('fonts.fontFile')}</label>
-            <label className="flex items-center justify-center gap-2 px-4 py-8 bg-[#190237] border-2 border-dashed border-white/20 rounded-xl text-gray-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
+            <label className="flex items-center justify-center gap-2 px-4 py-8 bg-[#0B0E17] border-2 border-dashed border-white/20 rounded-md text-slate-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
               <Upload size={24} />
               <span>{fontFile ? fontFile.name : t('fonts.fontFile')}</span>
               <input 
@@ -579,7 +579,7 @@ const FontForm = ({
               {mainPreviewUrl && (
                 <img src={mainPreviewUrl} alt="Preview" className="w-32 h-24 object-cover rounded-xl " />
               )}
-              <label className="flex-1 flex items-center justify-center gap-2 px-4 py-8 bg-[#190237] border-2 border-dashed border-white/20 rounded-xl text-gray-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
+              <label className="flex-1 flex items-center justify-center gap-2 px-4 py-8 bg-[#0B0E17] border-2 border-dashed border-white/20 rounded-md text-slate-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
                 <ImageIcon size={24} />
                 <span>{t('fonts.uploadImage')}</span>
                 <input type="file" accept="image/*" onChange={handleMainPreviewChange} className="hidden" />
@@ -633,7 +633,7 @@ const FontForm = ({
                   ))}
                 </div>
               )}
-              <label className="flex items-center justify-center gap-2 px-4 py-6 bg-[#190237] border-2 border-dashed border-white/20 rounded-xl text-gray-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
+              <label className="flex items-center justify-center gap-2 px-4 py-6 bg-[#0B0E17] border-2 border-dashed border-white/20 rounded-md text-slate-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors cursor-pointer">
                 <Plus size={20} />
                 <span>{t('fonts.addGalleryImages')}</span>
                 <input type="file" accept="image/*" multiple onChange={handlePreviewImagesChange} className="hidden" />
@@ -653,7 +653,7 @@ const FontForm = ({
           {variantFiles.length > 0 && (
             <div className="space-y-3">
               {variantFiles.map((v, index) => (
-                <div key={index} className="flex items-center gap-4 p-4 bg-[#190237] rounded-xl ">
+                <div key={index} className="flex items-center gap-4 p-4 bg-[#07090F] rounded-md border border-white/10 ">
                   <Type size={20} className="text-[#00c48c]" />
                   <span className="text-white font-medium truncate flex-1">{v.file.name}</span>
                   <input
@@ -702,7 +702,7 @@ const FontForm = ({
           <button
             type="button"
             onClick={addVariant}
-            className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-[#190237] border-2 border-dashed border-white/20 rounded-xl text-gray-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-[#0B0E17] border-2 border-dashed border-white/20 rounded-md text-slate-400 hover:border-[#00c48c] hover:text-[#00c48c] transition-colors"
           >
             <Plus size={20} />
             <span>{t('fonts.addVariant')}</span>
@@ -1027,7 +1027,7 @@ function FontsAdminPage() {
               <button
                 onClick={handleToggleFontsHub}
                 disabled={loadingFontsHubStatus}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-md font-bold text-xs transition-colors ${
                   fontsHubEnabled
                     ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
                     : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30'
@@ -1045,7 +1045,7 @@ function FontsAdminPage() {
                   setEditingCategory(undefined);
                   setCategoryModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-[#00c48c]  rounded-xl text-black font-bold hover:bg-[#00c48c]/90 transition-colors"
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 rounded-md text-white font-bold text-xs hover:bg-emerald-500 transition-colors"
               >
                 <Folder size={18} />
                 {t('fonts.newCategory')}
@@ -1055,7 +1055,7 @@ function FontsAdminPage() {
                   setEditingFont(undefined);
                   setFontModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-[#00c48c] rounded-xl text-black font-bold hover:bg-[#00c48c]/90 transition-colors"
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 rounded-md text-white font-bold text-xs hover:bg-emerald-500 transition-colors"
               >
                 <Plus size={18} />
                 {t('fonts.addFont')}
@@ -1113,7 +1113,7 @@ function FontsAdminPage() {
               {categories.map((cat) => (
                 <div 
                   key={cat.category_id}
-                  className="gradient-border-analysis border border-white/5 rounded-xl p-4 hover:border-white/20 transition-colors group"
+                  className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-3 hover:border-white/20 transition-colors group"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-white font-medium truncate">{cat.name}</h3>
@@ -1167,7 +1167,7 @@ function FontsAdminPage() {
                     setCurrentPage(1);
                   }}
                   placeholder={t('fonts.searchPlaceholder')}
-                  className="pl-10 pr-4 py-2 bg-[#190237]  rounded-xl text-white w-64 border border-[#00c48c] focus:outline-none"
+                  className="pl-9 pr-3 py-1.5 bg-[#07090F] rounded-md text-white w-64 border border-white/10 focus:outline-none focus:border-emerald-500/50 text-xs"
                 />
               </div>
               
@@ -1178,7 +1178,7 @@ function FontsAdminPage() {
                   setSelectedCategory(e.target.value ? parseInt(e.target.value) : null);
                   setCurrentPage(1);
                 }}
-                className="bg-[#190237]  rounded-xl  px-4 py-2 text-white border border-[#00c48c] focus:outline-none"
+                className="bg-[#07090F] rounded-md px-3 py-1.5 text-white border border-white/10 focus:outline-none focus:border-emerald-500/50 text-xs"
               >
                 <option className="" value="">{t('fonts.allCategories')}</option>
                 {categories.map((cat) => (
@@ -1193,7 +1193,7 @@ function FontsAdminPage() {
                   setStatusFilter(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="bg-[#190237]  rounded-xl px-4 py-2 text-white border border-[#00c48c] focus:outline-none"
+                className="bg-[#07090F] rounded-md px-3 py-1.5 text-white border border-white/10 focus:outline-none focus:border-emerald-500/50 text-xs"
               >
                 <option className="" value="">{t('fonts.allStatus')}</option>
                 <option value="active">{t('fonts.active')}</option>
@@ -1216,7 +1216,7 @@ function FontsAdminPage() {
           ) : (
             <div className="space-y-4">
               {fonts.map((font) => (
-                <div key={font.font_id} className="bg-[#190237] border border-white/20 rounded-2xl p-6 hover:border-[#00c48c]/30 transition-all duration-300 group">
+                <div key={font.font_id} className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4 hover:border-white/20 transition-colors group">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 items-center">
                     {/* Font Info */}
                     <div className="lg:col-span-1">
@@ -1280,7 +1280,7 @@ function FontsAdminPage() {
                     <div className="flex items-center lg:justify-end gap-2 pt-4 lg:pt-0 border-t lg:border-t-0 border-white/5">
                       <button
                         onClick={() => router.push(`/fonts/${font.slug}`)}
-                        className="flex-1 lg:flex-none p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-400 hover:text-white transition-all duration-200 border border-white/5 hover:border-white/10"
+                        className="flex-1 lg:flex-none p-2 bg-white/5 hover:bg-white/10 rounded-md text-slate-400 hover:text-white transition-all duration-200 border border-white/5 hover:border-white/10"
                         title={t('fonts.preview')}
                       >
                         <Eye size={18} className="mx-auto" />
@@ -1290,14 +1290,14 @@ function FontsAdminPage() {
                           setEditingFont(font);
                           setFontModalOpen(true);
                         }}
-                        className="flex-1 lg:flex-none p-2.5 bg-white/5 hover:bg-[#00c48c]/10 rounded-xl text-gray-400 hover:text-[#00c48c] transition-all duration-200 border border-white/5 hover:border-[#00c48c]/10"
+                        className="flex-1 lg:flex-none p-2 bg-white/5 hover:bg-[#00c48c]/10 rounded-md text-slate-400 hover:text-[#00c48c] transition-all duration-200 border border-white/5 hover:border-[#00c48c]/10"
                         title={t('fonts.edit')}
                       >
                         <Edit2 className="text-[#00c48c] mx-auto" size={18}  />
                       </button>
                       <button
                         onClick={() => handleDeleteFont(font.font_id)}
-                        className="flex-1 lg:flex-none p-2.5 bg-white/5 hover:bg-red-500/10 rounded-xl text-gray-400 hover:text-red-500 transition-all duration-200 border border-white/5 hover:border-red-500/10"
+                        className="flex-1 lg:flex-none p-2 bg-white/5 hover:bg-red-500/10 rounded-md text-slate-400 hover:text-red-500 transition-all duration-200 border border-white/5 hover:border-red-500/10"
                         title={t('fonts.delete')}
                       >
                         <Trash2 className="text-[#ff7702] mx-auto" size={18} />
@@ -1339,7 +1339,7 @@ function FontsAdminPage() {
       {activeTab === 'banner' && (
         <div className="max-w-5xl mx-auto px-4 py-6 space-y-8">
           {/* Upload New Banner */}
-          <div className="bg-[#190237] p-8 rounded-xl shadow-lg">
+          <div className="bg-[#0B0E17] p-6 rounded-md border border-white/[0.08]">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
               <ImageIcon size={24} className="text-orange" />
               رفع بانر جديد للخطوط
@@ -1380,7 +1380,7 @@ function FontsAdminPage() {
               <button
                 onClick={handleUploadBanner}
                 disabled={!bannerFile || uploadingBanner}
-                className="w-full bg-orange hover:bg-orange/80 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-md text-xs flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {uploadingBanner ? (
                   <>
@@ -1398,7 +1398,7 @@ function FontsAdminPage() {
           </div>
 
           {/* Existing Banners */}
-          <div className="bg-[#190237] p-8 rounded-xl shadow-lg">
+          <div className="bg-[#0B0E17] p-6 rounded-md border border-white/[0.08]">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
               <Type size={24} className="text-[#00c48c]" />
               البانرات الموجودة ({banners.length})

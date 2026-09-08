@@ -279,7 +279,7 @@ const PayTabsPayment: React.FC<PayTabsPaymentProps> = ({
                 {showCountries && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowCountries(false)} />
-                    <div className="absolute top-full right-0 mt-1 w-44 bg-[#1a1129] border border-white/10 rounded-lg shadow-xl overflow-hidden z-20">
+                    <div className="absolute top-full right-0 mt-1 w-44 bg-[#12141F] border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-20">
                       <div className="max-h-48 overflow-y-auto">
                         {countries.map((c) => (
                           <button key={c.iso} type="button" onClick={() => handleCountryChange(c)} className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-white/5 ${selectedCountry.iso === c.iso ? 'bg-[#00c48c]/20 text-[#00c48c]' : 'text-white/80'}`}>

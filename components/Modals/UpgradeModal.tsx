@@ -11,6 +11,10 @@ interface UpgradeModalProps {
   onClose: () => void;
   title?: string;
   description?: string;
+  currentPlan?: string;
+  requiredCredits?: number;
+  currentCredits?: number;
+  featureName?: string;
 }
 
 const UpgradeModal: React.FC<UpgradeModalProps> = ({
@@ -18,6 +22,10 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
   onClose,
   title = 'رصيدك غير كافٍ',
   description = 'لقد استهلكت كامل نقاطك في الباقة الحالية. قم بالترقية الآن للحصول على المزيد من النقاط والوصول الكامل لجميع ميزات نيكسوس برو.',
+  currentPlan,
+  requiredCredits,
+  currentCredits,
+  featureName,
 }) => {
   if (!isOpen) return null;
 

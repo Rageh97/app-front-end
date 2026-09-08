@@ -1,80 +1,172 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { 
+  Sparkles, 
+  Upload, 
+  Download, 
+  Mic, 
+  Video, 
+  CheckCircle2, 
+  X,
+  Play,
+  Film,
+  Music
+, Trash2 } from "lucide-react";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import PaymentModal from "@/components/Modals/PaymentModal";
+import { toast, Toaster } from "react-hot-toast";
 import UpgradeModal from "@/components/Modals/UpgradeModal";
-import Link from "next/link";
-import { toast, Toaster } from 'react-hot-toast';
-import { ArrowRight, Mic, Video, Upload, Download, X, RefreshCw, Wand2, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Volume2, Play, Trash2, Coins } from 'lucide-react';
-import TextType from "@/components/TextType";
-import { PremiumButton } from "@/components/PremiumButton";
+import { 
+  AIToolHeader, 
+  AIGenerateButton, 
+  AIGenerationCard, 
+  AIResultModal, 
+  downloadMediaDirectly,
+  AIDeleteModal
+} from "@/components/ai";
+import { handleAuthError } from "@/utils/auth";
+import { useAiPricing } from '@/hooks/useAiPricing';
 
-type CreditsRecord = {
-  users_credits_id: number;
-  user_id: number;
-  plan_id: number;
-  plan_name: string;
-  period: "day" | "month" | "year" | string;
-  total_credits: number;
-  remaining_credits: number;
-  endedAt: string;
-  createdAt: string;
-  plan?: { 
-    plan_id: number; 
-    plan_name: string; 
-    period: string; 
-    video_profit: number;
-  };
-};
+interface GenerationResult {
+  id?: number | string;
+  video_url: string;
+  videoName: string;
+  audioName: string;
+  time: string;
+}
 
 export default function LipSyncPage() {
-  const [balance, setBalance] = useState<CreditsRecord | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(false);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [processingProgress, setProcessingProgress] = useState(0);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4560', []);
+  const getToken = useCallback(() => typeof window !== 'undefined' ? localStorage.getItem("a") : null, []);
+  
+  // State
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
+  const [videoName, setVideoName] = useState<string>('');
+  const [audioName, setAudioName] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  
+  const [history, setHistory] = useState<GenerationResult[]>([]);
+  const [selectedModalItem, setSelectedModalItem] = useState<GenerationResult | null>(null);
+  const [balance, setBalance] = useState<any>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'all';
+    id?: number | string | null;
+  }>({ isOpen: false, type: 'single', id: null });
+  const [isDeletingModal, setIsDeletingModal] = useState(false);
 
-  const [plans, setPlans] = useState<Array<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string }>>([]);
-  const [loadingPlans, setLoadingPlans] = useState(false);
-  const [openPaymentModal, setOpenPaymentModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
-  const baseCredits = 30;
-  const videoProfit = balance?.plan?.video_profit ?? 0;
-  const creditsNeeded = baseCredits + videoProfit;
-
-  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
-
-  const getToken = () => {
-    if (typeof window !== 'undefined') return localStorage.getItem("a");
-    return null;
-  };
-
-  const fetchBalance = async () => {
-    if (!apiBase) return;
-    const token = getToken();
-    setLoadingBalance(true);
+  const handleConfirmDelete = async () => {
+    setIsDeletingModal(true);
     try {
-      const res = await fetch(`${apiBase}/api/credits/me/balance`, { 
-        headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 } 
-      });
-      if (res.status === 200) {
-        const data = (await res.json()) as CreditsRecord | null;
-        setBalance(data);
+      if (deleteModal.type === 'single' && deleteModal.id !== undefined && deleteModal.id !== null) {
+        await handleDeleteSingle(deleteModal.id, true);
+      } else if (deleteModal.type === 'all') {
+        await handleDeleteAll();
       }
-    } catch (e: any) {} finally {
-      setLoadingBalance(false);
+      setDeleteModal({ isOpen: false, type: 'single', id: null });
+    } finally {
+      setIsDeletingModal(false);
     }
   };
 
+  const { operationPrice } = useAiPricing();
+  const creditsNeeded = operationPrice('lipsync', 18);
+
+  const fetchBalance = useCallback(async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/credits/me/balance`, {
+        headers: { 
+          'Authorization': getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        }
+      });
+      if (res.status === 401 || res.status === 403) {
+        handleAuthError(res.status);
+        return;
+      }
+      if (res.ok) setBalance(await res.json());
+    } catch (e) {}
+  }, [apiBase, getToken]);
+
+  const fetchHistory = useCallback(async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/ai/user-videos?tool=lip_sync&limit=50`, {
+        headers: { 
+          'Authorization': getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        }
+      });
+      if (res.status === 401 || res.status === 403) {
+        handleAuthError(res.status);
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.videos)) {
+          const mapped: GenerationResult[] = data.videos.map((v: any) => ({
+            id: v.id || v.video_id,
+            video_url: v.video_url || v.cloudinary_url,
+            videoName: v.metadata?.videoName || 'فيديو الوجه',
+            audioName: v.metadata?.audioName || 'التسجيل الصوتي',
+            time: v.created_at ? new Date(v.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : ''
+          }));
+          setHistory(mapped);
+        }
+      }
+    } catch (e) {}
+  }, [apiBase, getToken]);
+
+  const handleDeleteSingle = async (idOrIdx: number | string, isVideo = true) => {
+    if (!apiBase) return;
+    try {
+      const endpoint = isVideo
+        ? `${apiBase}/api/ai/user-videos/${idOrIdx}`
+        : `${apiBase}/api/ai/user-images/${idOrIdx}`;
+      await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': getToken() || '',
+          'User-Client': (global as any)?.clientId1328 || ''
+        }
+      });
+      setHistory(prev => prev.filter((item: any) => (item.id || item.time) !== idOrIdx));
+      toast.success('تم حذف النتيجة بنجاح');
+      if (selectedModalItem && ((selectedModalItem as any).id === idOrIdx || selectedModalItem.time === idOrIdx)) {
+        setSelectedModalItem(null);
+      }
+    } catch (e) {
+      toast.error('فشل حذف النتيجة');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!apiBase) return;
+    try {
+      await fetch(`${apiBase}/api/ai/user-videos?tool=lip_sync`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': getToken() || '',
+          'User-Client': (global as any)?.clientId1328 || ''
+        }
+      });
+      setHistory([]);
+      toast.success('تم حذف جميع النتائج السابقة');
+      setSelectedModalItem(null);
+    } catch (e) {
+      toast.error('فشل حذف النتائج');
+    }
+  };
+
+
   useEffect(() => {
     let cancelled = false;
-    const ensureClientId = async () => {
+    const init = async () => {
       try {
         if (!(global as any)?.clientId1328) {
           const fp = await FingerprintJS.load();
@@ -83,388 +175,392 @@ export default function LipSyncPage() {
         }
         if (!cancelled) {
           fetchBalance();
-          void loadPlans();
+          fetchHistory();
         }
-      } catch (_) {}
+      } catch (e) {}
     };
-    ensureClientId();
+    init();
     return () => { cancelled = true; };
-  }, []);
+  }, [fetchBalance, fetchHistory]);
 
-  const loadPlans = async () => {
-    if (!apiBase) return;
-    setLoadingPlans(true);
-    try {
-      const res = await fetch(`${apiBase}/api/credits/plans`);
-      if (res.status === 200) {
-        const data = await res.json();
-        setPlans(data);
-      }
-    } finally {
-      setLoadingPlans(false);
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      toast.error("يرجى اختيار ملف فيديو صالح");
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSelectedVideo(event.target?.result as string);
+      setVideoName(file.name);
+      toast.success("تم رفع الفيديو بنجاح");
+    };
+    reader.readAsDataURL(file);
   };
 
-  const convertToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
+  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('audio/')) {
+      toast.error("يرجى اختيار ملف صوتي صالح (MP3, WAV)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSelectedAudio(event.target?.result as string);
+      setAudioName(file.name);
+      toast.success("تم رفع الصوت بنجاح");
+    };
+    reader.readAsDataURL(file);
   };
 
-  const onProcess = async () => {
-    if (!apiBase || !videoFile || !audioFile) return;
-    
-    // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits < creditsNeeded) {
+  const handleGenerate = async () => {
+    if (!selectedVideo || !selectedAudio) {
+      toast.error("يرجى رفع ملف الفيديو والملف الصوتي معاً");
+      return;
+    }
+
+    if (balance && balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
-    
-    setIsProcessing(true);
-    setError('');
-    setResult(null);
-    setProcessingProgress(0);
-    
-    let progressValue = 0;
-    const progressInterval = setInterval(() => {
-      progressValue += Math.random() * 2 + 0.5;
-      if (progressValue >= 98) {
-        progressValue = 98;
-        clearInterval(progressInterval);
-      }
-      setProcessingProgress(progressValue);
-    }, 1000);
-    
+
+    setIsGenerating(true);
+
     try {
-      const videoBase64 = await convertToBase64(videoFile);
-      const audioBase64 = await convertToBase64(audioFile);
-      const token = getToken();
-      
-      const res = await fetch(`${apiBase}/api/ai/lip-sync`, {
+      const response = await fetch(`${apiBase}/api/ai/lip-sync`, {
         method: "POST",
-        headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 },
-        body: JSON.stringify({ video: videoBase64, audio: audioBase64 }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        },
+        body: JSON.stringify({
+          video: selectedVideo,
+          audio: selectedAudio
+        })
       });
-      
-      clearInterval(progressInterval);
-      setProcessingProgress(100);
-      
-      const data = await res.json();
-      if (data.success) {
-        setResult(data);
-        await fetchBalance();
-        fetchUserVideos(); // Refresh list
-        toast.success('تمت مزامنة الشفاه بنجاح!');
-      } else {
-        setError(data.message || 'فشلت المزامنة');
+
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status);
+        return;
       }
-    } catch (e: any) {
-      clearInterval(progressInterval);
-      setError('خطأ في الاتصال');
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "فشلت عملية مزامنة الشفاه");
+      }
+
+      const newResult: GenerationResult = {
+        id: data.video_id || data.id,
+        video_url: data.video_url,
+        videoName: videoName || 'فيديو الوجه',
+        audioName: audioName || 'الصوت المتزامن',
+        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setHistory(prev => [newResult, ...prev]);
+      setSelectedModalItem(newResult);
+      toast.success("تمت مزامنة حركة الشفاه والصوت بنجاح!");
+      fetchBalance();
+
+    } catch (err: any) {
+      console.error("LipSync error:", err);
+      toast.error(err.message || "حدث خطأ أثناء المعالجة");
     } finally {
-      setIsProcessing(false);
+      setIsGenerating(false);
     }
   };
-
-  // Previous Works Logic
-  const [userVideos, setUserVideos] = useState<any[]>([]);
-  const [loadingVideos, setLoadingVideos] = useState(false);
-
-  const fetchUserVideos = async () => {
-    if (!apiBase) return;
-    const token = getToken();
-    setLoadingVideos(true);
-    try {
-        const res = await fetch(`${apiBase}/api/ai/user-videos?limit=8`, {
-            headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 }
-        });
-        if (res.status === 200) {
-            const data = await res.json();
-            if (data.success) {
-                setUserVideos(data.videos.map((vid: any) => ({
-                    id: vid.video_id,
-                    url: vid.video_url || vid.cloudinary_url,
-                    thumbnail: vid.thumbnail_url,
-                    prompt: vid.prompt
-                })));
-            }
-        }
-    } catch (e) {} finally { setLoadingVideos(false); }
-  };
-
-  const deleteVideo = async (videoId: number) => {
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos(userVideos.filter(v => v.id !== videoId));
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos/${videoId}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم الحذف');
-      } catch (e) {}
-  };
-
-  const deleteAllVideos = async () => {
-      if (!confirm('حذف جميع الفيديوهات؟')) return;
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos([]);
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم حذف السجل');
-      } catch (e) {}
-  };
-
-  useEffect(() => {
-     if (balance) {
-         fetchUserVideos();
-     }
-  }, [balance]); function convertToSlug(text: string) { return text.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-'); }
 
   return (
     <>
       <Toaster position="top-right" />
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
 
-      <div className="min-h-screen bg-[#000000] text-white selection:bg-pink-500/30 font-sans no-scrollbar" dir="rtl">
-        {/* Background Ambient */}
-        <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
-        <div className="fixed top-[-10%] right-[-10%] w-[50%] h-[50%] bg-pink-900/5 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="fixed bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-900/5 blur-[120px] rounded-full pointer-events-none"></div>
+      {/* Unified AI Result Modal */}
+      <AIResultModal
+        isOpen={!!selectedModalItem}
+        onClose={() => setSelectedModalItem(null)}
+        mediaUrl={selectedModalItem?.video_url || null}
+        mediaType="video"
+        title="مزامنة حركة الشفاه مع الصوت (LipSync AI)"
+        subtitle="فيديو متزامن بدقة عالية مع نبرة الصوت المرفوعة"
+        details={[
+          { label: "الملف الصوتي", value: selectedModalItem?.audioName || "صوت متزامن" },
+          { label: "الرصيد المستخدم", value: `${creditsNeeded} رصيد` },
+        ]}
+        timestamp={selectedModalItem?.time}
+        creditsUsed={creditsNeeded}
+      />
 
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-          <div className="max-w-[1600px] mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/ai" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/10">
-                  <ArrowRight size={18} />
-                  <span>عودة</span>
-                </Link>
-                <span className="text-xl font-bold">مزامنة الشفاه Lip Sync</span>
+      <div className="h-screen flex flex-col bg-[#06070B] text-white selection:bg-cyan-500/30 overflow-hidden font-sans" dir="rtl">
+        
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="مزامنة حركة الشفاه مع الصوت (LipSync)"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={() => setShowUpgradeModal(true)}
+          backHref="/ai"
+        />
+
+        {/* ─── Studio 2-Column Layout ─── */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          
+          {/* ─── Right Column: Control Sidebar (Compact, No Scrollbar) ─── */}
+          <aside className="w-full lg:w-[360px] xl:w-[380px] h-[calc(100vh-3.5rem)] bg-[#0B0D14] border-b lg:border-b-0 lg:border-l border-white/[0.08] p-4 flex flex-col justify-between shrink-0 overflow-hidden z-30 shadow-2xl relative">
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+              
+              <div>
+                <h2 className="text-sm font-bold text-white tracking-wide">إعدادات مزامنة الشفاه</h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">مطابقة نطق وحركة فم الشخصية مع أي تسجيل صوتي بدقة ملي ثانية</p>
               </div>
 
-               <div className="flex items-center gap-4">
-                 <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
-                  {loadingBalance ? (
-                    <span className="text-xs text-gray-400">جاري التحميل...</span>
-                  ) : balance ? (
-                    <div className="flex items-center gap-2">
-                       <CreditCard size={14} className="text-pink-400" />
-                      <span className={`text-sm font-bold ${balance.remaining_credits === 0 ? 'text-red-400' : 'text-pink-400'}`}>
-                        {balance.remaining_credits}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-red-400">لا يوجد رصيد</span>
-                  )}
-                </div>
-                
-                <button
-                  onClick={() => setOpenPaymentModal(true)}
-                  className="relative inline-flex h-10 active:scale-95 transition overflow-hidden rounded-lg p-[1px] focus:outline-none"
-                >
-                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#ec4899_0%,#a855f7_50%,#ec4899_100%)]"></span>
-                  <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-lg bg-[#050505] px-4 text-xs font-black text-white backdrop-blur-3xl gap-2 transition-all hover:bg-black/40">
-                    <Crown size={14} className="text-pink-500" />
-                    شراء رصيد
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+              {/* 1. Upload Video */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 block text-right flex items-center gap-1.5">
+                  <Video size={12} className="text-cyan-400" />
+                  <span>1. فيديو الشخصية (يظهر فيها الوجه بوضوح):</span>
+                </label>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                />
 
-        {/* Main Content */}
-        <div className="max-w-[1600px] mx-auto p-6 pt-8">
-          <div className="grid lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Panel */}
-            <div className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-28">
-                <div className="bg-[#0c0c0c] rounded-3xl p-5 border border-white/10 relative group shadow-2xl overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 opacity-50"></div>
-                
-                <div className="relative space-y-5">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block">ملف الفيديو</span>
-                    <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="hidden" id="video-up" />
-                    <label htmlFor="video-up" className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-pink-500/30 transition-all">
-                        <span className="text-[10px] text-gray-400 max-w-[180px] truncate">{videoFile ? videoFile.name : "اختر ملف فيديو..."}</span>
-                        <Video size={16} className="text-pink-500" />
-                    </label>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block">ملف الصوت</span>
-                    <input type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} className="hidden" id="audio-up" />
-                    <label htmlFor="audio-up" className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-purple-500/30 transition-all">
-                        <span className="text-[10px] text-gray-400 max-w-[180px] truncate">{audioFile ? audioFile.name : "اختر ملف صوتي..."}</span>
-                        <Mic size={16} className="text-purple-500" />
-                    </label>
-                  </div>
-
-                  <div className="pt-4 border-t border-white/5 space-y-3">
-                     <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                                <Coins size={10} className="text-yellow-500" />
-                            </div>
-                            <span>التكلفة المتوقعه:</span>
-                        </div>
-                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                     </div>
-
-                    <PremiumButton 
-                        label={isProcessing ? "جاري المزامنة..." : "بدء المزامنة الذكية"}
-                        icon={isProcessing ? RefreshCw : Sparkles}
-                        onClick={onProcess}
-                        disabled={!videoFile || !audioFile || isProcessing}
-                        className="w-full py-3 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center flex items-center justify-center gap-2 truncate">
-                  <X size={14} />
-                  {error}
-                </div>
-              )}
-            </div>
-
-            {/* Right Panel */}
-            <div className="lg:col-span-8 order-2 space-y-6">
-              <div className="bg-[#080808] rounded-[3rem] border border-white/5 min-h-[500px] lg:min-h-[850px] flex items-center justify-center relative overflow-hidden group shadow-inner">
-                {result ? (
-                  <div className="relative w-full h-full p-8 flex flex-col items-center justify-center group/vid">
-                    <div className="absolute top-6 left-6 z-20">
-                      <button
-                        onClick={() => setResult(null)}
-                        className="p-3 bg-black/40 backdrop-blur-xl border border-white/10 text-white rounded-full hover:bg-white/10 transition-all shadow-lg group-hover/vid:scale-110"
-                        title="إغلاق المعاينة"
-                      >
-                        <X size={20} />
-                      </button>
+                {selectedVideo ? (
+                  <div className="p-2.5 rounded-xl bg-[#121520] border border-white/[0.08] flex items-center justify-between gap-2.5 shadow-sm">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/20 bg-black shrink-0 flex items-center justify-center text-cyan-400">
+                        <Film size={18} />
+                      </div>
+                      <div className="text-right truncate">
+                        <span className="text-xs font-bold text-white block truncate">{videoName || 'تم تحديد الفيديو'}</span>
+                        <span className="text-[10px] text-cyan-400 flex items-center gap-1 font-medium">
+                          <CheckCircle2 size={10} /> جاهز للمزامنة
+                        </span>
+                      </div>
                     </div>
 
-                    <video src={result.video_url} controls className="max-h-[650px] w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-white/10 animate-fade-in" />
-                    <div className="mt-8 flex items-center gap-3">
-                        <button onClick={() => window.open(result.video_url)} className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition-all font-black text-sm">
-                            <Download size={18} />
-                            <span>تحميل الفيديو</span>
-                        </button>
-                        <button onClick={() => setResult(null)} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/10" title="إعادة التوليد">
-                            <RefreshCw size={20} />
-                        </button>
-                    </div>
-                  </div>
-                ) : isProcessing ? (
-                  <div className="text-center relative z-10 w-full max-w-sm px-8">
-                    <div className="w-24 h-24 relative mx-auto mb-8">
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-pink-500/10 scale-125"></div>
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-t-pink-500 animate-spin"></div>
-                        <Mic className="absolute inset-0 m-auto text-pink-400 animate-pulse" size={40} />
-                    </div>
-                    <h3 className="text-2xl font-black mb-2">جاري مزامنة الترددات...</h3>
-                    <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mt-6">
-                      <div className="bg-pink-500 h-full transition-all duration-700" style={{ width: `${processingProgress}%` }}></div>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedVideo(null);
+                        setVideoName('');
+                      }}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-900/50 text-gray-400 hover:text-rose-300 border border-white/10 transition-all shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
                 ) : (
-                  <div className="text-center relative z-10 p-12">
-                     <div className="w-32 h-32 bg-white/[0.02] rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-white/5 group-hover:scale-105 transition-all duration-700 shadow-inner">
-                      <Mic size={64} className="text-white/5 group-hover:text-pink-500/10 transition-colors" />
+                  <div
+                    onClick={() => videoInputRef.current?.click()}
+                    className="border border-dashed border-white/[0.08] hover:border-cyan-500/40 rounded-xl py-3 px-4 text-center cursor-pointer transition-all bg-[#121520] hover:bg-[#161a27] flex items-center justify-center gap-3 group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform shrink-0">
+                      <Upload size={14} />
                     </div>
-                    <p className="text-gray-600 max-w-xs mx-auto font-bold text-lg leading-relaxed">ارفع الفيديو وملف الصوت، واترك الذكاء الاصطناعي يقوم بمطابقة حركة الشفاه بدقة.</p>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-gray-200 block group-hover:text-cyan-300 transition-colors">
+                        رفع فيديو الوجه
+                      </span>
+                      <span className="text-[10px] text-gray-500">MP4 حتى 50MB</span>
+                    </div>
                   </div>
                 )}
               </div>
+
+              {/* 2. Upload Audio */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 block text-right flex items-center gap-1.5">
+                  <Mic size={12} className="text-cyan-400" />
+                  <span>2. الملف الصوتي أو التعليق المراد نطقه:</span>
+                </label>
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/mp3,audio/wav,audio/m4a"
+                  onChange={handleAudioUpload}
+                  className="hidden"
+                />
+
+                {selectedAudio ? (
+                  <div className="p-2.5 rounded-xl bg-[#121520] border border-white/[0.08] flex items-center justify-between gap-2.5 shadow-sm">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/20 bg-black shrink-0 flex items-center justify-center text-cyan-400">
+                        <Music size={18} />
+                      </div>
+                      <div className="text-right truncate">
+                        <span className="text-xs font-bold text-white block truncate">{audioName || 'تم تحديد الصوت'}</span>
+                        <span className="text-[10px] text-cyan-400 flex items-center gap-1 font-medium">
+                          <CheckCircle2 size={10} /> جاهز للدمج
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setSelectedAudio(null);
+                        setAudioName('');
+                      }}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-900/50 text-gray-400 hover:text-rose-300 border border-white/10 transition-all shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => audioInputRef.current?.click()}
+                    className="border border-dashed border-white/[0.08] hover:border-cyan-500/40 rounded-xl py-3 px-4 text-center cursor-pointer transition-all bg-[#121520] hover:bg-[#161a27] flex items-center justify-center gap-3 group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform shrink-0">
+                      <Upload size={14} />
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-gray-200 block group-hover:text-cyan-300 transition-colors">
+                        رفع التسجيل الصوتي
+                      </span>
+                      <span className="text-[10px] text-gray-500">MP3, WAV حتى 25MB</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
-          </div>
 
-          {/* Previous Works Section - Lip Sync */}
-          <div className="mt-12 lg:col-span-12 border-t border-white/5 pt-8">
-                     <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 bg-pink-500/10 rounded-xl flex items-center justify-center text-pink-400 border border-pink-500/20">
-                              <Mic size={20} />
-                           </div>
-                           <div>
-                              <h3 className="text-lg font-bold text-white">مزامناتك السابقة</h3>
-                              <p className="text-xs text-gray-500 font-medium">سجل بمقاطع الفيديو التي قمت بمزامنة شفاهها</p>
-                           </div>
-                        </div>
-                        
-                        {userVideos.length > 0 && (
-                            <button 
-                              onClick={deleteAllVideos}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs font-bold transition-all"
-                            >
-                               <Trash2 size={14} />
-                               <span>حذف السجل</span>
-                            </button>
-                        )}
-                     </div>
+            {/* Bottom Generate Action */}
+            <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
+              <AIGenerateButton
+                onClick={handleGenerate}
+                isGenerating={isGenerating}
+                disabled={!selectedVideo || !selectedAudio}
+                cost={creditsNeeded}
+                label="مزامنة الشفاه والصوت"
+                generatingLabel="جاري مطابقة الصوت وحركة الفم..."
+                icon={Mic}
+                variant="cyan"
+              />
+            </div>
+          </aside>
 
-                     {loadingVideos ? (
-                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 animate-pulse">
-                             {[...Array(6)].map((_, i) => (
-                                 <div key={i} className="aspect-square bg-white/5 rounded-2xl"></div>
-                             ))}
-                         </div>
-                     ) : userVideos.length > 0 ? (
-                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {userVideos.map((v: any) => (
-                                <div key={v.id} className="group relative aspect-square rounded-2xl overflow-hidden border border-white/5 bg-[#0c0c0c]">
-                                   <video 
-                                      src={v.url} 
-                                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                   />
-                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                       <button 
-                                          onClick={() => deleteVideo(v.id)}
-                                          className="p-2 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all"
-                                          title="حذف"
-                                       >
-                                           <Trash2 size={16} />
-                                       </button>
-                                       <button 
-                                          onClick={() => {
-                                              setResult({ video_url: v.url, success: true });
-                                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                                          }}
-                                          className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all"
-                                          title="فتح"
-                                       >
-                                           <ArrowRight size={16} className="rotate-180" />
-                                       </button>
-                                   </div>
-                                </div>
-                            ))}
-                         </div>
-                     ) : (
-                        <div className="py-16 text-center border border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
-                           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
-                              <Sparkles size={24} />
-                           </div>
-                           <p className="text-gray-500 font-bold text-sm">لا توجد سجلات سابقة</p>
-                        </div>
-                     )}
+          {/* ─── Left Column: Gallery Studio Grid (Slot 1 Loading & Results) ─── */}
+          <main className="flex-1 overflow-y-auto no-scrollbar bg-[#06070B] p-4 lg:p-6 flex flex-col justify-start">
+            
+            {/* Gallery Header */}
+            <div className="flex items-center justify-between mb-4 w-full">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white tracking-wide">النتائج والمعرض</h2>
+                <span className="text-[11px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                  {history.length} {history.length === 1 ? 'نتيجة' : 'نتائج'}
+                </span>
+              </div>
+              {history.length > 0 && (
+                <button
+                  onClick={() => setDeleteModal({ isOpen: true, type: 'all', id: null })}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 transition-colors px-2.5 py-1 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
+                  title="مسح سجل مزامنة الشفاه بالكامل"
+                >
+                  <Trash2 size={13} />
+                  <span>مسح السجل</span>
+                </button>
+              )}
+            </div>
+
+            {/* Gallery Grid starting at Slot 1 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full">
+              
+              {/* 1. Ghost Loading Card in Slot 1 while generating */}
+              {isGenerating && (
+                <AIGenerationCard
+                  aspectRatio="aspect-video"
+                  icon={Mic}
+                  className="border-cyan-500/30"
+                />
+              )}
+
+              {/* 2. Results Cards */}
+              {history.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  onClick={() => setSelectedModalItem(item)}
+                  className="group relative rounded-2xl overflow-hidden bg-black border border-white/[0.08] hover:border-cyan-500/50 transition-all duration-300 shadow-lg cursor-pointer aspect-video flex items-center justify-center"
+                >
+                  <video
+                    src={item.video_url}
+                    muted
+                    loop
+                    playsInline
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    onMouseEnter={(e) => e.currentTarget.play()}
+                    onMouseLeave={(e) => e.currentTarget.pause()}
+                  />
+
+                  {/* Floating Setting Badge */}
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-bold text-cyan-300 shadow-md flex items-center gap-1">
+                    <Mic size={10} />
+                    <span className="truncate max-w-[120px]">{item.audioName}</span>
                   </div>
 
-        <UpgradeModal 
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-        />
+                  {/* Hover Overlay & Direct Download / Delete */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex items-end justify-between">
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-white block truncate max-w-[140px]">{item.audioName}</span>
+                      <span className="text-[10px] text-gray-300 block">{item.time}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteModal({ isOpen: true, type: 'single', id: item.id || idx });
+                        }}
+                        className="p-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-white shadow-lg transition-transform active:scale-95"
+                        title="حذف الفيديو"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadMediaDirectly(item.video_url, `lipsync-${Date.now()}.mp4`);
+                        }}
+                        className="p-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg transition-transform active:scale-95"
+                        title="تحميل مباشر دون فتح صفحة جديدة"
+                      >
+                        <Download size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* 3. Clean Empty State if no history and not generating */}
+              {history.length === 0 && !isGenerating && (
+                <div className="col-span-full py-16 flex flex-col items-center justify-center text-center p-6 rounded-2xl border border-dashed border-white/[0.08] bg-[#0B0D14]/50">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-cyan-400 mb-3">
+                    <Mic size={26} />
+                  </div>
+                  <h3 className="text-sm font-bold text-white">لا توجد نتائج سابقة بعد</h3>
+                </div>
+              )}
+
+            </div>
+
+          </main>
+
         </div>
       </div>
+      <AIDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        type={deleteModal.type}
+        itemType="فيديو"
+        isDeleting={isDeletingModal}
+      />
     </>
   );
 }

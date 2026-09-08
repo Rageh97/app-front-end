@@ -10,6 +10,8 @@ import { toast, Toaster } from 'react-hot-toast';
 import { Copy, Check, ArrowRight, Image as ImageIcon, Upload, X, Sparkles, FileText, Wand2, CreditCard, Crown, ChevronLeft, Zap, RefreshCw, ArrowLeft, ShieldCheck, Coins } from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
+import { AIToolHeader, AIGenerateButton, AILoadingOverlay } from "@/components/ai";
+import { useAiPricing } from '@/hooks/useAiPricing';
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -46,7 +48,8 @@ export default function ImageToTextPage() {
   const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
-  const baseCredits = 2;
+  const { operationPrice } = useAiPricing();
+  const baseCredits = operationPrice('image-to-prompt', 2);
   const imageProfit = balance?.plan?.image_profit ?? 0;
   const creditsNeeded = baseCredits + imageProfit;
 
@@ -300,83 +303,37 @@ export default function ImageToTextPage() {
         }}
       />
 
-      <div className="h-screen flex flex-col bg-[#000000] text-white selection:bg-green-500/30 font-sans overflow-hidden" dir="rtl">
+      <div className="h-screen flex flex-col bg-[#06070B] text-white selection:bg-emerald-500/30 font-sans overflow-hidden" dir="rtl">
         {/* Background Ambience */}
         <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none z-0"></div>
-        <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-900/5 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-green-900/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-          <div className="px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link 
-                  href="/ai" 
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-                >
-                  <ArrowRight size={16} />
-                  <span className="text-sm font-bold">عودة</span>
-                </Link>
-                
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-8 bg-emerald-600 rounded-full"></span>
-                    <h1 className="text-lg font-bold">صورة إلى نص</h1>
-                  </div>
-                  <p className="text-[9px] text-gray-400 font-medium mt-0.5 opacity-80">
-                    ⚠️ الموديلات السينمائية لا تدعم النصوص العربية بدقة؛ للتصميم بالعربي استخدم <Link href="/ai/nano" className="text-emerald-400 hover:underline">نانو بنانا</Link>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
-                  {loadingBalance ? (
-                    <span className="text-[10px] text-gray-400">جاري التحميل...</span>
-                  ) : balance ? (
-                    <div className="flex items-center gap-2">
-                       <CreditCard size={12} className="text-emerald-400" />
-                      <span className="text-xs text-gray-300">الرصيد:</span>
-                      <span className={`text-sm font-bold ${
-                        balance.remaining_credits === 0 ? 'text-red-400' : 
-                        balance.remaining_credits <= 5 ? 'text-yellow-400' : 'text-emerald-400'
-                      }`}>
-                        {balance.remaining_credits}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-red-400">لا يوجد رصيد</span>
-                  )}
-                </div>
-                
-                <button
-                  onClick={openBuyModal}
-                  className="relative inline-flex h-8 active:scale-95 transition overflow-hidden rounded-lg p-[1px] focus:outline-none"
-                >
-                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#10b981_0%,#34d399_50%,#059669_100%)]"></span>
-                  <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-lg bg-[#050505] px-3 text-[10px] font-black text-white backdrop-blur-3xl gap-1.5 transition-all hover:bg-black/40">
-                    <Crown size={12} className="text-emerald-500" />
-                    شراء كريديت
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="صورة إلى نص"
+          description="تحليل الصور واستخراج برومبت نصي سينمائي فائق الدقة لإعادة توليدها"
+          badge="Vision AI"
+          icon={FileText}
+          iconGradient="from-emerald-600 to-teal-600"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={openBuyModal}
+          backHref="/ai"
+        />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden relative z-10">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative z-10">
           
           {/* Right Sidebar (Settings) - Fixed Width */}
-          <aside className="w-[280px] md:w-[300px] flex flex-col border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar shrink-0">
-            <div className="p-4 space-y-4">
+          <aside className="w-full lg:w-[380px] h-[calc(100vh-3.5rem)] flex flex-col justify-between border-b lg:border-b-0 lg:border-l border-white/[0.08] bg-[#0B0D14] p-5 overflow-hidden shrink-0 z-30 shadow-2xl relative">
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-black text-white">استخراج برومبت من صورة</h2>
+              </div>
               
               {/* Upload Area */}
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
-                  <Upload size={12} className="text-emerald-400" />
-                  رفع الصورة
+                <label className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                  <Upload size={14} className="text-emerald-400" />
+                  رفع الصورة المراد تحليلها
                 </label>
                 
                 {!uploadedImage ? (
@@ -384,11 +341,11 @@ export default function ImageToTextPage() {
                     onClick={() => document.getElementById('image-upload')?.click()}
                     className="relative group cursor-pointer"
                   >
-                    <div className="w-full h-40 rounded-xl bg-white/5 border border-dashed border-white/10 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center gap-2 hover:bg-white/[0.07]">
-                      <Upload size={24} className="text-gray-500 group-hover:text-emerald-400 transition-colors" />
+                    <div className="w-full h-44 rounded-xl bg-[#121520] border border-dashed border-white/[0.08] hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center gap-2 hover:bg-[#161a27]">
+                      <Upload size={26} className="text-gray-400 group-hover:text-emerald-400 transition-colors" />
                       <div className="text-center">
-                        <span className="text-[11px] text-gray-400 group-hover:text-emerald-300 transition-colors block mb-0.5 font-bold">انقر لرفع صورة</span>
-                        <span className="text-[9px] text-gray-600">JPG, PNG, WEBP</span>
+                        <span className="text-xs text-gray-300 group-hover:text-emerald-300 transition-colors block mb-0.5 font-bold">انقر لرفع صورة</span>
+                        <span className="text-[10px] text-gray-500">JPG, PNG, WEBP</span>
                       </div>
                     </div>
                     <input
@@ -404,56 +361,60 @@ export default function ImageToTextPage() {
                     <img 
                       src={uploadedImage} 
                       alt="Uploaded" 
-                      className="w-full h-40 object-cover rounded-xl border border-white/10 shadow-lg"
+                      className="w-full h-44 object-cover rounded-xl border border-white/[0.08] shadow-lg"
                     />
                     <button
                       onClick={clearUploadedImage}
-                      className="absolute top-2 left-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      className="absolute top-2 left-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all"
                     >
                       <X size={14} />
                     </button>
-                    <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-[8px] text-emerald-400 font-bold border border-emerald-500/20 backdrop-blur-md">
+                    <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-[9px] text-emerald-400 font-bold border border-emerald-500/20 backdrop-blur-md">
                       ✓ جاهز للتحليل
                     </div>
                   </div>
                 )}
               </div>
+
+              <div className="p-3 bg-[#121520] rounded-xl border border-white/[0.08] flex gap-2.5 items-start">
+                  <Sparkles size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-gray-400 leading-relaxed">سيقوم الذكاء الاصطناعي بتحليل تفاصيل الصورة واستخراج الوصف الهندسي الكامل (Prompt) بدقة متناهية.</p>
+              </div>
             </div>
             
             {/* Generate Button - Fixed at bottom */}
-            <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
+            <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
               {error && (
-                <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">
+                <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-bold text-center truncate">
                   {error}
                 </div>
               )}
 
-              <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                  <div className="flex items-center gap-1.5">
-                      <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                          <Coins size={10} className="text-yellow-500" />
-                      </div>
-                      <span>التكلفة المتوقعه:</span>
-                  </div>
-                  <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-              </div>
-
-              <PremiumButton 
-                label={isGeneratingPrompt ? "جاري التحليل..." : "استخراج الوصف الآن"}
-                icon={isGeneratingPrompt ? RefreshCw : Wand2}
+              <AIGenerateButton
                 onClick={generatePromptFromImage}
-                disabled={!clientReady || !uploadedImage || isGeneratingPrompt}
-                className="w-full py-3 text-xs rounded-xl"
+                isGenerating={isGeneratingPrompt}
+                disabled={!clientReady || !uploadedImage}
+                cost={creditsNeeded}
+                label="إنشاء"
+                generatingLabel="جاري الإنشاء..."
+                icon={FileText}
+                variant="emerald"
               />
             </div>
           </aside>
 
           {/* Left Main Area (Results) - Scrollable */}
-          <main className="flex-1 overflow-y-auto bg-[#020202] custom-scrollbar relative">
+          <main className="flex-1 overflow-y-auto bg-[#06070B] custom-scrollbar relative">
             
             {/* Results Display Area */}
-            <div className="h-[60vh] flex items-center justify-center border-b border-white/5 bg-[#080808] relative overflow-hidden">
+            <div className="h-[60vh] flex items-center justify-center border-b border-white/[0.08] bg-[#0B0D14] relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none"></div>
+
+              <AILoadingOverlay
+                isGenerating={isGeneratingPrompt}
+                progress={generationProgress}
+                icon={Sparkles}
+              />
               
               {generatedPrompt ? (
                 <div className="w-full h-full p-6 relative z-10 flex flex-col">
@@ -464,37 +425,19 @@ export default function ImageToTextPage() {
                     </div>
                     <button
                       onClick={() => copyPromptToClipboard(generatedPrompt)}
-                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-all flex items-center gap-1.5 text-xs text-gray-300 font-bold"
+                      className="px-3 py-1.5 bg-[#121520] hover:bg-[#161a27] rounded-lg border border-white/[0.08] transition-all flex items-center gap-1.5 text-xs text-gray-300 font-bold"
                     >
                       {copiedPrompt ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                       <span>{copiedPrompt ? 'تم النسخ' : 'نسخ النص'}</span>
                     </button>
                   </div>
                   
-                  <div className="flex-1 p-6 bg-white/[0.02] rounded-2xl border border-white/5 relative overflow-y-auto custom-scrollbar">
+                  <div className="flex-1 p-6 bg-[#121520] rounded-2xl border border-white/[0.08] relative overflow-y-auto custom-scrollbar">
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                       <FileText size={100} />
                     </div>
                     <p className="text-gray-300 leading-relaxed text-base font-medium relative z-10">{generatedPrompt}</p>
                   </div>
-                </div>
-              ) : isGeneratingPrompt ? (
-                <div className="text-center relative z-10 w-full max-w-xs px-6">
-                  <div className="w-20 h-20 relative mx-auto mb-6">
-                    <div className="absolute inset-0 rounded-full border-2 border-emerald-500/10"></div>
-                    <div className="absolute inset-0 rounded-full border-2 border-t-emerald-500 animate-spin"></div>
-                    <Sparkles className="absolute inset-0 m-auto text-emerald-400 animate-pulse" size={24} />
-                  </div>
-                  <div className="text-lg font-bold mb-2">جاري التحليل...</div>
-                  <p className="text-gray-500 text-xs mb-6 font-medium">يقوم الذكاء الاصطناعي الآن بقراءة تفاصيل الصورة بعناية</p>
-                  
-                  <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mb-2">
-                    <div 
-                      className="bg-gradient-to-r from-emerald-500 to-green-400 h-full rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-                      style={{ width: `${generationProgress}%` }}
-                    ></div>
-                  </div>
-                  <div className="text-emerald-400 font-mono text-xs font-bold">{Math.floor(generationProgress)}%</div>
                 </div>
               ) : (
                 <div className="text-center relative z-10 p-8 opacity-60">
@@ -502,7 +445,7 @@ export default function ImageToTextPage() {
                     <Sparkles size={40} className="text-white/20" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">انتظار الصورة</h3>
-                  <p className="text-gray-500 max-w-xs mx-auto text-sm">قم برفع الصورة من القائمة الجانبية وسنقوم بتحويلها إلى وصف نصي دقيق فوراً</p>
+                  <p className="text-gray-400 max-w-xs mx-auto text-sm">قم برفع الصورة من القائمة الجانبية وسنقوم بتحويلها إلى وصف نصي دقيق فوراً</p>
                 </div>
               )}
             </div>

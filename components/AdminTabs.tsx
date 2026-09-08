@@ -18,85 +18,27 @@ const AdminTabs: FunctionComponent = () => {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const res = await axios.get("api/chat/admin/chat-users");
-      const users = res.data || [];
-      const totalUnread = users.reduce((sum: number, user: any) => sum + (user.unread_user_messages || ""), 0);
-      setUnreadCount(totalUnread);
+      const res = await axios.get("api/chat/admin/unread-count");
+      if (typeof res.data?.unread_count === "number") {
+        setUnreadCount(res.data.unread_count);
+      } else {
+        const users = Array.isArray(res.data) ? res.data : (res.data?.users || []);
+        const totalUnread = typeof res.data?.totalUnread === "number"
+          ? res.data.totalUnread
+          : users.reduce((sum: number, user: any) => sum + (Number(user.unread_user_messages) || 0), 0);
+        setUnreadCount(totalUnread);
+      }
     } catch (e) {
       // noop
     }
   }, []);
 
+  const userRole = data?.userRole || data?.userData?.userRole || (global as any)?.userRole || (global as any)?.userData?.userRole || "admin";
+  const isSuperAdmin = data?.userData?.email === "nouamanlamkadmxd@gmail.com";
+
   const getTabsByRole = () => {
-    // Super admin (specific email) gets all tabs including releases
-    if (data?.userData.email === "nouamanlamkadmxd@gmail.com") {
-      return [
-        {
-          label: t('admin.overview'),
-          href: `/admin/overview`,
-        },
-        {
-          label: t('chat.Chat'),
-          href: `/admin/chat`,
-          badge: unreadCount,
-        },
-        {
-          label: t('admin.users'),
-          href: `/admin/users`,
-        },
-        {
-          label: t('admin.directActivation'),
-          href: `/admin/direct-activation`,
-        },
-        {
-          label: t('admin.tools'),
-          href: `/admin/tools`,
-        },
-        {
-          label: t('admin.packs'),
-          href: `/admin/packs`,
-        },
-        {
-          label: t('admin.questions'),
-          href: `/admin/questions`,
-        },
-        {
-          label: t('admin.reviews'),
-          href: `/admin/reviews`,
-        },
-        {
-          label: t('admin.addVideo'),
-          href: `/admin/videos`,
-        },
-        {
-          label: t('admin.orders'),
-          href: `/admin/orders`,
-        },
-        {
-          label: t('admin.settings'),
-          href: `/admin/setting`,
-        },
-        {
-          label: t('admin.issues'),
-          href: `/admin/issues`,
-        },
-        {
-          label: t('admin.releases'),
-          href: `/admin/releases`,
-        },
-        {
-          label: t('admin.Media'),
-          href: `/admin/media`,
-        },
-        {
-          label: 'الكوبونات',
-          href: `/admin/coupons`,
-        },
-      ];
-    }
-    
-    // Regular admin gets all tabs except releases
-    if (data?.userRole === "admin") {
+    // Super admin or regular admin gets all tabs
+    if (isSuperAdmin || userRole === "admin" || !userRole) {
       return [
         {
           label: t('admin.overview'),
@@ -163,11 +105,12 @@ const AdminTabs: FunctionComponent = () => {
           label: 'الكوبونات',
           href: `/admin/coupons`,
         },
+        ...(isSuperAdmin ? [{ label: t('admin.releases'), href: `/admin/releases` }] : []),
       ];
     }
     
     // Manager gets access to users, tools, packs, orders, issues, and can add supervisors and employees
-    if (data?.userRole === "manager") {
+    if (userRole === "manager") {
       return [
         {
           label: t('admin.overview'),
@@ -214,7 +157,7 @@ const AdminTabs: FunctionComponent = () => {
           label: t('admin.addVideo'),
           href: `/admin/videos`,
         },
-         {
+        {
           label: t('admin.Media'),
           href: `/admin/media`,
         },
@@ -222,15 +165,11 @@ const AdminTabs: FunctionComponent = () => {
           label: 'الكوبونات',
           href: `/admin/coupons`,
         },
-        // {
-        //   label: t('admin.issues'),
-        //   href: `/admin/issues`,
-        // },
       ];
     }
     
     // Supervisor gets access to tools, packs, orders, overview, and questions
-    if (data?.userRole === "supervisor") {
+    if (userRole === "supervisor") {
       return [
         {
           label: t('admin.overview'),
@@ -253,15 +192,11 @@ const AdminTabs: FunctionComponent = () => {
           label: t('admin.orders'),
           href: `/admin/orders`,
         },
-        // {
-        //   label: t('admin.questions'),
-        //   href: `/admin/questions`,
-        // },
       ];
     }
     
     // Employee gets access to overview, users, orders, and questions
-    if (data?.userRole === "employee") {
+    if (userRole === "employee") {
       return [
         {
           label: t('admin.overview'),
@@ -280,15 +215,9 @@ const AdminTabs: FunctionComponent = () => {
           label: t('admin.orders'),
           href: `/admin/orders`,
         },
-        // {
-        //   label: t('admin.questions'),
-        //   href: `/admin/questions`,
-        // },
       ];
     }
     
-    // Default tabs (fallback) - should not normally be reached
-    // Always include overview for any admin user
     return [
       {
         label: t('admin.overview'),
@@ -297,48 +226,16 @@ const AdminTabs: FunctionComponent = () => {
     ];
   };
 
-  useEffect(() => {
-    if (data) {
-      // Check if user has any admin role access
-      const hasAdminAccess = ['admin', 'manager', 'supervisor', 'employee'].includes(data?.userRole || '');
-      const isSuperAdmin = data?.userData.email === "nouamanlamkadmxd@gmail.com";
-      
-      // If user doesn't have admin access and tries to access admin routes, redirect to dashboard
-      if (!hasAdminAccess && !isSuperAdmin && pathname.startsWith('/admin')) {
-        router.push('/dashboard');
-        return;
-      }
-      
-      // Always allow access to overview page for admin users
-      if (pathname === '/admin/overview' && (hasAdminAccess || isSuperAdmin)) {
-        return; // Allow access to overview
-      }
-      
-      // If user has admin access, check if the specific path is allowed for their role
-      if (hasAdminAccess || isSuperAdmin) {
-        const allowedTabs = getTabsByRole();
-        const isPathAllowed = allowedTabs.some(tab => pathname.startsWith(tab.href));
-
-        if (!isPathAllowed && pathname.startsWith('/admin')) {
-          router.push('/dashboard');
-        }
-      }
-    }
-  }, [data, pathname, router]);
-
   // Fetch unread count for admin users
   useEffect(() => {
-    if (data) {
-      const hasAdminAccess = ['admin', 'manager', 'supervisor', 'employee'].includes(data?.userRole || '');
-      const isSuperAdmin = data?.userData.email === "nouamanlamkadmxd@gmail.com";
-      
-      if (hasAdminAccess || isSuperAdmin) {
-        fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 8000); // Poll every 8 seconds
-        return () => clearInterval(interval);
-      }
+    const hasAdminAccess = ['admin', 'manager', 'supervisor', 'employee'].includes(userRole || '');
+    
+    if (hasAdminAccess || isSuperAdmin) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 8000); // Poll every 8 seconds
+      return () => clearInterval(interval);
     }
-  }, [data, fetchUnreadCount]);
+  }, [userRole, isSuperAdmin, fetchUnreadCount]);
   
   const adminTabs = getTabsByRole();
   

@@ -29,7 +29,7 @@ import * as consts from "@/consts";
 import SignOutIcon from "../svg/SignOutIcon";
 import AffiliateIcon from "../svg/AffiliateIcon";
 import RocketIcon from "../svg/RocketIcon";
-import { Crown, Download, House, ListOrdered, LogOut, ShieldCheck, ShieldUser, ShoppingBag, ShoppingCart, UsersRound, Vibrate, Video, Bell, User, MessageCircleMore, ImageDown, TypeOutline, Brain } from "lucide-react";
+import { Crown, Download, House, ListOrdered, LogOut, ShieldCheck, ShieldUser, ShoppingBag, ShoppingCart, UsersRound, Vibrate, Video, Bell, User, MessageCircleMore, ImageDown, TypeOutline, Brain, Globe } from "lucide-react";
 import axios from "@/utils/api";
 import { useGetDevices } from "@/hooks/useGetDevices";
 import { useTranslation } from 'react-i18next';
@@ -106,12 +106,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   return (
     <aside
       ref={sidebar}
-      className="fixed start-0 top-0 z-[999] hidden md:flex flex-col h-screen w-40 xl:w-44 duration-300 ease-linear 
+      className="fixed start-0 top-0 z-[999] hidden md:flex dark:hidden flex-col h-screen w-40 xl:w-44 duration-300 ease-linear 
       bg-gradient-to-b from-[#0f021b]/95 via-[#190237]/80 to-[#0f021b]/95 backdrop-blur-3xl border-e border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] 
       pt-30 pb-5 overflow-visible ring-1 ring-white/5"
     >
       {/* Shiny Glowing Border Effect */}
-      <div className="absolute end-0 top-1/2 -translate-y-1/2 h-[70%] w-[1px] bg-gradient-to-b from-transparent via-[#ff7702] to-transparent opacity-80"></div>
+      <div className="absolute end-0 top-1/2 -translate-y-1/2 h-[70%] w-[1px] bg-gradient-to-b from-transparent via-[#ff7702] dark:via-[#00c48c]/40 to-transparent opacity-80"></div>
       
       <div className="flex-1 w-full flex flex-col items-center gap-2 overflow-y-auto no-scrollbar">
          {SidebarContent}
@@ -145,6 +145,7 @@ type SidebarLinkProps =
     getIsActive?: (pathname: string, completeHref: string) => boolean;
     permission?: Boolean;
     badge?: string;
+    hasSubscription?: boolean;
   }
   | SidebarDropdownProps;
 
@@ -163,6 +164,7 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
     : pathname.startsWith(completeHref);
 
   const badge = 'badge' in props ? props.badge : undefined;
+  const hasSubscription = 'hasSubscription' in props ? props.hasSubscription : false;
 
   return (
     <Link
@@ -170,8 +172,8 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
       className={clsx(
         "group relative flex items-center justify-start w-full px-2 h-12 gap-2 rounded-xl transition-all duration-500 ease-out",
         {
-          "bg-white/10 backdrop-blur-xl border border-white/20 text-emerald-500 inner-shadow shadow-[0_0_20px_rgba(255,255,255,0.3),inset_0_0_10px_rgba(255,255,255,0.05)] scale-[1.02]": isActive,
-          "text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] hover:scale-[1.02] border border-transparent hover:border-white/10": !isActive,
+          "bg-white/10 dark:bg-[#00c48c]/15 backdrop-blur-xl border border-white/20 dark:border-[#00c48c]/40 text-emerald-500 dark:text-[#00c48c] inner-shadow shadow-[0_0_20px_rgba(255,255,255,0.3),inset_0_0_10px_rgba(255,255,255,0.05)] dark:shadow-none scale-[1.02]": isActive,
+          "text-gray-400 dark:text-zinc-400 hover:text-white dark:hover:text-white bg-white/5 dark:bg-white/[0.03] hover:bg-white/10 dark:hover:bg-white/[0.08] hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] dark:hover:shadow-none hover:scale-[1.02] border border-transparent hover:border-white/10 dark:hover:border-zinc-800": !isActive,
         }
       )}
     >
@@ -180,7 +182,25 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
       </span>
       <div className="flex items-center gap-2 overflow-hidden w-full">
         <span className="relative z-10 font-medium whitespace-nowrap text-sm truncate">
-          {name}
+          {completeHref === "/subscriptions" && hasSubscription ? (
+            <span className="inline-flex items-center gap-1 font-black animate-amber-shimmer">
+              <span>{name}</span>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400"></span>
+              </span>
+            </span>
+          ) : completeHref === "/dashboard/web-tools" ? (
+            <span className="inline-flex items-center gap-1 font-black animate-green-shimmer">
+              <span>{name}</span>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+              </span>
+            </span>
+          ) : (
+            name
+          )}
         </span>
         {badge && (
           <span className="relative z-10 flex h-2 w-2">
@@ -288,9 +308,12 @@ const GlobalMenu: FunctionComponent = () => {
 
   const hasActiveSubscription = () => {
     if (!data) return false;
-    const hasActivePacks = data.userPacksData?.some((pack: any) => pack.isActive === true);
-    const hasActiveTools = data.userToolsData?.some((tool: any) => tool.isActive === true);
-    return hasActivePacks || hasActiveTools;
+    const hasActivePacks = data.userPacksData?.some((pack: any) => pack.isActive !== false) || (data.userPacksData && data.userPacksData.length > 0);
+    const hasActiveTools = data.userToolsData?.some((tool: any) => tool.isActive !== false) || (data.userToolsData && data.userToolsData.length > 0);
+    const hasActivePlans = data.userPlansData?.some((plan: any) => plan.isActive !== false) || (data.userPlansData && data.userPlansData.length > 0);
+    const hasCredits = Number(data?.userData?.credits || 0) > 0 || (data.userCreditsData && data.userCreditsData.length > 0);
+    const hasAiPlan = Boolean(data.hasAiPlan || data.hasActivePlan);
+    return Boolean(hasActivePacks || hasActiveTools || hasActivePlans || hasCredits || hasAiPlan);
   };
 
   if (data)
@@ -305,6 +328,13 @@ const GlobalMenu: FunctionComponent = () => {
             permission: true,
           },
           {
+            completeHref: "/dashboard/web-tools",
+            name: "أدوات المواقع",
+            icon: <Globe size={24} />,
+            children: "",
+            permission: true,
+          },
+          {
             completeHref: "/ai",
             name: "Nexus Ai",
             icon: <Brain size={24} />,
@@ -312,25 +342,26 @@ const GlobalMenu: FunctionComponent = () => {
             children: "",
             permission: isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },
-            {
+          {
             completeHref: "/media-hub",
             name: t('dashboard.media'),
             icon: <Video size={24} />,
             children: "",
             permission: isMediaHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },
-            {
-              completeHref: "/fonts",
-              name: t('dashboard.fontsLibrary'),
-              icon: <TypeOutline   size={24} />,
-              children: "",
-              permission: isFontsHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
-            },
+          {
+            completeHref: "/fonts",
+            name: t('dashboard.fontsLibrary'),
+            icon: <TypeOutline   size={24} />,
+            children: "",
+            permission: isFontsHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
+          },
           {
             completeHref: "/subscriptions",
             name: t('dashboard.Subscriptions'),
-            icon: <Crown size={24} /> ,
+            icon: <Crown size={24} />,
             children: "",
+            hasSubscription: hasActiveSubscription(),
             permission: true,
           },
           {
@@ -340,7 +371,6 @@ const GlobalMenu: FunctionComponent = () => {
             children: "",
             permission: true,
           },
-         
           {
             completeHref: "/orders",
             name: t('dashboard.Orders'),
@@ -355,14 +385,6 @@ const GlobalMenu: FunctionComponent = () => {
             children: "",
             permission: isMainDevice()
           },
-          {
-            completeHref: "/Policy",
-            name: t('footer.returnPolicy'),
-            icon: <ShieldCheck size={24} />,
-            children: "",
-            permission: true,
-          },
-          
           {
             completeHref: "/admin",
             name: data?.userRole === "admin" ? t('dashboard.Admin') : t('admin.manage'),

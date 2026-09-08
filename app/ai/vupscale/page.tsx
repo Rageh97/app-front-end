@@ -7,8 +7,8 @@ import UpgradeModal from "@/components/Modals/UpgradeModal";
 import Link from "next/link";
 import { toast, Toaster } from 'react-hot-toast';
 import { ArrowRight, Maximize, Upload, Download, X, RefreshCw, Wand2, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Play, Video, Trash2, Image as ImageIcon, Film, Coins } from 'lucide-react';
-import TextType from "@/components/TextType";
-import { PremiumButton } from "@/components/PremiumButton";
+import { AIToolHeader, AIGenerateButton, AILoadingOverlay, downloadMediaDirectly, AIDeleteModal } from "@/components/ai";
+import { useAiPricing } from "@/hooks/useAiPricing";
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -29,11 +29,12 @@ type CreditsRecord = {
 };
 
 const SCALE_OPTIONS = [
-    { id: '2x', name: 'جودة مضاعفة 2x', cost: 5 },
-    { id: '4x', name: 'جودة فائقة 4x', cost: 8 },
+    { id: '2x', name: 'جودة مضاعفة 2x' },
+    { id: '4x', name: 'جودة فائقة 4x' },
 ];
 
 export default function VideoUpscalePage() {
+  const { operationPrice } = useAiPricing();
   const [balance, setBalance] = useState<CreditsRecord | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -50,9 +51,7 @@ export default function VideoUpscalePage() {
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
   
-  const videoProfit = balance?.plan?.video_profit ?? 0;
-  const currentScaleOption = SCALE_OPTIONS.find(o => o.id === scale);
-  const creditsNeeded = (currentScaleOption?.cost || 0) + videoProfit;
+  const creditsNeeded = operationPrice('vupscale', 15);
 
   const getToken = () => {
     if (typeof window !== 'undefined') return localStorage.getItem("a");
@@ -175,7 +174,6 @@ export default function VideoUpscalePage() {
   // Previous Works Logic
   const [userVideos, setUserVideos] = useState<any[]>([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
-
   const fetchUserVideos = async () => {
     if (!apiBase) return;
     const token = getToken();
@@ -197,35 +195,49 @@ export default function VideoUpscalePage() {
     } catch (e) {} finally { setLoadingVideos(false); }
   };
 
-  const deleteVideo = async (videoId: number) => {
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos(userVideos.filter(v => v.id !== videoId));
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos/${videoId}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم الحذف');
-      } catch (e) {}
-  };
 
-  const deleteAllVideos = async () => {
-      if (!confirm('حذف السجل بالكامل؟')) return;
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos([]);
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم مسح السجل');
-      } catch (e) {}
-  };
 
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'all';
+    id?: number | string | null;
+  }>({ isOpen: false, type: 'single', id: null });
+  const [isDeletingModal, setIsDeletingModal] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    setIsDeletingModal(true);
+    try {
+      if (deleteModal.type === 'single' && deleteModal.id !== undefined && deleteModal.id !== null) {
+        const videoId = Number(deleteModal.id);
+        if (apiBase) {
+          const token = getToken();
+          setUserVideos(prev => prev.filter(v => v.id !== videoId));
+          await fetch(`${apiBase}/api/ai/user-videos/${videoId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
+          });
+          toast.success('تم الحذف');
+        }
+      } else if (deleteModal.type === 'all') {
+        if (apiBase) {
+          const token = getToken();
+          setUserVideos([]);
+          await fetch(`${apiBase}/api/ai/user-videos?tool=upscale`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
+          });
+          toast.success('تم مسح السجل');
+        }
+      }
+      setDeleteModal({ isOpen: false, type: 'single', id: null });
+    } catch (e) {
+      toast.error('حدث خطأ أثناء الحذف');
+    } finally {
+      setIsDeletingModal(false);
+    }
+  };
 
   useEffect(() => {
      if (typeof window !== 'undefined') {
@@ -237,118 +249,112 @@ export default function VideoUpscalePage() {
     <>
       <Toaster position="top-right" />
 
-      <div className="h-screen flex flex-col bg-black text-white overflow-hidden" dir="rtl">
-        {/* Header */}
-        <header className="shrink-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 flex justify-between items-center px-6 py-3">
-            <div className="flex items-center gap-4">
-              <Link href="/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-xs"><ArrowRight size={14} /> عودة</Link>
-              <div className="flex items-center gap-2 text-indigo-400">
-                <Maximize size={20} fill="currentColor" fillOpacity={0.2} />
-                <h1 className="text-lg font-bold">تحسين دقة الفيديو</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg flex items-center gap-2">
-                <CreditCard size={12} className="text-indigo-400" />
-                <span className="text-sm font-bold text-indigo-400">{balance?.remaining_credits || 0}</span>
-              </div>
-              <button onClick={() => setShowBuyModal(true)} className="bg-indigo-600 px-4 py-1.5 rounded-lg text-[10px] font-black hover:bg-indigo-700 transition-all flex items-center gap-2 text-white"><Crown size={12} /> شراء</button>
-            </div>
-        </header>
+      <div className="h-screen flex flex-col bg-[#06070B] text-white overflow-hidden" dir="rtl">
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="تحسين دقة وجودة الفيديو"
+          description="مضاعفة دقة الفيديو إلى 2K و 4K وإزالة التشويش بالذكاء الاصطناعي"
+          badge="Video Upscaler"
+          icon={Maximize}
+          iconGradient="from-emerald-600 to-teal-600"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={() => setShowBuyModal(true)}
+          backHref="/ai"
+        />
 
-        <div className="flex-1 flex overflow-hidden">
-            <aside className="w-[280px] md:w-[300px] border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0">
-                <div className="p-4 space-y-4">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            <aside className="w-full lg:w-[380px] h-[calc(100vh-3.5rem)] border-b lg:border-b-0 lg:border-l border-white/[0.08] bg-[#0B0D14] p-5 overflow-hidden flex flex-col justify-between shrink-0 z-30 space-y-4 shadow-2xl relative">
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-black text-white">تحسين جودة الفيديو</h2>
+                    </div>
+
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">ملف الفيديو</label>
+                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                            <Upload size={14} className="text-emerald-400" /> ملف الفيديو
+                        </label>
                         <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="hidden" id="v-ups-up" />
-                        <label htmlFor="v-ups-up" className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-indigo-500/30 transition-all">
-                            <span className="text-[10px] text-gray-400 max-w-[150px] truncate">{videoFile ? videoFile.name : "ارفع الفيديو هنا..."}</span>
-                            <Video size={14} className="text-indigo-500" />
+                        <label htmlFor="v-ups-up" className="flex items-center justify-between p-3.5 rounded-xl bg-[#121520] border border-white/[0.08] cursor-pointer hover:border-emerald-500/40 transition-all">
+                            <span className="text-xs text-gray-300 max-w-[220px] truncate">{videoFile ? videoFile.name : "اختر ملف فيديو..."}</span>
+                            <Video size={16} className="text-emerald-400" />
                         </label>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">مقياس التحسين</label>
-                        <div className="grid grid-cols-1 gap-1.5">
+                        <label className="text-xs font-bold text-gray-400">مقياس ومضاعف الدقة</label>
+                        <div className="grid grid-cols-1 gap-2">
                             {SCALE_OPTIONS.map((opt) => (
                                 <button
                                     key={opt.id}
                                     onClick={() => setScale(opt.id)}
-                                    className={`flex items-center justify-between p-3 rounded-lg transition-all duration-300 border ${
+                                    className={`flex items-center justify-between p-3 rounded-xl transition-all border ${
                                         scale === opt.id
-                                        ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-300'
-                                        : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'
+                                        ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300 font-bold'
+                                        : 'bg-[#121520] border-white/[0.08] text-gray-400 hover:bg-[#161a27]'
                                     }`}
                                 >
-                                    <span className="text-[10px] font-black">{opt.name}</span>
-                                    <span className="text-[9px] text-gray-600 font-bold">{opt.cost + videoProfit} نقطة</span>
+                                    <span className="text-xs font-bold">{opt.name}</span>
+                                    <span className="text-xs text-emerald-400 font-bold">{creditsNeeded} 🪙</span>
                                 </button>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
-                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">{error}</div>}
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                                <Coins size={10} className="text-yellow-500" />
-                            </div>
-                            <span>التكلفة المتوقعه:</span>
-                        </div>
-                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                    </div>
-                    <PremiumButton label={isProcessing ? "جاري التحسين..." : "بدء التحسين"} icon={isProcessing ? RefreshCw : Maximize} onClick={onProcess} disabled={!videoFile || isProcessing} className="w-full py-3 text-xs rounded-xl" />
+                <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
+                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-bold text-center truncate">{error}</div>}
+                    
+                    <AIGenerateButton
+                        onClick={onProcess}
+                        isGenerating={isProcessing}
+                        disabled={!videoFile}
+                        cost={creditsNeeded}
+                        label="إنشاء"
+                        generatingLabel="جاري الإنشاء..."
+                        icon={Maximize}
+                        variant="emerald"
+                    />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] custom-scrollbar p-6">
+            <main className="flex-1 overflow-y-auto bg-[#06070B] custom-scrollbar p-6">
                 <div className="max-w-5xl mx-auto space-y-8">
-                    <div className="bg-[#080808] rounded-[2rem] border border-white/5 min-h-[400px] flex items-center justify-center relative overflow-hidden group shadow-inner">
+                    <div className="bg-[#0B0D14] rounded-[2rem] border border-white/[0.08] min-h-[400px] flex items-center justify-center relative overflow-hidden group shadow-inner">
+                        <AILoadingOverlay
+                          isGenerating={isProcessing}
+                          progress={processingProgress}
+                          icon={Maximize}
+                        />
+
                         {result ? (
                             <div className="relative w-full h-full p-8 flex flex-col items-center justify-center group/vid">
-                                <video src={result.video_url} controls className="max-h-[500px] w-full max-w-2xl rounded-[2rem] shadow-2xl border border-white/10 animate-fade-in" />
+                                <video src={result.video_url} controls autoPlay loop playsInline className="max-h-[75vh] max-w-full w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/10 animate-fade-in" />
                                 <div className="mt-8 flex items-center gap-3">
-                                    <button onClick={() => window.open(result.video_url)} className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition-all font-black text-sm"><Download size={18} /> تحميل</button>
+                                    <button onClick={() => downloadMediaDirectly(result.video_url, `upscaled-video-${Date.now()}.mp4`)} className="flex items-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all font-black text-sm"><Download size={18} /> تحميل مباشر</button>
                                     <button onClick={() => setResult(null)} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/10"><RefreshCw size={20} /></button>
                                 </div>
-                            </div>
-                        ) : isProcessing ? (
-                            <div className="text-center relative z-10 w-full max-w-sm px-8">
-                                <div className="w-20 h-20 relative mx-auto mb-6">
-                                    <div className="absolute inset-0 rounded-[1.5rem] border-4 border-indigo-500/10 scale-125"></div>
-                                    <div className="absolute inset-0 rounded-[1.5rem] border-4 border-t-indigo-500 animate-spin"></div>
-                                    <Maximize className="absolute inset-0 m-auto text-indigo-400 animate-pulse" size={32} />
-                                </div>
-                                <h3 className="text-lg font-black mb-2">جاري مضاعفة البيكسلات...</h3>
-                                <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mt-6">
-                                    <div className="bg-indigo-500 h-full transition-all duration-700 shadow-[0_0_15px_rgba(30,58,138,0.5)]" style={{ width: `${processingProgress}%` }}></div>
-                                </div>
-                                <div className="text-indigo-400 font-mono text-[10px] mt-2 font-bold">{Math.floor(processingProgress)}%</div>
                             </div>
                         ) : (
                             <div className="text-center relative z-10 p-12">
                                 <div className="w-20 h-20 bg-white/[0.02] rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 border border-white/5 group-hover:scale-105 transition-all duration-700 shadow-inner">
-                                    <Maximize size={40} className="text-white/5 group-hover:text-indigo-500/10 transition-colors" />
+                                    <Maximize size={40} className="text-white/5 group-hover:text-emerald-500/10 transition-colors" />
                                 </div>
-                                <p className="text-gray-600 max-w-xs mx-auto font-bold text-sm leading-relaxed">ارفع الفيديو بجودته العالية أو المنخفضة، واترك الذكاء الاصطناعي يعيد صياغة كل فريم بدقة HDR.</p>
+                                <p className="text-gray-400 max-w-xs mx-auto font-bold text-sm leading-relaxed">ارفع الفيديو بجودته العالية أو المنخفضة، واترك الذكاء الاصطناعي يعيد صياغة كل فريم بدقة HDR.</p>
                             </div>
                         )}
                     </div>
 
-                    <div className="mt-12 border-t border-white/5 pt-8">
+                    <div className="mt-12 border-t border-white/[0.08] pt-8">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 border border-indigo-500/20"><Maximize size={20} /></div>
+                                <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 border border-emerald-500/20"><Maximize size={20} /></div>
                                 <div>
                                     <h3 className="text-lg font-bold text-white">سجل التحسينات</h3>
                                     <p className="text-xs text-gray-500 font-medium">الفيديوهات التي قمت برفع جودتها</p>
                                 </div>
                             </div>
                             {userVideos.length > 0 && (
-                                <button onClick={deleteAllVideos} className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs font-bold transition-all"><Trash2 size={14} /> مسح الكل</button>
+                                <button onClick={() => setDeleteModal({ isOpen: true, type: 'all', id: null })} className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs font-bold transition-all"><Trash2 size={14} /> مسح الكل</button>
                             )}
                         </div>
 
@@ -359,10 +365,10 @@ export default function VideoUpscalePage() {
                         ) : userVideos.length > 0 ? (
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {userVideos.map((v: any) => (
-                                    <div key={v.id} className="group relative aspect-video rounded-2xl overflow-hidden border border-white/5 bg-white/[0.02]">
-                                        <video src={v.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                    <div key={v.id} className="group relative aspect-video rounded-2xl overflow-hidden border border-white/5 bg-black flex items-center justify-center">
+                                        <video src={v.url} className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" />
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                            <button onClick={() => deleteVideo(v.id)} className="p-2 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 transition-all"><Trash2 size={16} /></button>
+                                            <button onClick={() => setDeleteModal({ isOpen: true, type: 'single', id: v.id })} className="p-2 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 transition-all"><Trash2 size={16} /></button>
                                             <button onClick={() => { setResult({ video_url: v.url }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all"><Play size={16} /></button>
                                         </div>
                                     </div>
@@ -382,19 +388,19 @@ export default function VideoUpscalePage() {
 
       {showBuyModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#111] rounded-3xl w-full max-w-lg border border-white/10 overflow-hidden relative" dir="rtl">
-            <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500"></div>
+          <div className="bg-[#0B0D14] rounded-3xl w-full max-w-lg border border-white/[0.08] overflow-hidden relative" dir="rtl">
+            <div className="absolute top-0 right-0 w-full h-1 bg-emerald-500"></div>
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3"><Crown size={20} className="text-indigo-400" /><h2 className="text-xl font-bold text-white">إضافة رصيد</h2></div>
+              <div className="flex items-center gap-3"><Crown size={20} className="text-emerald-400" /><h2 className="text-xl font-bold text-white">إضافة رصيد</h2></div>
               <button onClick={() => setShowBuyModal(false)} className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-gray-400" /></button>
             </div>
             <div className="p-6 max-h-[60vh] overflow-y-auto">
               {loadingPlans ? <div className="text-center py-12 animate-pulse text-gray-500">جاري التحميل...</div> : (
                 <div className="space-y-4">
                   {plans.map((p) => (
-                    <button key={p.plan_id} onClick={() => { setSelectedPlan(p as any); setShowBuyModal(false); setOpenPaymentModal(true); }} className="w-full p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-right transition-all border border-white/5 hover:border-indigo-500/50 group flex items-center justify-between">
-                      <div><div className="font-bold text-white group-hover:text-indigo-400 transition-colors">{p.plan_name}</div><div className="text-gray-400 text-xs mt-1">{p.credits_per_period} نقطة / {p.period}</div></div>
-                      <div className="text-white font-bold text-xl bg-white/10 px-3 py-1 rounded-lg group-hover:bg-indigo-500">${p.amount}</div>
+                    <button key={p.plan_id} onClick={() => { setSelectedPlan(p as any); setShowBuyModal(false); setOpenPaymentModal(true); }} className="w-full p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-right transition-all border border-white/5 hover:border-emerald-500/50 group flex items-center justify-between">
+                      <div><div className="font-bold text-white group-hover:text-emerald-400 transition-colors">{p.plan_name}</div><div className="text-gray-400 text-xs mt-1">{p.credits_per_period} نقطة / {p.period}</div></div>
+                      <div className="text-white font-bold text-xl bg-white/10 px-3 py-1 rounded-lg group-hover:bg-emerald-600">${p.amount}</div>
                     </button>
                   ))}
                 </div>
@@ -413,6 +419,14 @@ export default function VideoUpscalePage() {
       )}
 
       <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+
+      <AIDeleteModal
+        isOpen={deleteModal.isOpen}
+        type={deleteModal.type}
+        isDeleting={isDeletingModal}
+        onClose={() => setDeleteModal({ isOpen: false, type: 'single', id: null })}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 }

@@ -30,6 +30,11 @@ const BadgesRecord: Record<Props["type"], FunctionComponent<BadgeProps>> = {
       {text}
     </div>
   ),
+  DarkBlue: ({ text }) => (
+    <div className="inline-flex rounded-full bg-slate-900 py-1 px-3 text-sm font-medium text-blue-100 hover:bg-opacity-90">
+      {text}
+    </div>
+  ),
   Light: ({ text }) => (
     <div className="inline-flex rounded-full bg-[#EFEFEF] py-1 px-3 text-sm font-medium text-[#212B36] hover:bg-opacity-90">
       {text}

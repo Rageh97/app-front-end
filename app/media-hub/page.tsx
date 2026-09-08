@@ -563,38 +563,40 @@ const CategoryCard = ({ category, onClick }: { category: Category, onClick: () =
   return (
     <div 
       onClick={onClick}
-      className="group relative rounded-2xl overflow-hidden cursor-pointer aspect-[4/3] bg-[#1a1a1a] border border-white/5 hover:border-[#00c48c]/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#00c48c]/10"
+      className="group relative rounded-2xl p-[1px] cursor-pointer aspect-[4/3] bg-white/[0.08] hover:bg-gradient-to-tr hover:from-emerald-500/80 hover:via-[#00c48c] hover:to-teal-400 transition-all duration-300"
     >
-      {/* Background Image */}
-      {category.cover_image_url ? (
-        <img 
-          src={category.cover_image_url} 
-          alt={category.name}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-[#00c48c]/20 to-orange/20 flex items-center justify-center">
-          <Folder size={64} className="text-white/20" />
-        </div>
-      )}
-      
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300" />
-      
-      {/* Content */}
-      <div className="absolute inset-0 p-6 flex flex-col justify-end">
-        <h3 className="text-white font-black text-xl md:text-2xl mb-2 group-hover:text-[#00c48c] transition-colors duration-300">
-          {category.name}
-        </h3>
-        {category.description && (
-          <p className="text-gray-400 text-sm line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            {category.description}
-          </p>
+      <div className="relative w-full h-full rounded-[15px] overflow-hidden bg-[#12141c]">
+        {/* Background Image - No scale */}
+        {category.cover_image_url ? (
+          <img 
+            src={category.cover_image_url} 
+            alt={category.name}
+            className="absolute inset-0 w-full h-full object-cover opacity-72 transition duration-500 group-hover:opacity-85"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-[#00c48c]/20 to-orange/20 flex items-center justify-center">
+            <Folder size={64} className="text-white/20" />
+          </div>
         )}
         
-        {/* Arrow indicator */}
-        <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1">
-          <ChevronRight size={20} className="text-white" />
+        {/* Overlay - Balanced dark gradient matching tool cards */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#070910] via-[#070910]/50 to-transparent" />
+        
+        {/* Content */}
+        <div className="absolute inset-0 p-5 sm:p-6 flex flex-col justify-end">
+          <h3 className="text-white font-black text-lg sm:text-xl mb-1 group-hover:text-emerald-300 transition-colors duration-300">
+            {category.name}
+          </h3>
+          {category.description && (
+            <p className="text-zinc-400 text-xs line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              {category.description}
+            </p>
+          )}
+          
+          {/* Arrow indicator */}
+          <div className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 border border-white/10 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-0.5">
+            <ChevronRight size={18} className="text-white" />
+          </div>
         </div>
       </div>
     </div>

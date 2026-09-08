@@ -129,12 +129,13 @@ const ToolLocalBankPayment: FunctionComponent<ToolLocalBankPaymentProps> = ({
         <form noValidate onSubmit={formik.handleSubmit}>
           <LoadingButton
             isDisabled={isPaying}
-            title="Place Order"
             isLoading={isPaying}
-            className={{ width: "auto" }}
+            className="w-auto"
             loadingPaddingX={28.5}
             onClick={() => {}}
-          />
+          >
+            Place Order
+          </LoadingButton>
         </form>
 
         <p className="absolute text-danger text-sm bottom-5">

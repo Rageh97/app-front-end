@@ -968,7 +968,7 @@ isInStable:"Unstable"
         Questions: "الأسئلة الشائعة",
         Reviews: "تقييمات المنصة",
         Dashboard:"الرئيسية",
-        Subscriptions:"الاشتراكات",
+        Subscriptions:"اشتراكاتي",
         Plans:"الباقات المتاحة",
         Devices:"الاجهزة",
         Orders:"الطلبات",
@@ -1851,9 +1851,15 @@ isInStable:"Unstable"
 const getInitialLanguage = (): string => {
   // Check if we're in a browser environment
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('i18nextLng') || 'en';
+    const saved = localStorage.getItem('i18nextLng');
+    // Ensure default is Arabic if not set or if previously defaulted to English
+    if (!saved || saved.startsWith('en')) {
+      localStorage.setItem('i18nextLng', 'ar');
+      return 'ar';
+    }
+    return saved;
   }
-  return 'en'; // Default to 'en' for server-side rendering
+  return 'ar'; // Default to 'ar' for server-side rendering
 };
 
 // Configure i18next
@@ -1863,13 +1869,13 @@ i18n
   .init({
     resources,
     lng: getInitialLanguage(), // Set initial language
-    fallbackLng: 'en',
+    fallbackLng: 'ar',
     debug: process.env.NODE_ENV === 'development',
     interpolation: {
       escapeValue: false, // React already escapes values
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       caches: ['localStorage'],
       lookupLocalStorage: 'i18nextLng',
     },

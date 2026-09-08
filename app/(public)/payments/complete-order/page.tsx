@@ -1,11 +1,11 @@
 'use client'
 import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import logo from "@/public/images/Icon256.ico"
 import checkingMark from "@/public/images/checking-mark.png"
 
-const completePayment = () => {
+const CompletePaymentContent = () => {
     const router = useRouter()
 
     const searchParams = useSearchParams();
@@ -80,4 +80,15 @@ const completePayment = () => {
     )
 }
 
-export default completePayment
+const CompletePaymentPage = () => (
+    <Suspense fallback={
+        <div className="flex gap-4 flex-col justify-center items-center w-full h-[100vh]">
+            <img className="max-w-[60px]" src={logo.src} alt="logo" />
+            <div className="loaderToolzMarketDark text-black"></div>
+        </div>
+    }>
+        <CompletePaymentContent />
+    </Suspense>
+)
+
+export default CompletePaymentPage

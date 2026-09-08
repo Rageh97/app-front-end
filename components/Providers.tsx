@@ -4,9 +4,13 @@ import React, { FunctionComponent, PropsWithChildren, useState, useEffect } from
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
 import ModalProvider from "@/components/providers/ModalProvider";
+import MaintenanceGuard from "@/components/Maintenance/MaintenanceGuard";
 import { useTranslation } from 'react-i18next';
+import useColorMode from "@/hooks/useColorMode";
 
 const Providers: FunctionComponent<PropsWithChildren> = ({ children }) => {
+  useColorMode();
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -27,7 +31,11 @@ const Providers: FunctionComponent<PropsWithChildren> = ({ children }) => {
 
   return (
     <QueryClientProvider client={queryClient}>
-        <ModalProvider>{children}</ModalProvider>
+      <ModalProvider>
+        <MaintenanceGuard>
+          {children}
+        </MaintenanceGuard>
+      </ModalProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

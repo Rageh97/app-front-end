@@ -89,13 +89,13 @@ const ConfirmationModal = ({
 }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#190237] border border-white/10 w-full max-w-md rounded-2xl p-6 shadow-2xl scale-in-center">
-        <h3 className="text-xl font-bold mb-2">{title}</h3>
-        <p className="text-white/60 mb-6">{message}</p>
-        <div className="flex gap-3 justify-end">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">{cancelText}</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 transition-colors font-bold">{confirmText}</button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 animate-in fade-in duration-200 font-cairo">
+      <div className="bg-[#0F121C] border border-white/10 w-full max-w-md rounded-lg p-5">
+        <h3 className="text-base font-bold text-emerald-400 mb-2">{title}</h3>
+        <p className="text-slate-400 text-xs mb-5 leading-relaxed">{message}</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="px-3.5 py-1.5 rounded-md text-xs bg-white/5 text-slate-300 hover:bg-white/10 transition-colors">{cancelText}</button>
+          <button onClick={onConfirm} className="px-3.5 py-1.5 rounded-md text-xs bg-red-600 hover:bg-red-500 text-white transition-colors font-bold">{confirmText}</button>
         </div>
       </div>
     </div>
@@ -1106,65 +1106,55 @@ const MediaAdminPage = () => {
 
   return (
     <div className="p-6 min-h-screen text-white dark:text-gray-200">
-      {/* Professional TUS Upload Progress Overlay */}
+      {/* TUS Upload Progress Overlay */}
       {isUploading && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-[#190237] border border-orange/30 w-full max-w-2xl rounded-[2rem] p-10 shadow-[0_0_100px_rgba(255,119,2,0.2)] overflow-hidden relative">
-            {/* Background Glow */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-orange/20 blur-[80px] rounded-full"></div>
-            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-[#00c48c]/20 blur-[80px] rounded-full"></div>
-
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="w-20 h-20 bg-orange/10 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                <Upload size={36} className="text-orange" />
-              </div>
-              
-              <h3 className="text-2xl font-black mb-2 tracking-tight">
-                {isPaused ? "⏸️ متوقف مؤقتاً" : (uploadQueue[currentUploadIndex]?.status === "processing" ? "جاري المزامنة  " : "جاري الرفع...")}
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 animate-in fade-in duration-200">
+          <div className="bg-[#0F121C] border border-white/10 w-full max-w-xl rounded-lg p-6 overflow-hidden font-cairo">
+            <div className="flex flex-col items-center">
+              <h3 className="text-base font-bold text-emerald-400 mb-1">
+                {isPaused ? "متوقف مؤقتاً" : (uploadQueue[currentUploadIndex]?.status === "processing" ? "جاري المزامنة مع السيرفر" : "جاري الرفع...")}
               </h3>
-              <p className="text-white/40 text-sm mb-4 font-medium">{uploadQueue[currentUploadIndex]?.title || "ملف ميديا"}</p>
+              <p className="text-slate-400 text-xs mb-4 font-medium">{uploadQueue[currentUploadIndex]?.title || "ملف ميديا"}</p>
               
               {/* Current file info */}
-              <div className="w-full bg-black/30 rounded-xl p-4 mb-6 border border-white/10">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs text-white/60">الملف الحالي ({currentUploadIndex + 1}/{uploadQueue.length})</span>
-                  <span className="text-xs text-orange font-bold">{formatBytes(getTotalSize())}</span>
+              <div className="w-full bg-[#07090F] rounded-md p-3 mb-4 border border-white/10">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-xs text-slate-400">الملف الحالي ({currentUploadIndex + 1}/{uploadQueue.length})</span>
+                  <span className="text-xs text-emerald-400 font-bold">{formatBytes(getTotalSize())}</span>
                 </div>
-                <p className="text-sm font-medium truncate">{uploadQueue[currentUploadIndex]?.file.name || "-"}</p>
-                <div className="flex gap-2 mt-2">
-                  {uploadQueue.map((item, idx) => (
-                    <div key={item.id} className={`h-2 flex-1 rounded-full ${
-                      item.status === "completed" ? "bg-green-500" :
-                      item.status === "uploading" ? "bg-orange animate-pulse" :
+                <p className="text-xs font-medium text-white truncate">{uploadQueue[currentUploadIndex]?.file.name || "-"}</p>
+                <div className="flex gap-1.5 mt-2">
+                  {uploadQueue.map((item) => (
+                    <div key={item.id} className={`h-1.5 flex-1 rounded-full ${
+                      item.status === "completed" ? "bg-emerald-500" :
+                      item.status === "uploading" ? "bg-emerald-400" :
                       item.status === "error" ? "bg-red-500" :
-                      "bg-white/20"
+                      "bg-white/10"
                     }`} />
                   ))}
                 </div>
               </div>
 
               {/* Progress Container */}
-              <div className="w-full space-y-4">
+              <div className="w-full space-y-3">
                 <div className="flex justify-between items-end mb-1">
-                  <span className="text-xs font-bold uppercase tracking-widest text-orange text-shadow-glow">
+                  <span className="text-xs font-bold text-slate-400">
                     {uploadQueue[currentUploadIndex]?.status === "processing" 
-                      ? "جاري المزامنة  (Stage 2)..." 
-                      : (tusUpload.isPaused ? "الرفع متوقف" : "رفع خارق للملفات الكبيرة")}
+                      ? "جاري المزامنة السحابية..." 
+                      : (tusUpload.isPaused ? "الرفع متوقف" : "رفع سريع للملفات")}
                   </span>
-                  <span className="text-3xl font-black text-white">
+                  <span className="text-xl font-black text-white">
                     {uploadQueue[currentUploadIndex]?.status === "processing"
                       ? (uploadQueue[currentUploadIndex]?.cloudProgress && uploadQueue[currentUploadIndex]?.cloudProgress > 0 
                           ? `${uploadQueue[currentUploadIndex]?.cloudProgress}%` 
-                          : "جاري الرفع إلى Bunny...")
+                          : "جاري المعالجة...")
                       : `${tusUpload.progress.percentage}%`}
                   </span>
                 </div>
                 
-                <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden p-1 border border-white/10">
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
                   <div 
-                    className={`h-full bg-gradient-to-r from-orange via-orange to-[#00c48c] rounded-full transition-all duration-300 ease-out shadow-[0_0_20px_rgba(255,119,2,0.4)] ${
-                      uploadQueue[currentUploadIndex]?.status === "processing" ? "animate-pulse shadow-[0_0_15px_rgba(255,119,2,0.6)]" : ""
-                    }`}
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
                     style={{ 
                       width: uploadQueue[currentUploadIndex]?.status === "processing" 
                         ? (uploadQueue[currentUploadIndex]?.cloudProgress ? `${uploadQueue[currentUploadIndex]?.cloudProgress}%` : "100%")
@@ -1173,32 +1163,28 @@ const MediaAdminPage = () => {
                   ></div>
                 </div>
                 
-                <div className="flex justify-between items-center text-[10px] text-white/40 uppercase tracking-wider font-bold">
+                <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium">
                   <span>
                     {uploadQueue[currentUploadIndex]?.status === "processing"
-                      ? "يتم الآن نقل ملفك إلى  Bunny CDN..."
+                      ? "يتم الآن نقل الملف إلى خوادم التخزين..."
                       : `${formatBytes(tusUpload.progress.bytesUploaded)} / ${formatBytes(tusUpload.progress.bytesTotal)}`}
                   </span>
                   <span>
                     {uploadQueue[currentUploadIndex]?.status === "processing"
-                      ? "يرجى الانتظار، السيرفر يعمل على ملفك"
+                      ? "يرجى الانتظار"
                       : (uploadStartTime ? calculateETA(tusUpload.progress.bytesUploaded, tusUpload.progress.bytesTotal, uploadStartTime) : "")}
                   </span>
                 </div>
 
                 {/* Control Buttons */}
-                <div className="flex gap-3 justify-center pt-4">
-                  <button onClick={handlePauseResume} className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${isPaused ? "bg-[#00c48c]" : "bg-orange hover:bg-yellow-600"}`}>
-                    {isPaused ? <><Play size={18} /> استئناف</> : <><Pause size={18} /> إيقاف مؤقت</>}
+                <div className="flex gap-2 justify-center pt-3">
+                  <button onClick={handlePauseResume} className={`px-4 py-1.5 rounded-md font-bold text-xs flex items-center gap-1.5 transition-colors ${isPaused ? "bg-emerald-600 text-white hover:bg-emerald-500" : "bg-white/10 text-white hover:bg-white/20"}`}>
+                    {isPaused ? <><Play size={14} /> استئناف</> : <><Pause size={14} /> إيقاف مؤقت</>}
                   </button>
-                  <button onClick={handleCancelUpload} className="px-3 py-2 rounded-xl bg-red border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white font-bold flex items-center gap-2 transition-all">
-                    <X size={18} /> إلغاء
+                  <button onClick={handleCancelUpload} className="px-3.5 py-1.5 rounded-md bg-red-600/10 border border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-colors">
+                    <X size={14} /> إلغاء
                   </button>
                 </div>
-
-                {/* <p className="text-center text-[10px] text-orange uppercase tracking-[0.2em] pt-2">
-                  ✨ يمكنك إيقاف الرفع واستئنافه لاحقاً - الملفات الكبيرة مدعومة
-                </p> */}
               </div>
             </div>
           </div>
@@ -1206,98 +1192,92 @@ const MediaAdminPage = () => {
       )}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h1 className="text-3xl font-bold">{t('mediaAdmin.pageTitle')}</h1>
-        <button onClick={toggleMediaHub} className={`px-4 py-2 rounded-lg font-bold transition-all transform hover:scale-105 flex items-center gap-2 shadow-lg ${isMediaHubEnabled ? 'bg-red-500/10 border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-green-500/10 border border-green-500/50 text-green-500 hover:bg-green-500 hover:text-white'}`}>
-          {isMediaHubEnabled ? <EyeOff size={18} /> : <Eye size={18} />}
+        <h1 className="text-xl font-black text-emerald-400">{t('mediaAdmin.pageTitle')}</h1>
+        <button onClick={toggleMediaHub} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-1.5 ${isMediaHubEnabled ? 'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'}`}>
+          {isMediaHubEnabled ? <EyeOff size={14} /> : <Eye size={14} />}
           <span>{isMediaHubEnabled ? "إخفاء المكتبة من الموقع" : "إظهار المكتبة في الموقع"}</span>
         </button>
       </div>
       
-      
-      <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
-        <button onClick={() => setActiveTab("hero")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "hero" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
-          <Layers size={18} /> المجموعات (Colletions)
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+        <button onClick={() => setActiveTab("hero")} className={`px-3.5 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-colors ${activeTab === "hero" ? "bg-emerald-600 text-white" : "bg-[#0B0E17] border border-white/[0.08] text-slate-400 hover:text-white"}`}>
+          المجموعات (Collections)
         </button>
-        <button onClick={() => setActiveTab("categories")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "categories" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
-          <FolderPlus size={18} /> {t('mediaAdmin.categoriesTab')}
+        <button onClick={() => setActiveTab("categories")} className={`px-3.5 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-colors ${activeTab === "categories" ? "bg-emerald-600 text-white" : "bg-[#0B0E17] border border-white/[0.08] text-slate-400 hover:text-white"}`}>
+          {t('mediaAdmin.categoriesTab')}
         </button>
-        <button onClick={() => setActiveTab("uploads")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap relative ${activeTab === "uploads" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
-          <Upload size={18} /> {t('mediaAdmin.uploadsTab')}
-          {/* <span className="absolute -top-2 -right-1 bg-green-500 text-[8px] px-1.2 py-0.5 rounded-full font-bold animate-pulse">NEW</span> */}
+        <button onClick={() => setActiveTab("uploads")} className={`px-3.5 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-colors ${activeTab === "uploads" ? "bg-emerald-600 text-white" : "bg-[#0B0E17] border border-white/[0.08] text-slate-400 hover:text-white"}`}>
+          {t('mediaAdmin.uploadsTab')}
         </button>
-        <button onClick={() => setActiveTab("banner")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "banner" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
-          <ImageIcon size={18} /> إدارة البانر
+        <button onClick={() => setActiveTab("banner")} className={`px-3.5 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-colors ${activeTab === "banner" ? "bg-emerald-600 text-white" : "bg-[#0B0E17] border border-white/[0.08] text-slate-400 hover:text-white"}`}>
+          إدارة البانر
         </button>
-        <button onClick={() => setActiveTab("analytics")} className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap ${activeTab === "analytics" ? "bg-orange text-white inner-shadow" : "bg-[#190237] text-white"}`}>
-          <AlertCircle size={18} /> الإحصائيات
+        <button onClick={() => setActiveTab("analytics")} className={`px-3.5 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-colors ${activeTab === "analytics" ? "bg-emerald-600 text-white" : "bg-[#0B0E17] border border-white/[0.08] text-slate-400 hover:text-white"}`}>
+          الإحصائيات
         </button>
       </div>
 
       {activeTab === "hero" && (
-        <div className="grid md:grid-cols-1 gap-8">
-           <div className="bg-[#190237] p-6 rounded-xl shadow-lg h-fit">
-            <h2 className="text-xl font-semibold mb-4">{editingHeroId ? "تعديل المجموعة" : "إضافة مجموعة جديدة (Collection)"}</h2>
-            <form onSubmit={handleCreateOrUpdateHero} className="flex flex-col gap-4">
-              <input type="text" placeholder="اسم المجموعة (مثال: مؤثرات صوتية)" className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={heroName} onChange={(e) => setHeroName(e.target.value)} required />
-              <textarea placeholder="وصف المجموعة" className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={heroDesc} onChange={(e) => setHeroDesc(e.target.value)} />
+        <div className="grid md:grid-cols-1 gap-6">
+           <div className="bg-[#0B0E17] p-5 rounded-md border border-white/[0.08] h-fit">
+            <h2 className="text-sm font-bold mb-4 text-emerald-400">{editingHeroId ? "تعديل المجموعة" : "إضافة مجموعة جديدة (Collection)"}</h2>
+            <form onSubmit={handleCreateOrUpdateHero} className="flex flex-col gap-3">
+              <input type="text" placeholder="اسم المجموعة (مثال: مؤثرات صوتية)" className="p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs placeholder-white/30 focus:border-emerald-500/50 focus:outline-none" value={heroName} onChange={(e) => setHeroName(e.target.value)} required />
+              <textarea placeholder="وصف المجموعة" className="p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs placeholder-white/30 focus:border-emerald-500/50 focus:outline-none min-h-[70px]" value={heroDesc} onChange={(e) => setHeroDesc(e.target.value)} />
               <div>
-              <label className="block mb-2 font-medium">نوع المجموعة</label>
-              <div className="flex gap-4">
-                <label className={`cursor-pointer border p-3 rounded-lg flex items-center gap-2 transition-all ${heroType === 'visual' ? 'border-[#00c48c] bg-[#00c48c]/10 text-white' : 'border-gray-600 text-gray-400'}`}>
+              <label className="block mb-2 text-xs font-medium text-slate-400">نوع المجموعة</label>
+              <div className="flex gap-3">
+                <label className={`cursor-pointer border p-2.5 rounded-md flex items-center gap-2 transition-colors text-xs ${heroType === 'visual' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-white/10 text-slate-400'}`}>
                   <input type="radio" name="heroType" value="visual" className="hidden" checked={heroType === 'visual'} onChange={() => setHeroType('visual')} />
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${heroType === 'visual' ? 'border-[#00c48c]' : 'border-gray-500'}`}>
-                    {heroType === 'visual' && <div className="w-2 h-2 rounded-full bg-[#00c48c]"></div>}
+                  <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${heroType === 'visual' ? 'border-emerald-400' : 'border-slate-500'}`}>
+                    {heroType === 'visual' && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>}
                   </div>
                   <span>Visual (Photos/Videos)</span>
                 </label>
-                <label className={`cursor-pointer border p-3 rounded-lg flex items-center gap-2 transition-all ${heroType === 'audio' ? 'border-orange bg-orange/10 text-white' : 'border-gray-600 text-gray-400'}`}>
+                <label className={`cursor-pointer border p-2.5 rounded-md flex items-center gap-2 transition-colors text-xs ${heroType === 'audio' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-white/10 text-slate-400'}`}>
                   <input type="radio" name="heroType" value="audio" className="hidden" checked={heroType === 'audio'} onChange={() => setHeroType('audio')} />
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${heroType === 'audio' ? 'border-orange' : 'border-gray-500'}`}>
-                    {heroType === 'audio' && <div className="w-2 h-2 rounded-full bg-orange"></div>}
+                  <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${heroType === 'audio' ? 'border-emerald-400' : 'border-slate-500'}`}>
+                    {heroType === 'audio' && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>}
                   </div>
                   <span>Audio (Music/SFX)</span>
                 </label>
               </div>
             </div>
 
-            {/* <div>
-              <label className="block mb-2 font-medium">{t('mediaAdmin.coverImage')}</label>
-              <input type="file" onChange={(e) => setHeroCover(e.target.files?.[0] || null)} className="w-full text-sm" />
-            </div> */}
               <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-orange hover:bg-orange/80 text-white font-bold py-2 rounded-lg transition">{editingHeroId ? t('mediaAdmin.update') : t('mediaAdmin.create')}</button>
-                {editingHeroId && <button type="button" onClick={handleCancelEditHero} className="bg-gray-500 text-white px-4 py-2 rounded-lg">{t('mediaAdmin.cancel')}</button>}
+                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-md text-xs transition-colors">{editingHeroId ? t('mediaAdmin.update') : t('mediaAdmin.create')}</button>
+                {editingHeroId && <button type="button" onClick={handleCancelEditHero} className="bg-white/10 hover:bg-white/15 text-white px-4 py-2 rounded-md text-xs transition-colors">{t('mediaAdmin.cancel')}</button>}
               </div>
             </form>
            </div>
 
-           <div className="bg-[#190237] p-6 rounded-xl shadow-lg">
-             <h2 className="text-xl font-semibold mb-4">المجموعات الحالية (Hero Categories)</h2>
-             {loadingHero ? <p>{t('common.loading')}</p> : (
-               <div className="space-y-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+           <div className="bg-[#0B0E17] p-5 rounded-md border border-white/[0.08]">
+             <h2 className="text-sm font-bold mb-4 text-emerald-400">المجموعات الحالية (Hero Categories)</h2>
+             {loadingHero ? <p className="text-xs text-slate-400">{t('common.loading')}</p> : (
+               <div className="space-y-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {heroCategories.map(hero => (
-                    <div key={hero.hero_category_id} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                        <div className="w-16 h-16 rounded-lg bg-black/40 overflow-hidden flex-shrink-0">
+                    <div key={hero.hero_category_id} className="flex items-center gap-3 p-3 bg-[#0F121C] rounded-md border border-white/[0.08] hover:border-white/20 transition-colors">
+                        <div className="w-12 h-12 rounded-md bg-black/40 overflow-hidden flex-shrink-0">
                            {hero.cover_image_url ? (
                               <img src={hero.cover_image_url} alt="" className="w-full h-full object-cover" />
                            ) : (
-                              <Layers className="w-full h-full p-4 text-white/20" />
+                              <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">مجموعة</div>
                            )}
                         </div>
                         <div className="flex-1 min-w-0">
-                           <h4 className="font-bold text-lg">{hero.name}</h4>
-                           <p className="text-xs text-white/50 truncate">{hero.description}</p>
-                           <p className="text-xs text-orange mt-1">
+                           <h4 className="font-bold text-xs text-white truncate">{hero.name}</h4>
+                           <p className="text-[10px] text-slate-400 truncate">{hero.description || '-'}</p>
+                           <p className="text-[10px] text-emerald-400 font-medium mt-1">
                               {hero.subCategories?.length || 0} تصنيف فرعي
                            </p>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <button onClick={() => handleEditHero(hero)} className="bg-blue-500/10 text-blue-400 p-2 rounded hover:bg-blue-500/20"><Edit size={16} /></button>
-                          <button onClick={() => openDeleteModal('hero', hero.hero_category_id)} className="bg-red-500/10 text-red-500 p-2 rounded hover:bg-red-500/20"><Trash2 size={16} /></button>
+                        <div className="flex flex-col gap-1">
+                          <button onClick={() => handleEditHero(hero)} className="bg-white/5 hover:bg-white/10 text-slate-300 p-1.5 rounded-md transition-colors"><Edit size={13} /></button>
+                          <button onClick={() => openDeleteModal('hero', hero.hero_category_id)} className="bg-red-500/10 text-red-400 hover:bg-red-500/20 p-1.5 rounded-md transition-colors"><Trash2 size={13} /></button>
                         </div>
                     </div>
                   ))}
-                  {heroCategories.length === 0 && <p className="opacity-50 text-white col-span-full">لا توجد مجموعات</p>}
+                  {heroCategories.length === 0 && <p className="opacity-50 text-white col-span-full text-xs">لا توجد مجموعات</p>}
                </div>
              )}
            </div>
@@ -1305,40 +1285,40 @@ const MediaAdminPage = () => {
       )}
 
       {activeTab === "categories" && (
-        <div className="grid md:grid-cols-1 gap-8">
-          <div className="bg-[#190237] p-6 rounded-xl shadow-lg h-fit">
-            <h2 className="text-xl font-semibold mb-4">{editingCatId ? t('mediaAdmin.editCategory') : t('mediaAdmin.addCategory')}</h2>
-            <form onSubmit={handleCreateOrUpdateCategory} className="flex flex-col gap-4">
-              <input type="text" placeholder={t('mediaAdmin.categoryName')} className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={catName} onChange={(e) => setCatName(e.target.value)} required />
+        <div className="grid md:grid-cols-1 gap-6">
+          <div className="bg-[#0B0E17] p-5 rounded-md border border-white/[0.08] h-fit">
+            <h2 className="text-sm font-bold mb-4 text-emerald-400">{editingCatId ? t('mediaAdmin.editCategory') : t('mediaAdmin.addCategory')}</h2>
+            <form onSubmit={handleCreateOrUpdateCategory} className="flex flex-col gap-3">
+              <input type="text" placeholder={t('mediaAdmin.categoryName')} className="p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs placeholder-white/30 focus:border-emerald-500/50 focus:outline-none" value={catName} onChange={(e) => setCatName(e.target.value)} required />
               
-              <select className="p-3 rounded-lg border border-[#00c48c] bg-white text-black appearance-none" value={selectedHeroId || ""} onChange={(e) => setSelectedHeroId(Number(e.target.value) || null)}>
-                 <option value="">-- اختر المجموعة الأم (Collection) --</option>
+              <select className="p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs focus:border-emerald-500/50 focus:outline-none" value={selectedHeroId || ""} onChange={(e) => setSelectedHeroId(Number(e.target.value) || null)}>
+                 <option value="" className="bg-[#07090F] text-white">-- اختر المجموعة الأم (Collection) --</option>
                  {heroCategories.map(h => (
-                    <option key={h.hero_category_id} value={h.hero_category_id}>{h.name}</option>
+                    <option key={h.hero_category_id} value={h.hero_category_id} className="bg-[#07090F] text-white">{h.name}</option>
                  ))}
               </select>
 
-              <textarea placeholder={t('mediaAdmin.description')} className="p-3 rounded-lg border border-[#00c48c] bg-white text-black" value={catDesc} onChange={(e) => setCatDesc(e.target.value)} />
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold opacity-70 text-white">رفع صورة التصنيف</label>
-                <input type="file" accept="image/*" onChange={(e) => setCatCover(e.target.files?.[0] || null)} className="w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20" />
+              <textarea placeholder={t('mediaAdmin.description')} className="p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs placeholder-white/30 focus:border-emerald-500/50 focus:outline-none min-h-[70px]" value={catDesc} onChange={(e) => setCatDesc(e.target.value)} />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-slate-400">رفع صورة التصنيف</label>
+                <input type="file" accept="image/*" onChange={(e) => setCatCover(e.target.files?.[0] || null)} className="w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" />
               </div>
               <div className="flex gap-2">
-                <button type="submit" className="flex-1 bg-orange hover:bg-orange/80 text-white font-bold py-2 rounded-lg transition">{editingCatId ? t('mediaAdmin.update') : t('mediaAdmin.create')}</button>
-                {editingCatId && <button type="button" onClick={handleCancelEdit} className="bg-gray-500 text-white px-4 py-2 rounded-lg">{t('mediaAdmin.cancel')}</button>}
+                <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-md text-xs transition-colors">{editingCatId ? t('mediaAdmin.update') : t('mediaAdmin.create')}</button>
+                {editingCatId && <button type="button" onClick={handleCancelEdit} className="bg-white/10 hover:bg-white/15 text-white px-4 py-2 rounded-md text-xs transition-colors">{t('mediaAdmin.cancel')}</button>}
               </div>
             </form>
           </div>
 
-          <div className="bg-[#190237] p-6 rounded-xl shadow-lg">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-              <h2 className="text-xl font-semibold">{t('mediaAdmin.existingCategories')}</h2>
+          <div className="bg-[#0B0E17] p-5 rounded-md border border-white/[0.08]">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+              <h2 className="text-sm font-bold text-emerald-400">{t('mediaAdmin.existingCategories')}</h2>
               
               {/* Filter Row */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <button 
                   onClick={() => setFilterHeroId(null)} 
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${filterHeroId === null ? 'bg-orange text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${filterHeroId === null ? 'bg-emerald-600 text-white' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-white'}`}
                 >
                   الكل
                 </button>
@@ -1346,7 +1326,7 @@ const MediaAdminPage = () => {
                   <button 
                     key={hero.hero_category_id}
                     onClick={() => setFilterHeroId(hero.hero_category_id)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${filterHeroId === hero.hero_category_id ? 'bg-orange text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${filterHeroId === hero.hero_category_id ? 'bg-emerald-600 text-white' : 'bg-white/5 border border-white/10 text-slate-400 hover:text-white'}`}
                   >
                     {hero.name}
                   </button>
@@ -1354,64 +1334,63 @@ const MediaAdminPage = () => {
               </div>
             </div>
 
-            {loading ? <p>{t('common.loading')}</p> : (
+            {loading ? <p className="text-xs text-slate-400">{t('common.loading')}</p> : (
               <div className="space-y-3 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 {categories
                   .filter(cat => filterHeroId === null || cat.hero_category_id === filterHeroId)
                   .map(cat => (
-                  <div key={cat.category_id} className={`flex flex-col p-2.5 bg-white text-black rounded-xl shadow-sm cursor-pointer transition-all hover:shadow-md ${selectedCatId === cat.category_id ? 'ring-2 ring-orange scale-[1.02]' : ''}`} onClick={() => handleViewFiles(cat.category_id)}>
+                  <div key={cat.category_id} className={`flex flex-col p-3 bg-[#0F121C] border rounded-md cursor-pointer transition-colors ${selectedCatId === cat.category_id ? 'border-emerald-500 bg-emerald-500/5' : 'border-white/[0.08] hover:border-white/20'}`} onClick={() => handleViewFiles(cat.category_id)}>
                     <div className="mb-2">
-                      <h4 className="font-bold text-sm truncate">{cat.name}</h4>
+                      <h4 className="font-bold text-xs text-white truncate">{cat.name}</h4>
                       {cat.hero_category_id && (
-                          <span className="text-[9px] bg-black/10 px-1 rounded text-gray-600 block w-fit mb-1">
+                          <span className="text-[9px] bg-white/5 px-1 py-0.5 rounded text-slate-400 block w-fit mb-1">
                              {heroCategories.find(h => h.hero_category_id === cat.hero_category_id)?.name || "Unknown"}
                           </span>
                       )}
-                      <p className="text-[10px] opacity-60 truncate">{cat.description || '-'}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{cat.description || '-'}</p>
                     </div>
-                    <div className="flex justify-between items-center mt-auto pt-2 border-t border-gray-100">
-                      <span className="text-[10px] bg-orange/10 text-orange px-1.5 py-0.5 rounded-md font-medium">{cat.filesCount || 0}</span>
+                    <div className="flex justify-between items-center mt-auto pt-2 border-t border-white/5">
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-bold">{cat.filesCount || 0}</span>
                       <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => handleEditCategory(cat)} className="text-blue-500 hover:bg-blue-50 p-1 rounded transition-colors"><Edit size={14} /></button>
-                        <button onClick={() => openDeleteModal('category', cat.category_id)} className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"><Trash2 size={14} /></button>
+                        <button onClick={() => handleEditCategory(cat)} className="text-slate-300 hover:bg-white/10 p-1 rounded transition-colors"><Edit size={13} /></button>
+                        <button onClick={() => openDeleteModal('category', cat.category_id)} className="text-red-400 hover:bg-red-500/10 p-1 rounded transition-colors"><Trash2 size={13} /></button>
                       </div>
                     </div>
                   </div>
                 ))}
-                {categories.length === 0 && <p className="opacity-50 text-white col-span-full">{t('mediaAdmin.noCategories')}</p>}
+                {categories.length === 0 && <p className="opacity-50 text-white col-span-full text-xs">{t('mediaAdmin.noCategories')}</p>}
               </div>
             )}
           </div>
 
           {/* Files List Section */}
           {selectedCatId && (
-            <div className="bg-[#190237] p-6 rounded-xl shadow-lg mt-4 animate-in fade-in slide-in-from-top-4">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Film size={18} className="text-orange" />
-                  <span className="opacity-60">{t('mediaAdmin.filesInCategory')}:</span>
+            <div className="bg-[#0B0E17] p-5 rounded-md border border-white/[0.08] mt-2">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                  <span className="text-slate-400">{t('mediaAdmin.filesInCategory')}:</span>
                   <span className="text-white">{categories.find(c => c.category_id === selectedCatId)?.name}</span>
                 </h2>
-                <button onClick={() => setSelectedCatId(null)} className="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded-lg transition-colors"><X size={20} /></button>
+                <button onClick={() => setSelectedCatId(null)} className="text-slate-400 hover:text-white bg-white/5 p-1 rounded-md transition-colors"><X size={16} /></button>
               </div>
 
               {loadingFiles ? (
-                <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange"></div></div>
+                <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-400"></div></div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                   {categoryFiles.map((file) => (
-                    <div key={file.file_id} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden group hover:border-orange/50 transition-all hover:shadow-xl">
+                    <div key={file.file_id} className="bg-[#0F121C] border border-white/[0.08] rounded-md overflow-hidden group hover:border-emerald-500/40 transition-colors">
                       <div className="aspect-[4/3] relative bg-black/40 flex items-center justify-center">
-                        {file.type === 'video' ? <Film size={28} className="text-orange/40" /> : <ImageIcon size={28} className="text-orange/40" />}
-                        {file.thumbnail_url && <img src={file.thumbnail_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" />}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
-                          <button onClick={() => handleOpenEditFile(file.file_id)} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transform scale-90 group-hover:scale-100 transition-transform shadow-lg" title="تعديل"><Edit size={16} /></button>
-                          <button onClick={() => openDeleteModal('file', file.file_id)} className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transform scale-90 group-hover:scale-100 transition-transform shadow-lg" title={t('mediaAdmin.deleteFile')}><Trash2 size={16} /></button>
+                        {file.type === 'video' ? <Film size={22} className="text-white/30" /> : <ImageIcon size={22} className="text-white/30" />}
+                        {file.thumbnail_url && <img src={file.thumbnail_url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />}
+                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1.5 transition-opacity">
+                          <button onClick={() => handleOpenEditFile(file.file_id)} className="bg-white/10 hover:bg-white/20 text-white p-1.5 rounded-md transition-colors" title="تعديل"><Edit size={14} /></button>
+                          <button onClick={() => openDeleteModal('file', file.file_id)} className="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white p-1.5 rounded-md transition-colors" title={t('mediaAdmin.deleteFile')}><Trash2 size={14} /></button>
                         </div>
                       </div>
                       <div className="p-2 bg-black/20">
-                        <h4 className="font-medium text-[10px] truncate mb-0.5">{file.title}</h4>
-                        <p className="text-[9px] text-white/40 uppercase tracking-tight">
+                        <h4 className="font-medium text-[10px] text-white truncate mb-0.5">{file.title}</h4>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-tight">
                           {file.file_type === 'video' ? t('mediaAdmin.video') : 
                            file.file_type === 'audio' ? 'Audio' : t('mediaAdmin.image')}
                         </p>
@@ -1419,9 +1398,8 @@ const MediaAdminPage = () => {
                     </div>
                   ))}
                   {categoryFiles.length === 0 && (
-                    <div className="col-span-full py-16 text-center text-white/20 flex flex-col items-center gap-2">
-                      <ImageIcon size={40} className="opacity-10" />
-                      <p className="text-sm italic">{t('mediaAdmin.noFilesInCategory')}</p>
+                    <div className="col-span-full py-10 text-center text-slate-500 flex flex-col items-center gap-1">
+                      <p className="text-xs">{t('mediaAdmin.noFilesInCategory')}</p>
                     </div>
                   )}
                 </div>
@@ -1459,98 +1437,84 @@ const MediaAdminPage = () => {
 
       {/* Edit File Modal */}
       {editFileModal.isOpen && editFileModal.file && (
-        <div className="fixed inset-0 z-[30] mt-25 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="gradient-border-analysis border border-white/10 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[30] mt-25 flex items-center justify-center p-4 bg-black/70 animate-in fade-in duration-200">
+          <div className="bg-[#0F121C] border border-white/10 w-full max-w-2xl rounded-lg overflow-hidden font-cairo">
             {/* Header */}
-            <div className="flex justify-between items-center p-6 border-b border-white/10">
-              <h3 className="text-xl font-bold flex items-center gap-2">
-                <Edit size={20} className="text-orange" />
+            <div className="flex justify-between items-center p-4 border-b border-white/10">
+              <h3 className="text-sm font-bold text-emerald-400">
                 تعديل الملف
               </h3>
-              <button onClick={handleCloseEditFile} className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
-                <X size={20} />
+              <button onClick={handleCloseEditFile} className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/5 transition-colors">
+                <X size={16} />
               </button>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Preview */}
-              <div className="flex gap-4 items-start">
-                <div className="w-24 h-24 rounded-xl bg-black/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="flex gap-3 items-start p-3 bg-[#07090F] rounded-md border border-white/10">
+                <div className="w-16 h-16 rounded-md bg-black/40 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {editFileModal.file.thumbnail_url ? (
                     <img src={editFileModal.file.thumbnail_url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    editFileModal.file.file_type === 'video' ? <Film size={32} className="text-orange/40" /> : <ImageIcon size={32} className="text-orange/40" />
+                    editFileModal.file.file_type === 'video' ? <Film size={24} className="text-white/30" /> : <ImageIcon size={24} className="text-white/30" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-white/40 mb-1">النوع: {editFileModal.file.file_type}</p>
-                  <p className="text-xs text-white/40 truncate">URL: {editFileModal.file.storage_url}</p>
+                  <p className="text-xs text-white font-medium mb-1">النوع: {editFileModal.file.file_type}</p>
+                  <p className="text-[10px] text-slate-400 truncate">URL: {editFileModal.file.storage_url}</p>
                 </div>
               </div>
 
-              {/* Title removed as requested */}
-
-              {/* Description */}
-              {/* <div>
-                <label className="block text-sm font-medium mb-2 text-white">الوصف</label>
-                <textarea 
-                  value={editDesc} 
-                  onChange={(e) => setEditDesc(e.target.value)}
-                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black min-h-[80px]"
-                />
-              </div> */}
-
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-white">التصنيف</label>
+                <label className="block text-xs font-medium mb-1.5 text-slate-300">التصنيف</label>
                 <select 
                   value={editCategoryId || ""} 
                   onChange={(e) => setEditCategoryId(Number(e.target.value))}
-                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black"
+                  className="w-full p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs focus:border-emerald-500/50 focus:outline-none"
                 >
                   {categories.map(cat => (
-                    <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
+                    <option key={cat.category_id} value={cat.category_id} className="bg-[#07090F] text-white">{cat.name}</option>
                   ))}
                 </select>
               </div>
 
               {/* Update Main File & Preview */}
-              <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
-                 <h4 className="font-bold text-white flex items-center gap-2">
-                    <Edit size={16} className="text-orange" />
+              <div className="bg-[#07090F] p-4 rounded-md border border-white/10 space-y-3">
+                 <h4 className="font-bold text-xs text-emerald-400">
                     تحديث الملفات الأساسية
                  </h4>
                  
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-medium mb-1 block text-white/70">استبدال الملف الرئيسي</label>
+                      <label className="text-[10px] font-medium mb-1 block text-slate-400">استبدال الملف الرئيسي</label>
                       <input 
-                        type="file"
+                        type="file" 
                         onChange={(e) => setNewMainFile(e.target.files?.[0] || null)}
                         disabled={isUpdatingFiles}
-                        className="w-full text-xs text-gray-300 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20"
+                        className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20"
                       />
-                      {newMainFile && <p className="text-[10px] text-orange mt-1 truncate">{newMainFile.name}</p>}
+                      {newMainFile && <p className="text-[10px] text-emerald-400 mt-1 truncate">{newMainFile.name}</p>}
                     </div>
                     
                     <div>
-                      <label className="text-xs font-medium mb-1 block text-white/70">استبدال فيديو الهوفر (Preview)</label>
+                      <label className="text-[10px] font-medium mb-1 block text-slate-400">استبدال فيديو الهوفر (Preview)</label>
                       <input 
-                        type="file"
+                        type="file" 
                         accept="video/*"
                         onChange={(e) => setNewPreviewFile(e.target.files?.[0] || null)}
                         disabled={isUpdatingFiles}
-                        className="w-full text-xs text-gray-300 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#00c48c]/10 file:text-[#00c48c] hover:file:bg-[#00c48c]/20"
+                        className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20"
                       />
-                      {newPreviewFile && <p className="text-[10px] text-[#00c48c] mt-1 truncate">{newPreviewFile.name}</p>}
+                      {newPreviewFile && <p className="text-[10px] text-emerald-400 mt-1 truncate">{newPreviewFile.name}</p>}
                     </div>
                  </div>
 
                  {isUpdatingFiles && (
-                    <div className="w-full bg-black/30 rounded-full h-2 overflow-hidden mt-2">
+                    <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mt-2">
                       <div 
-                        className="h-full bg-gradient-to-r from-orange to-[#00c48c] transition-all duration-300"
+                        className="h-full bg-emerald-500 transition-all duration-300"
                         style={{ width: `${filesUpdateProgress}%` }}
                       />
                     </div>
@@ -1559,60 +1523,51 @@ const MediaAdminPage = () => {
 
               {/* Variants Section */}
               <div>
-                <label className="block text-sm font-medium mb-3 text-white flex items-center gap-2">
-                  <Film size={16} className="text-orange" />
+                <label className="block text-xs font-bold mb-2 text-emerald-400">
                   الصيغ المتاحة ({editFileModal.file.variants?.length || 0})
                 </label>
                 
                 {editFileModal.file.variants && editFileModal.file.variants.length > 0 ? (
                   <div className="space-y-2">
                     {editFileModal.file.variants.map((variant) => (
-                      <div key={variant.variant_id} className="flex items-center justify-between p-3 bg-black/30 rounded-xl border border-white/10">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-orange/20 flex items-center justify-center">
-                            {variant.file_type === 'video' || variant.file_type === 'prores' ? (
-                              <Film size={18} className="text-orange" />
-                            ) : (
-                              <ImageIcon size={18} className="text-orange" />
-                            )}
-                          </div>
+                      <div key={variant.variant_id} className="flex items-center justify-between p-2.5 bg-[#07090F] rounded-md border border-white/10">
+                        <div className="flex items-center gap-2.5">
                           <div>
-                            <p className="font-medium text-sm">{variant.label}</p>
-                            <p className="text-[10px] text-white/40">{variant.file_type} • {variant.extension}</p>
+                            <p className="font-bold text-xs text-white">{variant.label}</p>
+                            <p className="text-[10px] text-slate-400">{variant.file_type} • {variant.extension}</p>
                           </div>
                         </div>
                         <button 
                           onClick={() => openDeleteModal('variant', variant.variant_id)}
-                          className="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-colors"
+                          className="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded-md transition-colors"
                           title="حذف الصيغة"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center p-4 border border-dashed border-white/20 rounded-xl text-white/40 text-sm">
+                  <div className="text-center p-3 border border-dashed border-white/10 rounded-md text-slate-500 text-xs">
                     لا توجد صيغ إضافية
                   </div>
                 )}
 
                 {/* Add New Variants Section */}
                 <div className="mt-4 space-y-3">
-                  <div className="flex flex-col gap-3">
-                    <label className="text-sm font-medium text-[#00c48c] flex items-center gap-2">
-                      <Plus size={16} />
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-emerald-400">
                       إضافة ملفات أو صيغ جديدة
                     </label>
 
                     {/* Quick Add Buttons */}
-                    <div className="flex flex-wrap gap-2 items-center bg-black/30 p-3 rounded-lg border border-white/10">
-                      <span className="text-xs text-white/60 font-medium">{t('mediaAdmin.quickAdd')}</span>
-                      <button type="button" onClick={() => addNewVariantRow("4K PRORES", "prores")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
-                      <button type="button" onClick={() => addNewVariantRow("MP4", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
-                      <button type="button" onClick={() => addNewVariantRow("MP3", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ MP3</button>
-                      <button type="button" onClick={() => addNewVariantRow("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ PNG SEQ.</button>
-                      <button type="button" onClick={() => addNewVariantRow("MOV", "video")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/20 transition font-bold">+ MOV</button>
+                    <div className="flex flex-wrap gap-1.5 items-center bg-[#07090F] p-2.5 rounded-md border border-white/10">
+                      <span className="text-[10px] text-slate-400 font-medium">{t('mediaAdmin.quickAdd')}</span>
+                      <button type="button" onClick={() => addNewVariantRow("4K PRORES", "prores")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ PRORES</button>
+                      <button type="button" onClick={() => addNewVariantRow("MP4", "video")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ MP4</button>
+                      <button type="button" onClick={() => addNewVariantRow("MP3", "audio")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ MP3</button>
+                      <button type="button" onClick={() => addNewVariantRow("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ PNG SEQ.</button>
+                      <button type="button" onClick={() => addNewVariantRow("MOV", "video")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ MOV</button>
 
                       <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
                       
@@ -1627,22 +1582,22 @@ const MediaAdminPage = () => {
                       <button 
                         type="button" 
                         onClick={() => editBulkVariantInputRef.current?.click()} 
-                        className="text-[10px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 px-3 py-1 rounded border border-blue-500/30 transition font-bold flex items-center gap-1"
+                        className="text-[10px] bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/30 transition font-bold"
                       >
-                        <Plus size={10} /> رفع أكثر من ملف
+                        + رفع أكثر من ملف
                       </button>
                     </div>
                   </div>
 
                   {/* New Variants Rows */}
                   {newVariantsToUpload.map((v, idx) => (
-                    <div key={idx} className="flex gap-3 items-end bg-[#00c48c]/5 p-3 rounded-lg border border-[#00c48c]/20 flex-wrap">
+                    <div key={idx} className="flex gap-2 items-end bg-[#07090F] p-2.5 rounded-md border border-white/10 flex-wrap">
                       {v.isIndependent && (
                         <div className="flex-[2] min-w-[150px]">
-                          <label className="text-xs block mb-1 opacity-70 text-white">العنوان الرئيسي</label>
+                          <label className="text-[10px] block mb-1 text-slate-400">العنوان الرئيسي</label>
                           <input 
                             type="text" 
-                            className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-[#00c48c]" 
+                            className="w-full p-2 text-xs rounded-md bg-[#0B0E17] border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none" 
                             value={v.title || ""} 
                             onChange={(e) => updateNewVariantRow(idx, 'title', e.target.value)} 
                             placeholder="عنوان الميديا"
@@ -1651,10 +1606,10 @@ const MediaAdminPage = () => {
                         </div>
                       )}
                       <div className="flex-1 min-w-[100px]">
-                        <label className="text-xs block mb-1 opacity-70 text-white">الاسم (مثل 4K)</label>
+                        <label className="text-[10px] block mb-1 text-slate-400">الاسم (مثل 4K)</label>
                         <input 
                           type="text" 
-                          className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-[#00c48c]" 
+                          className="w-full p-2 text-xs rounded-md bg-[#0B0E17] border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none" 
                           value={v.label} 
                           onChange={(e) => updateNewVariantRow(idx, 'label', e.target.value)} 
                           placeholder="مثال: MP3"
@@ -1662,9 +1617,9 @@ const MediaAdminPage = () => {
                         />
                       </div>
                       <div className="w-24">
-                        <label className="text-xs block mb-1 opacity-70 text-white">النوع</label>
+                        <label className="text-[10px] block mb-1 text-slate-400">النوع</label>
                         <select 
-                          className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-[#00c48c]" 
+                          className="w-full p-2 text-xs rounded-md bg-[#0B0E17] border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none" 
                           value={v.type} 
                           onChange={(e) => updateNewVariantRow(idx, 'type', e.target.value as Variant['type'])}
                           disabled={uploadingNewVariant}
@@ -1678,7 +1633,7 @@ const MediaAdminPage = () => {
                         </select>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <label className="text-xs block mb-1 opacity-70 text-white">الملف {v.file ? `(${formatBytes(v.file.size)})` : ''}</label>
+                        <label className="text-[10px] block mb-1 text-slate-400">الملف {v.file ? `(${formatBytes(v.file.size)})` : ''}</label>
                         <input 
                           type="file" 
                           accept={
@@ -1686,7 +1641,7 @@ const MediaAdminPage = () => {
                             v.type === 'audio' ? 'audio/*,.mp3,.wav,.zip,.rar,.7z' :
                             'image/*,.zip,.rar,.7z'
                           } 
-                          className="w-full text-xs text-gray-300 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#00c48c]/10 file:text-[#00c48c] hover:file:bg-[#00c48c]/20" 
+                          className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" 
                           onChange={(e) => updateNewVariantRow(idx, 'file', e.target.files ? e.target.files[0] : null)}
                           disabled={uploadingNewVariant}
                         />
@@ -1694,26 +1649,26 @@ const MediaAdminPage = () => {
                       <button 
                         type="button" 
                         onClick={() => removeNewVariantRow(idx)} 
-                        className="text-red-400 hover:text-red-600 p-2 bg-red-400/10 hover:bg-red-400/20 rounded-lg transition"
+                        className="text-red-400 hover:text-red-500 p-2 bg-red-500/10 hover:bg-red-500/20 rounded-md transition-colors"
                         disabled={uploadingNewVariant}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   ))}
 
                   {/* Upload Progress */}
                   {uploadingNewVariant && (
-                    <div className="p-3 bg-orange/10 border border-orange/30 rounded-lg space-y-2">
+                    <div className="p-2.5 bg-[#07090F] border border-white/10 rounded-md space-y-1.5">
                       <div className="flex justify-between text-xs">
-                        <span className="text-white/60">
+                        <span className="text-slate-400">
                           جاري رفع الصيغة {currentUploadingVariantIndex + 1} من {newVariantsToUpload.filter(v => v.file && v.label).length}...
                         </span>
-                        <span className="text-orange font-bold">{newVariantProgress}%</span>
+                        <span className="text-emerald-400 font-bold">{newVariantProgress}%</span>
                       </div>
-                      <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-gradient-to-r from-orange to-[#00c48c] rounded-full transition-all duration-300"
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-300"
                           style={{ width: `${newVariantProgress}%` }}
                         />
                       </div>
@@ -1726,19 +1681,9 @@ const MediaAdminPage = () => {
                       type="button"
                       onClick={handleUploadNewVariants}
                       disabled={uploadingNewVariant || newVariantsToUpload.every(v => !v.file || !v.label)}
-                      className="w-full py-2.5 rounded-lg bg-[#00c48c] hover:bg-[#00c48c]/80 text-black font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                      className="w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
                     >
-                      {uploadingNewVariant ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
-                          جاري الرفع...
-                        </>
-                      ) : (
-                        <>
-                          <Upload size={16} />
-                          رفع الصيغ الجديدة ({newVariantsToUpload.filter(v => v.file && v.label).length})
-                        </>
-                      )}
+                      {uploadingNewVariant ? "جاري الرفع..." : `رفع الصيغ الجديدة (${newVariantsToUpload.filter(v => v.file && v.label).length})`}
                     </button>
                   )}
                 </div>
@@ -1746,26 +1691,19 @@ const MediaAdminPage = () => {
             </div>
 
             {/* Footer */}
-            <div className="flex gap-3 justify-end p-6 border-t border-white/10 bg-black/20">
+            <div className="flex gap-2 justify-end p-4 border-t border-white/10 bg-[#07090F]">
               <button 
                 onClick={handleCloseEditFile} 
-                className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                className="px-3.5 py-1.5 rounded-md text-xs bg-white/5 text-slate-300 hover:bg-white/10 transition-colors"
               >
                 إلغاء
               </button>
               <button 
                 onClick={handleSaveFileEdit}
                 disabled={savingFile}
-                className="px-6 py-2 rounded-lg bg-orange hover:bg-orange/80 transition-colors font-bold disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-1.5 rounded-md text-xs bg-emerald-600 hover:bg-emerald-500 text-white transition-colors font-bold disabled:opacity-50"
               >
-                {savingFile ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    جاري الحفظ...
-                  </>
-                ) : (
-                  "حفظ التغييرات"
-                )}
+                {savingFile ? "جاري الحفظ..." : "حفظ التغييرات"}
               </button>
             </div>
           </div>
@@ -1774,27 +1712,26 @@ const MediaAdminPage = () => {
 
       {/* Banner Tab */}
       {activeTab === "banner" && (
-        <div className="max-w-5xl mx-auto space-y-8">
+        <div className="max-w-5xl mx-auto space-y-6">
           {/* Upload New Banner */}
-          <div className="bg-[#190237] p-8 rounded-xl shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
-              <ImageIcon size={24} className="text-orange" />
+          <div className="bg-[#0B0E17] p-5 rounded-md border border-white/[0.08]">
+            <h2 className="text-sm font-bold mb-4 text-emerald-400">
               رفع بانر جديد
             </h2>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="block mb-3 font-medium text-white">اختر صورة أو فيديو للبانر</label>
+                <label className="block mb-2 text-xs font-medium text-slate-300">اختر صورة أو فيديو للبانر</label>
                 <input 
                   type="file" 
                   accept="image/*,video/*"
                   onChange={handleBannerFileChange}
-                  className="w-full text-sm text-white file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20 cursor-pointer"
+                  className="w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 cursor-pointer"
                 />
               </div>
 
               {bannerPreview && (
-                <div className="relative w-full h-64 bg-black rounded-xl overflow-hidden border border-white/10">
+                <div className="relative w-full h-56 bg-black rounded-md overflow-hidden border border-white/10">
                   {bannerFile?.type.startsWith('video') ? (
                     <video 
                       src={bannerPreview} 
@@ -1817,44 +1754,32 @@ const MediaAdminPage = () => {
               <button
                 onClick={handleUploadBanner}
                 disabled={!bannerFile || uploadingBanner}
-                className="w-full bg-orange hover:bg-orange/80 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-md text-xs flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {uploadingBanner ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    جاري الرفع...
-                  </>
-                ) : (
-                  <>
-                    <Upload size={20} />
-                    رفع البانر
-                  </>
-                )}
+                {uploadingBanner ? "جاري الرفع..." : "رفع البانر"}
               </button>
             </div>
           </div>
 
           {/* Existing Banners */}
-          <div className="bg-[#190237] p-8 rounded-xl shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
-              <Film size={24} className="text-[#00c48c]" />
+          <div className="bg-[#0B0E17] p-5 rounded-md border border-white/[0.08]">
+            <h2 className="text-sm font-bold mb-4 text-emerald-400">
               البانرات الموجودة ({banners.length})
             </h2>
 
             {loadingBanners ? (
-              <div className="flex justify-center p-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange"></div>
+              <div className="flex justify-center p-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-400"></div>
               </div>
             ) : banners.length === 0 ? (
-              <div className="text-center p-12 text-white/40">
-                <ImageIcon size={48} className="mx-auto mb-4 opacity-20" />
-                <p>لا توجد بانرات حالياً</p>
+              <div className="text-center p-8 text-slate-500">
+                <p className="text-xs">لا توجد بانرات حالياً</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {banners.map((banner) => (
-                  <div key={banner.banner_id} className="bg-black/30 rounded-xl overflow-hidden border border-white/10 hover:border-orange/30 transition-all group">
-                    <div className="relative h-48 bg-black">
+                  <div key={banner.banner_id} className="bg-[#0F121C] rounded-md overflow-hidden border border-white/[0.08] hover:border-white/20 transition-colors">
+                    <div className="relative h-44 bg-black">
                       {banner.media_type === 'video' ? (
                         <video 
                           src={banner.media_url} 
@@ -1876,10 +1801,10 @@ const MediaAdminPage = () => {
                       )}
                       
                       {/* Status Badge */}
-                      <div className="absolute top-3 right-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      <div className="absolute top-2.5 right-2.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
                           banner.is_active 
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                             : 'bg-red-500/20 text-red-400 border border-red-500/30'
                         }`}>
                           {banner.is_active ? 'نشط' : 'معطل'}
@@ -1887,13 +1812,10 @@ const MediaAdminPage = () => {
                       </div>
                     </div>
 
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center justify-between text-sm text-white/60">
-                        <span className="flex items-center gap-2">
-                          {banner.media_type === 'video' ? <Film size={16} /> : <ImageIcon size={16} />}
-                          {banner.media_type === 'video' ? 'فيديو' : 'صورة'}
-                        </span>
-                        <span className="text-xs">
+                    <div className="p-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span>{banner.media_type === 'video' ? 'فيديو' : 'صورة'}</span>
+                        <span className="text-[10px]">
                           {new Date(banner.createdAt).toLocaleDateString('ar-EG')}
                         </span>
                       </div>
@@ -1901,19 +1823,19 @@ const MediaAdminPage = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleToggleBannerActive(banner.banner_id, banner.is_active)}
-                          className={`flex-1 py-2 rounded-lg font-bold transition-all ${
+                          className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-colors ${
                             banner.is_active
                               ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
-                              : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30'
+                              : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30'
                           }`}
                         >
-                          {banner.is_active ? <><EyeOff size={16} className="inline mr-1" /> إخفاء</> : <><Eye size={16} className="inline mr-1" /> تفعيل</>}
+                          {banner.is_active ? "إخفاء" : "تفعيل"}
                         </button>
                         <button
                           onClick={() => handleDeleteBanner(banner.banner_id)}
-                          className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-all"
+                          className="px-3 py-1.5 rounded-md text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 transition-colors"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </div>
@@ -1926,32 +1848,18 @@ const MediaAdminPage = () => {
       )}
 
       {activeTab === "uploads" && (
-        <div className="max-w-5xl mx-auto bg-[#190237] p-8 rounded-xl shadow-lg">
-          {/* TUS Feature Banner */}
-          {/* <div className="bg-gradient-to-r from-orange/20 to-[#00c48c]/20 border border-orange/30 rounded-xl p-4 mb-6 flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <Upload size={24} className="text-orange" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white">رفع احترافي للملفات الكبيرة</h3>
-              <p className="text-sm text-white/60">يدعم الملفات الضخمة (ProRes, 4K+) مع إمكانية الإيقاف والاستئناف تلقائياً</p>
-            </div>
-          </div> */}
-
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
-            <div className="w-10 h-10 bg-orange/20 rounded-full flex items-center justify-center">
-              <Upload className="text-orange" />
-            </div>
-            <span>{t('mediaAdmin.uploadNewMedia')} <span className="text-orange whitespace-nowrap text-sm">(يدعم الرفع المتعدد الآن في الصوتيات)</span></span>
+        <div className="max-w-5xl mx-auto bg-[#0B0E17] p-6 rounded-md border border-white/[0.08]">
+          <h2 className="text-base font-bold mb-5 text-emerald-400">
+            <span>{t('mediaAdmin.uploadNewMedia')}</span>
           </h2>
-          <form onSubmit={handleUpload} className="space-y-6">
+          <form onSubmit={handleUpload} className="space-y-4">
             
             {/* Metadata */}
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-3">
               <div>
-                <label className="block mb-2 font-medium text-white">المجموعة  (Collection)</label>
+                <label className="block mb-1.5 text-xs font-medium text-slate-300">المجموعة (Collection)</label>
                 <select 
-                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black font-bold" 
+                  className="w-full p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs font-medium focus:border-emerald-500/50 focus:outline-none" 
                   value={uploadHeroId || ""} 
                   onChange={(e) => {
                     const val = e.target.value ? Number(e.target.value) : null;
@@ -1959,46 +1867,42 @@ const MediaAdminPage = () => {
                     setUploadCategory(""); // Reset category when hero changes
                   }}
                 >
-                  <option value="">كل المجموعات</option>
-                  {heroCategories.map(h => <option key={h.hero_category_id} value={h.hero_category_id}>{h.name}</option>)}
+                  <option value="" className="bg-[#07090F]">كل المجموعات</option>
+                  {heroCategories.map(h => <option key={h.hero_category_id} value={h.hero_category_id} className="bg-[#07090F]">{h.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block mb-2 font-medium text-white">{t('mediaAdmin.selectCategory')}</label>
+                <label className="block mb-1.5 text-xs font-medium text-slate-300">{t('mediaAdmin.selectCategory')}</label>
                 <select 
-                  className="w-full p-3 rounded-lg border border-[#00c48c] bg-white text-black font-bold" 
+                  className="w-full p-2.5 rounded-md border border-white/10 bg-[#07090F] text-white text-xs font-medium focus:border-emerald-500/50 focus:outline-none" 
                   value={uploadCategory} 
                   onChange={(e) => setUploadCategory(e.target.value)} 
                   required
                 >
-                  <option value="">{t('mediaAdmin.chooseCategory')}</option>
+                  <option value="" className="bg-[#07090F]">{t('mediaAdmin.chooseCategory')}</option>
                   {categories
                     .filter(cat => !uploadHeroId || cat.hero_category_id === uploadHeroId)
-                    .map(cat => <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>)
+                    .map(cat => <option key={cat.category_id} value={cat.category_id} className="bg-[#07090F]">{cat.name}</option>)
                   }
                 </select>
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="border border-orange/30 bg-orange/5 p-4 rounded-lg">
-                <h3 className="font-bold mb-3 flex items-center gap-2 text-white">
-                  <ImageIcon size={18} /> {t('mediaAdmin.mainFile')} 
-                  <span className="text-xs text-gray-400 font-normal">(اختياري)</span>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="border border-white/10 bg-[#07090F] p-3.5 rounded-md">
+                <h3 className="font-bold mb-2 text-xs text-emerald-400">
+                  {t('mediaAdmin.mainFile')} 
+                  <span className="text-[10px] text-slate-400 font-normal mr-1">(اختياري)</span>
                 </h3>
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'image' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
+                <div className="grid grid-cols-2 gap-2 mb-2.5">
+                  <label className={`cursor-pointer border p-1.5 rounded-md flex items-center justify-center gap-1 text-xs transition-colors ${mainFileType === 'image' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-white/10 text-slate-400'}`}>
                     <input type="radio" name="mainType" value="image" className="hidden" checked={mainFileType === 'image'} onChange={() => setMainFileType('image')} />
-                    <span className="text-sm text-white">{t('mediaAdmin.image')}</span>
+                    <span>{t('mediaAdmin.image')}</span>
                   </label>
-                  <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'video' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
+                  <label className={`cursor-pointer border p-1.5 rounded-md flex items-center justify-center gap-1 text-xs transition-colors ${mainFileType === 'video' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-white/10 text-slate-400'}`}>
                     <input type="radio" name="mainType" value="video" className="hidden" checked={mainFileType === 'video'} onChange={() => setMainFileType('video')} />
-                    <span className="text-sm text-white">{t('mediaAdmin.video')}</span>
+                    <span>{t('mediaAdmin.video')}</span>
                   </label>
-                  {/* <label className={`cursor-pointer border p-2 rounded-lg flex flex-col items-center gap-1 ${mainFileType === 'audio' ? 'border-orange bg-orange/20' : 'border-gray-500'}`}>
-                    <input type="radio" name="mainType" value="audio" className="hidden" checked={mainFileType === 'audio'} onChange={() => setMainFileType('audio')} />
-                    <span className="text-sm text-white">{t('mediaAdmin.audio')}</span>
-                  </label> */}
                 </div>
                 <input 
                   type="file" 
@@ -2008,52 +1912,54 @@ const MediaAdminPage = () => {
                     'image/*,.zip,.rar,.7z'
                   } 
                   onChange={handleMainFileChange} 
-                  className="w-full text-sm text-white" 
+                  className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" 
                 />
-                {mainFiles.length > 0 && <p className="text-xs text-orange mt-2">📁 {mainFiles[0].name} ({formatBytes(mainFiles[0].size)})</p>}
+                {mainFiles.length > 0 && <p className="text-[10px] text-emerald-400 mt-1.5 truncate">📁 {mainFiles[0].name} ({formatBytes(mainFiles[0].size)})</p>}
               </div>
 
-              <div className="border border-[#00c48c]/30 bg-[#00c48c]/5 p-4 rounded-lg">
-                <h3 className="font-bold mb-3 flex items-center gap-2 text-white">
-                  <Film size={18} /> Hover Video Preview
-                  <span className="text-xs text-gray-400 font-normal">(اختياري)</span>
+              <div className="border border-white/10 bg-[#07090F] p-3.5 rounded-md">
+                <h3 className="font-bold mb-2 text-xs text-emerald-400">
+                  Hover Video Preview
+                  <span className="text-[10px] text-slate-400 font-normal mr-1">(اختياري)</span>
                 </h3>
-                <input type="file" accept="video/*,.mov" onChange={(e) => setPreviewVideo(e.target.files?.[0] || null)} className="w-full text-sm text-white mt-10" />
-                {previewVideo && <p className="text-xs text-[#00c48c] mt-2">📁 {previewVideo.name} ({formatBytes(previewVideo.size)})</p>}
+                <div className="mt-8">
+                  <input type="file" accept="video/*,.mov" onChange={(e) => setPreviewVideo(e.target.files?.[0] || null)} className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" />
+                  {previewVideo && <p className="text-[10px] text-emerald-400 mt-1.5 truncate">📁 {previewVideo.name} ({formatBytes(previewVideo.size)})</p>}
+                </div>
               </div>
             </div>
 
             {/* Main File Title */}
             {mainFiles.length > 0 && (
-              <div className="bg-black/20 p-4 rounded-lg border border-orange/30 animate-in fade-in slide-in-from-top-2">
-                <label className="block mb-2 font-medium text-white">العنوان الرئيسي للميديا</label>
+              <div className="bg-[#07090F] p-3.5 rounded-md border border-white/10">
+                <label className="block mb-1.5 text-xs font-medium text-slate-300">العنوان الرئيسي للميديا</label>
                 <input 
                   type="text" 
                   placeholder="عنوان الكار ميديا" 
                   value={bulkMetadata[0]?.title || ""} 
                   onChange={(e) => updateBulkMetadata(0, 'title', e.target.value)}
-                  className="w-full p-3 rounded-lg border border-orange/50 bg-white text-black font-bold focus:ring-2 focus:ring-orange/20 transition-all"
+                  className="w-full p-2.5 rounded-md border border-white/10 bg-[#0B0E17] text-white text-xs font-medium focus:border-emerald-500/50 focus:outline-none"
                   required
                 />
               </div>
             )}
 
             {/* Variants Section */}
-            <div className="space-y-3">
-              <div className="flex flex-col gap-4">
+            <div className="space-y-2.5">
+              <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center">
-                  <label className="font-medium text-white">{t('mediaAdmin.variants')}</label>
+                  <label className="text-xs font-bold text-emerald-400">{t('mediaAdmin.variants')}</label>
                 </div>
 
                 {/* Format Presets */}
-                <div className="flex flex-wrap gap-2 items-center bg-black/30 p-3 rounded-lg border border-white/10">
-                  <span className="text-xs text-white/60 font-medium">{t('mediaAdmin.quickAdd')}</span>
-                  <button type="button" onClick={() => addVariant("4K PRORES", "prores")} className="text-[10px] bg-orange/20 hover:bg-orange/40 text-orange px-2 py-1 rounded border border-orange/30 transition font-bold">+ PRORES</button>
-                  <button type="button" onClick={() => addVariant("MP4 (PREVIEW)", "video")} className="text-[10px] bg-white/20 hover:bg-white/40 text-white px-2 py-1 rounded border border-white/20 transition font-bold">+ MP4</button>
-                  <button type="button" onClick={() => addVariant("MP3", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ MP3</button>
-                  <button type="button" onClick={() => addVariant("WAV", "audio")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ WAV</button>
-                  <button type="button" onClick={() => addVariant("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ PNG SEQ.</button>
-                  <button type="button" onClick={() => addVariant("MOV", "video")} className="text-[10px] bg-[#00c48c]/20 hover:bg-[#00c48c]/40 text-[#00c48c] px-2 py-1 rounded border border-[#00c48c]/30 transition font-bold">+ MOV</button>
+                <div className="flex flex-wrap gap-1.5 items-center bg-[#07090F] p-2.5 rounded-md border border-white/10">
+                  <span className="text-[10px] text-slate-400 font-medium">{t('mediaAdmin.quickAdd')}</span>
+                  <button type="button" onClick={() => addVariant("4K PRORES", "prores")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ PRORES</button>
+                  <button type="button" onClick={() => addVariant("MP4 (PREVIEW)", "video")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ MP4</button>
+                  <button type="button" onClick={() => addVariant("MP3", "audio")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ MP3</button>
+                  <button type="button" onClick={() => addVariant("WAV", "audio")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ WAV</button>
+                  <button type="button" onClick={() => addVariant("PNG SEQUENCE", "png_sequence")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ PNG SEQ.</button>
+                  <button type="button" onClick={() => addVariant("MOV", "video")} className="text-[10px] bg-white/5 hover:bg-white/10 text-slate-300 px-2 py-1 rounded-md border border-white/10 transition font-bold">+ MOV</button>
                   
                   <div className="h-4 w-[1px] bg-white/10 mx-1"></div>
                   
@@ -2068,25 +1974,25 @@ const MediaAdminPage = () => {
                   <button 
                     type="button" 
                     onClick={() => bulkVariantInputRef.current?.click()} 
-                    className="text-[10px] bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 px-3 py-1 rounded border border-blue-500/30 transition font-bold flex items-center gap-1"
+                    className="text-[10px] bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/30 transition font-bold"
                   >
-                    <Plus size={10} /> رفع أكثر من ملف
+                    + رفع أكثر من ملف
                   </button>
                 </div>
               </div>
 
               {variants.length === 0 && (
-                <div className="text-center p-6 border border-dashed border-[#00c48c] rounded-lg text-gray-400 text-sm">{t('mediaAdmin.noVariants')}</div>
+                <div className="text-center p-4 border border-dashed border-white/10 rounded-md text-slate-500 text-xs">{t('mediaAdmin.noVariants')}</div>
               )}
               
               {variants.map((v, idx) => (
-                <div key={idx} className="flex gap-3 items-end bg-black/20 p-3 rounded-lg border border-gray-700 flex-wrap">
+                <div key={idx} className="flex gap-2 items-end bg-[#07090F] p-2.5 rounded-md border border-white/10 flex-wrap">
                   {v.isIndependent && (
-                    <div className="flex-[2] min-w-[200px]">
-                      <label className="text-xs block mb-1 opacity-70 text-white">العنوان الرئيسي</label>
+                    <div className="flex-[2] min-w-[180px]">
+                      <label className="text-[10px] block mb-1 text-slate-400">العنوان الرئيسي</label>
                       <input 
                         type="text" 
-                        className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange font-bold" 
+                        className="w-full p-2 text-xs rounded-md bg-[#0B0E17] border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none" 
                         value={v.title || ""} 
                         onChange={(e) => updateVariant(idx, 'title', e.target.value)} 
                         placeholder="عنوان الميديا" 
@@ -2094,12 +2000,12 @@ const MediaAdminPage = () => {
                     </div>
                   )}
                   <div className="flex-1 min-w-[100px]">
-                    <label className="text-xs block mb-1 opacity-70 text-white">{t('mediaAdmin.label')}</label>
-                    <input type="text" className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange" value={v.label} onChange={(e) => updateVariant(idx, 'label', e.target.value)} placeholder="مثال: MP3" />
+                    <label className="text-[10px] block mb-1 text-slate-400">{t('mediaAdmin.label')}</label>
+                    <input type="text" className="w-full p-2 text-xs rounded-md bg-[#0B0E17] border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none" value={v.label} onChange={(e) => updateVariant(idx, 'label', e.target.value)} placeholder="مثال: MP3" />
                   </div>
                   <div className="w-24">
-                    <label className="text-xs block mb-1 opacity-70 text-white">{t('mediaAdmin.type')}</label>
-                    <select className="w-full p-2 text-sm rounded bg-white text-black border-none focus:ring-1 focus:ring-orange" value={v.type} onChange={(e) => updateVariant(idx, 'type', e.target.value as Variant['type'])}>
+                    <label className="text-[10px] block mb-1 text-slate-400">{t('mediaAdmin.type')}</label>
+                    <select className="w-full p-2 text-xs rounded-md bg-[#0B0E17] border border-white/10 text-white focus:border-emerald-500/50 focus:outline-none" value={v.type} onChange={(e) => updateVariant(idx, 'type', e.target.value as Variant['type'])}>
                       <option value="video">{t('mediaAdmin.video')}</option>
                       <option value="audio">Audio</option>
                       <option value="image">{t('mediaAdmin.image')}</option>
@@ -2109,7 +2015,7 @@ const MediaAdminPage = () => {
                     </select>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <label className="text-xs block mb-1 opacity-70 text-white">{t('mediaAdmin.file')} {v.file ? `(${formatBytes(v.file.size)})` : ''}</label>
+                    <label className="text-[10px] block mb-1 text-slate-400">{t('mediaAdmin.file')} {v.file ? `(${formatBytes(v.file.size)})` : ''}</label>
                     <input 
                       type="file" 
                       accept={
@@ -2117,25 +2023,25 @@ const MediaAdminPage = () => {
                         v.type === 'audio' ? 'audio/*,.mp3,.wav,.zip,.rar,.7z' :
                         'image/*,.zip,.rar,.7z'
                       } 
-                      className="w-full text-xs text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange/10 file:text-orange hover:file:bg-orange/20" 
+                      className="w-full text-xs text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" 
                       onChange={(e) => updateVariant(idx, 'file', e.target.files ? e.target.files[0] : null)} 
                     />
                   </div>
-                  <button type="button" onClick={() => removeVariant(idx)} className="text-red-400 hover:text-red-600 p-2 bg-red-400/10 hover:bg-red-400/20 rounded-lg transition"><Trash2 size={16} /></button>
+                  <button type="button" onClick={() => removeVariant(idx)} className="text-red-400 hover:text-red-500 p-2 bg-red-500/10 hover:bg-red-500/20 rounded-md transition-colors"><Trash2 size={14} /></button>
                 </div>
               ))}
             </div>
 
             {/* Total Size Display */}
             {getTotalSize() > 0 && (
-              <div className="bg-black/30 border border-white/10 rounded-xl p-4 flex items-center justify-between">
-                <span className="text-white/60">إجمالي حجم الملفات:</span>
-                <span className="text-xl font-bold text-orange">{formatBytes(getTotalSize())}</span>
+              <div className="bg-[#07090F] border border-white/10 rounded-md p-3 flex items-center justify-between">
+                <span className="text-xs text-slate-400">إجمالي حجم الملفات:</span>
+                <span className="text-sm font-bold text-emerald-400">{formatBytes(getTotalSize())}</span>
               </div>
             )}
 
-            <button disabled={isUploading} className="w-full bg-orange hover:bg-orange/80 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 disabled:opacity-50">
-              {isUploading ? t('mediaAdmin.uploading') : <><Upload size={20} /> {t('mediaAdmin.uploadEverything')}</>}
+            <button disabled={isUploading} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-md text-xs flex justify-center items-center gap-2 disabled:opacity-50 transition-colors">
+              {isUploading ? t('mediaAdmin.uploading') : t('mediaAdmin.uploadEverything')}
             </button>
           </form>
         </div>
@@ -2143,120 +2049,101 @@ const MediaAdminPage = () => {
 
       {/* Analytics Tab */}
       {activeTab === "analytics" && (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-4">
           {loadingAnalytics ? (
-            <div className="flex justify-center p-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange"></div>
+            <div className="flex justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
             </div>
           ) : analytics ? (
             <>
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Total Downloads */}
-                <div className="gradient-border-analysis  rounded-2xl p-6 hover:scale-105 transition-transform">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-orange/20 rounded-full flex items-center justify-center">
-                      <Download size={24} className="text-orange" />
-                    </div>
-                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">إجمالي</span>
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4 transition-colors hover:border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-400 font-medium">إجمالي التحميلات</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">الكل</span>
                   </div>
-                  <h3 className="text-4xl font-black text-white mb-2">{analytics.totalDownloads?.toLocaleString() || 0}</h3>
-                  <p className="text-white/60 text-sm">إجمالي التحميلات</p>
+                  <h3 className="text-2xl font-black text-white mb-0.5">{analytics.totalDownloads?.toLocaleString() || 0}</h3>
+                  <p className="text-slate-500 text-[10px]">كافة الملفات</p>
                 </div>
 
                 {/* Downloads Today */}
-                <div className="gradient-border-analysis  rounded-2xl p-6 hover:scale-105 transition-transform">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-[#00c48c]/20 rounded-full flex items-center justify-center">
-                      <Download size={24} className="text-[#00c48c]" />
-                    </div>
-                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">اليوم</span>
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4 transition-colors hover:border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-400 font-medium">تحميلات اليوم</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">اليوم</span>
                   </div>
-                  <h3 className="text-4xl font-black text-white mb-2">{analytics.downloadsToday?.toLocaleString() || 0}</h3>
-                  <p className="text-white/60 text-sm">تحميلات اليوم</p>
+                  <h3 className="text-2xl font-black text-white mb-0.5">{analytics.downloadsToday?.toLocaleString() || 0}</h3>
+                  <p className="text-slate-500 text-[10px]">خلال 24 ساعة</p>
                 </div>
 
                 {/* Downloads This Month */}
-                <div className="gradient-border-analysis rounded-2xl p-6 hover:scale-105 transition-transform">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Download size={24} className="text-blue-400" />
-                    </div>
-                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">هذا الشهر</span>
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4 transition-colors hover:border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-400 font-medium">تحميلات الشهر</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">الشهر</span>
                   </div>
-                  <h3 className="text-4xl font-black text-white mb-2">{analytics.downloadsThisMonth?.toLocaleString() || 0}</h3>
-                  <p className="text-white/60 text-sm">تحميلات الشهر</p>
+                  <h3 className="text-2xl font-black text-white mb-0.5">{analytics.downloadsThisMonth?.toLocaleString() || 0}</h3>
+                  <p className="text-slate-500 text-[10px]">خلال الشهر الحالي</p>
                 </div>
 
                 {/* Unique Users */}
-                <div className="gradient-border-analysis   rounded-2xl p-6 hover:scale-105 transition-transform">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
-                      <Film size={24} className="text-purple-400" />
-                    </div>
-                    <span className="text-xs text-white/60 font-bold uppercase tracking-wider">مستخدمين</span>
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4 transition-colors hover:border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-slate-400 font-medium">مستخدمين فريدين</span>
+                    <span className="text-[10px] text-emerald-400 font-bold">المستخدمين</span>
                   </div>
-                  <h3 className="text-4xl font-black text-white mb-2">{analytics.uniqueDownloaders?.toLocaleString() || 0}</h3>
-                  <p className="text-white/60 text-sm">مستخدمين فريدين</p>
+                  <h3 className="text-2xl font-black text-white mb-0.5">{analytics.uniqueDownloaders?.toLocaleString() || 0}</h3>
+                  <p className="text-slate-500 text-[10px]">قاموا بالتحميل</p>
                 </div>
               </div>
 
               {/* Additional Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <FolderPlus size={20} className="text-orange" />
-                    <h4 className="font-bold text-white">التصنيفات</h4>
-                  </div>
-                  <p className="text-3xl font-black text-white">{analytics.totalCategories || 0}</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4">
+                  <h4 className="text-xs font-medium text-slate-400 mb-1">التصنيفات</h4>
+                  <p className="text-2xl font-black text-white">{analytics.totalCategories || 0}</p>
                 </div>
 
-                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Film size={20} className="text-[#00c48c]" />
-                    <h4 className="font-bold text-white">الملفات</h4>
-                  </div>
-                  <p className="text-3xl font-black text-white">{analytics.totalFiles || 0}</p>
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4">
+                  <h4 className="text-xs font-medium text-slate-400 mb-1">الملفات</h4>
+                  <p className="text-2xl font-black text-white">{analytics.totalFiles || 0}</p>
                 </div>
 
-                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Eye size={20} className="text-blue-400" />
-                    <h4 className="font-bold text-white">زيارات الصفحة</h4>
-                  </div>
-                  <p className="text-3xl font-black text-white">{analytics.pageViews?.toLocaleString() || 0}</p>
-                  <p className="text-xs text-white/40 mt-1">زيارات Media Hub</p>
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4">
+                  <h4 className="text-xs font-medium text-slate-400 mb-1">زيارات Media Hub</h4>
+                  <p className="text-2xl font-black text-white">{analytics.pageViews?.toLocaleString() || 0}</p>
                 </div>
               </div>
 
               {/* Top Downloaded Files */}
               {analytics.topFiles && analytics.topFiles.length > 0 && (
-                <div className="bg-[#190237] border border-white/10 rounded-2xl p-6">
-                  <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-white">
-                    <Download size={20} className="text-orange" />
+                <div className="bg-[#0B0E17] border border-white/[0.08] rounded-md p-4">
+                  <h3 className="text-xs font-bold mb-3 text-emerald-400">
                     الملفات الأكثر تحميلاً (أفضل 3)
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {analytics.topFiles.slice(0, 3).map((item: any, idx: number) => (
-                      <div key={item.file_id} className="flex items-center gap-4 p-4 bg-black/30 rounded-xl border border-white/5 hover:border-orange/30 transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-orange/20 flex items-center justify-center flex-shrink-0">
-                          <span className="text-orange font-bold text-sm">#{idx + 1}</span>
+                      <div key={item.file_id} className="flex items-center gap-3 p-3 bg-[#0F121C] rounded-md border border-white/[0.08] hover:border-white/20 transition-colors">
+                        <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <span className="text-emerald-400 font-bold text-xs">#{idx + 1}</span>
                         </div>
                         
                         {item.file?.thumbnail_url && (
-                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-black/40 flex-shrink-0">
+                          <div className="w-12 h-12 rounded-md overflow-hidden bg-black/40 flex-shrink-0">
                             <img src={item.file.thumbnail_url} alt="" className="w-full h-full object-cover" />
                           </div>
                         )}
                         
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-white truncate">{item.file?.title || 'Unknown'}</h4>
+                          <h4 className="font-bold text-xs text-white truncate">{item.file?.title || 'Unknown'}</h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <p className="text-xs text-white/40">{item.file?.file_type || 'N/A'}</p>
+                            <p className="text-[10px] text-slate-400">{item.file?.file_type || 'N/A'}</p>
                             {item.file?.category?.name && (
                               <>
                                 <span className="text-white/20">•</span>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-[#00c48c]/10 text-[#00c48c] border border-[#00c48c]/20">
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/5 text-slate-400 border border-white/10">
                                   {item.file.category.name}
                                 </span>
                               </>
@@ -2265,8 +2152,8 @@ const MediaAdminPage = () => {
                         </div>
                         
                         <div className="text-right">
-                          <p className="text-2xl font-black text-orange">{item.download_count}</p>
-                          <p className="text-xs text-white/40">تحميل</p>
+                          <p className="text-base font-black text-emerald-400">{item.download_count}</p>
+                          <p className="text-[10px] text-slate-400">تحميل</p>
                         </div>
                       </div>
                     ))}
@@ -2275,9 +2162,8 @@ const MediaAdminPage = () => {
               )}
             </>
           ) : (
-            <div className="text-center p-12 text-white/40">
-              <AlertCircle size={48} className="mx-auto mb-4 opacity-20" />
-              <p>لا توجد إحصائيات متاحة</p>
+            <div className="text-center p-8 text-slate-500">
+              <p className="text-xs">لا توجد إحصائيات متاحة</p>
             </div>
           )}
         </div>

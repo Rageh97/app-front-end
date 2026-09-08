@@ -45,6 +45,11 @@ const UseSignIn = async (
     if (response.status === 200) {
       localStorage.setItem("a", response.data?.token);
       
+      if (response.data?.role) {
+        localStorage.setItem("userRole", response.data.role);
+        (global as any).userRole = response.data.role;
+      }
+      
       // Set username cookie for the extension/panel using database verified email
       const usernameValue = response.data?.email || response.data?.user?.email || response.data?.userData?.email || response.data?.username;
       if (usernameValue) {

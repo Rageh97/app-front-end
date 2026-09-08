@@ -2,6 +2,14 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+export interface Question {
+  question_Id: number;
+  question: string | { ar?: string; en?: string };
+  answer: string | { ar?: string; en?: string };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 const useQuestions = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);

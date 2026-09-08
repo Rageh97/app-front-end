@@ -488,16 +488,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#000000] text-white selection:bg-purple-500/30 font-sans overflow-hidden" dir="rtl">
+    <div className="flex h-screen bg-[#06070B] text-white selection:bg-emerald-500/30 font-sans overflow-hidden" dir="rtl">
       <Toaster position="top-right" />
       
       {/* Dynamic Background Ambience */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-900/10 blur-[120px] rounded-full pointer-events-none"></div>
 
       {/* Sidebar - Threads */}
-      <aside className={`relative z-30 flex flex-col bg-[#050505] border-l border-white/5 transition-all duration-500 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0'} overflow-hidden shadow-2xl`}>
+      <aside className={`relative z-30 flex flex-col bg-[#0B0D14] border-l border-white/[0.08] transition-all duration-500 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0'} overflow-hidden shadow-2xl`}>
         <div className="flex flex-col h-full w-72">
             {/* Sidebar Header */}
             <div className="p-4 pb-2">
@@ -506,25 +504,25 @@ export default function ChatPage() {
                    <span>إستوديو نيكسوس</span>
                 </Link>
                 
-                <PremiumButton 
-                    label="محادثة جديدة"
-                    icon={Plus}
-                    secondaryIcon={ChevronLeft}
+                <button
                     onClick={() => createThread(null)}
-                    className="h-10 w-full text-xs"
-                />
+                    className="h-10 w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <Plus size={14} />
+                    <span>محادثة جديدة</span>
+                </button>
             </div>
 
             {/* Threads List */}
             <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
                 <div className="flex items-center gap-1.5 px-2 mb-3">
-                    <History size={12} className="text-gray-600" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">السجل الأخير</span>
+                    <History size={12} className="text-gray-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">السجل الأخير</span>
                 </div>
                 
                 {threads.length === 0 && !isLoadingThread && (
                     <div className="text-center py-8 px-4">
-                        <div className="text-gray-700 text-[10px] font-bold leading-relaxed">لا يوجد محادثات سابقة.</div>
+                        <div className="text-gray-600 text-[10px] font-bold leading-relaxed">لا يوجد محادثات سابقة.</div>
                     </div>
                 )}
 
@@ -533,12 +531,12 @@ export default function ChatPage() {
                         key={thread.thread_id}
                         className={`group relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-300 border ${
                             activeThreadId === thread.thread_id 
-                                ? 'bg-white/10 border-white/10 shadow-lg' 
-                                : 'bg-transparent border-transparent hover:bg-white/[0.03]'
+                                ? 'bg-[#121520] border-white/[0.08] text-white shadow-lg' 
+                                : 'bg-transparent border-transparent hover:bg-[#121520]/50 text-gray-400 hover:text-white'
                         }`}
                         onClick={() => setActiveThreadId(thread.thread_id)}
                     >
-                        <MessageSquare size={14} className={activeThreadId === thread.thread_id ? 'text-purple-400' : 'text-gray-600'} />
+                        <MessageSquare size={14} className={activeThreadId === thread.thread_id ? 'text-emerald-400' : 'text-gray-500'} />
                         
                         <div className="flex-1 min-w-0">
                             {editingThreadId === thread.thread_id ? (
@@ -547,7 +545,7 @@ export default function ChatPage() {
                                     onChange={(e) => setEditingTitle(e.target.value)}
                                     onBlur={() => updateThreadTitle(thread.thread_id, editingTitle)}
                                     onKeyDown={(e) => e.key === 'Enter' && updateThreadTitle(thread.thread_id, editingTitle)}
-                                    className="w-full bg-black/50 border-b border-purple-500 focus:outline-none text-xs py-0.5"
+                                    className="w-full bg-[#121520] border-b border-emerald-500 focus:outline-none text-xs py-0.5"
                                     autoFocus
                                 />
                             ) : (
@@ -641,60 +639,50 @@ export default function ChatPage() {
       <main className="flex-1 flex flex-col relative min-w-0">
         
         {/* Modern Navbar */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-black/40 backdrop-blur-2xl relative z-20">
+        <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.08] bg-[#0B0D14] backdrop-blur-2xl relative z-20">
             <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-2 hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10 text-gray-200 hover:text-white"
+                  className="p-2 hover:bg-[#121520] rounded-xl transition-all border border-transparent hover:border-white/[0.08] text-gray-200 hover:text-white"
                 >
                   {sidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
                 </button>
                 
                 <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold">نيكسوس شات</span>
-                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 text-[9px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1">
-                        <Zap size={8} className="text-yellow-400 fill-yellow-400" />
-                        Unlimited
-                    </span>
+                    <span className="text-base font-bold">نيكسوس شات</span>
                 </div>
             </div>
 
-            <nav className="relative hidden xl:flex items-center gap-1 p-1 bg-black/60 backdrop-blur-3xl border border-white/10 rounded-full shadow-lg">
+            <nav className="relative hidden xl:flex items-center gap-1 p-1 bg-[#121520] border border-white/[0.08] rounded-full shadow-lg">
                 {[
-                    { name: 'الرئيسية', path: '/ai', icon: Sparkles, color: 'text-purple-400' },
-                    { name: 'المحادثة', path: '/ai/chat', icon: MessageSquare, color: 'text-blue-400' },
-                    { name: 'الوسائط', path: '/ai/media', icon: Wand2, color: 'text-pink-400' },
+                    { name: 'الرئيسية', path: '/ai', icon: Sparkles, color: 'text-emerald-400' },
+                    { name: 'المحادثة', path: '/ai/chat', icon: MessageSquare, color: 'text-emerald-400' },
                     { name: 'الخطط', path: '/ai/plans', icon: CreditCard, color: 'text-emerald-400' }
                 ].map((item, idx) => (
                     <Link 
                         key={idx}
                         href={item.path}
                         className={`group relative px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 flex items-center gap-1.5 overflow-hidden ${
-                            (item.path === '/ai/chat') ? 'bg-white/10 text-white shadow-inner' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            (item.path === '/ai/chat') ? 'bg-emerald-600 text-white shadow-inner' : 'text-gray-400 hover:text-white hover:bg-white/5'
                         }`}
                     >
-                        <item.icon size={12} className={`transition-all duration-300 ${item.color} ${item.path === '/ai/chat' ? 'opacity-100 scale-110' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
+                        <item.icon size={12} className={`transition-all duration-300 ${item.color} ${item.path === '/ai/chat' ? 'opacity-100 scale-110 text-white' : 'opacity-70 group-hover:opacity-100 group-hover:scale-110'}`} />
                         <span className="relative z-10">{item.name}</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     </Link>
                 ))}
             </nav>
 
             <div className="flex items-center gap-3">
-                <Link href="/ai" className="px-3 py-1.5 rounded-md bg-white/5 text-gray-300 text-[10px] font-bold border border-white/10 hover:bg-white/10 transition-all flex items-center gap-1.5">
+                <Link href="/ai" className="px-3 py-1.5 rounded-lg bg-[#121520] text-gray-300 text-xs font-bold border border-white/[0.08] hover:bg-[#161a27] transition-all flex items-center gap-1.5">
                     <ArrowRight size={12} />
                     <span>عودة</span>
                 </Link>
                 
                 <button
                   onClick={() => setShowBuyModal(true)}
-                  className="relative inline-flex h-8 active:scale-95 transition overflow-hidden rounded-lg p-[1px] focus:outline-none"
+                  className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white transition-all shadow-sm border border-emerald-500/40"
                 >
-                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#e7029a_0%,#f472b6_50%,#bd5fff_100%)]"></span>
-                  <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-lg bg-[#050505] px-3 text-[10px] font-black text-white backdrop-blur-3xl gap-1.5 transition-all hover:bg-black/40">
-                    <Crown size={12} className="text-pink-500" />
-                    شراء كريديت
-                  </span>
+                  ترقية
                 </button>
             </div>
         </header>
@@ -708,142 +696,45 @@ export default function ChatPage() {
                            <div className="spinner">
                 <div className="spinner1"></div>
               </div>
-                          {/* <img className="w-40 h-40" src="/images/Bot.gif" alt="" /> */}
-                            {/* <div className="w-24 h-24 bg-gradient-to-tr from-purple-600 to-cyan-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl animate-float">
-                                <Sparkles size={48} className="text-white" />
-                            </div>
-                            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-xl">
-                                <Bot size={20} className="text-black" />
-                            </div> */}
                         </div>
-                        <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight tracking-tight">
-                            <div className="flex items-center justify-center gap-3 text-2xl md:text-4xl text-gray-500 mb-4 font-bold animate-fade-in">
-                                <GreetingIcon size={32} className={greeting === "صباح الخير" ? "text-yellow-400" : "text-blue-400"} />
-                                <span>{greeting}</span>
-                                {userName && (
-                                    <span className="bg-gradient-to-r from-white via-gray-300 to-gray-500 bg-clip-text text-transparent">
-                                        ، {userName}
-                                    </span>
-                                )}
-                            </div>
-                            كيف يمكنني <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-500 animate-gradient bg-300%">مساعدتك؟</span>
-                        </h1>
 
-                        {/* Prompt Suggestions */}
-                        {/* <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4">
-                            {[
-                                { t: "اكتب لي كود بايثون لتحليل البيانات", i: Wand2 },
-                                { t: "لخص لي كتاب العادات الذرية", i: Layers },
-                                { t: "خطط لي رحلة سياحية إلى اليابان", i: Zap },
-                                { t: "اشرح لي نظرية النسبية ببساطة", i: Sparkles }
-                            ].map((s, i) => (
-                                <button key={i} onClick={() => setInputMessage(s.t)} className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 text-right hover:border-purple-500/50 hover:bg-white/[0.05] transition-all group">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <s.i size={16} className="text-purple-500 opacity-50 group-hover:opacity-100 transition-all" />
-                                        <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">اقتراح ذكي</span>
-                                    </div>
-                                    <div className="text-sm font-bold text-gray-400 group-hover:text-white transition-colors">{s.t}</div>
-                                </button>
-                            ))}
-                        </div> */}
+                        <div className="space-y-4 max-w-xl">
+                            <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+                                كيف يمكنني مساعدتك اليوم؟
+                            </h2>
+                            <p className="text-sm text-gray-400 font-medium leading-relaxed">
+                                اكتب رسالتك أو استفسارك وسيقوم مساعد نيكسوس الذكي بالإجابة عليك بدقة وسرعة.
+                            </p>
+                        </div>
                     </div>
                 ) : (
-                    messages.map((m, idx) => (
-                        <div key={m.id} className={`flex gap-3 group ${m.role === 'user' ? 'flex-row-reverse' : ''} animate-fade-in`}>
-                            <div className={`w-6 h-6 rounded-xl shrink-0 flex items-center justify-center shadow-lg ${
-                                m.role === 'user' ? 'bg-white text-black' : 'bg-gradient-to-tr from-purple-600 to-blue-600'
-                            }`}>
-                                {m.role === 'user' ? <User size={16} /> : <img className="w-5 h-5" src="/images/bai.png" alt="" />}
-                            </div>
-                            
-                            <div className={`flex flex-col max-w-[85%] ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                                {m.image && (
-                                    <div className="mb-3 rounded-2xl overflow-hidden border border-white/10 shadow-lg">
-                                        <img src={m.image} alt="Upload" className="max-h-60 w-auto object-cover" />
-                                    </div>
-                                )}
-                                
-                                <div className={`relative px-5 py-2 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-300 ${
-                                    m.role === 'user' 
-                                        ? 'bg-white/[0.07] border border-white/10 text-white rounded-tr-none' 
-                                        : ' text-gray-200 '
-                                }`}>
-                                    {m.role === 'assistant' && m.content === '' ? (
-                                        <div className="flex flex-col gap-2 py-1">
-                                            <div className="flex gap-1 items-center">
-                                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '0ms' }}></div>
-                                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '150ms' }}></div>
-                                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-typing-dot" style={{ animationDelay: '300ms' }}></div>
-                                            </div>
-                                            <span className="text-[10px] text-gray-500 animate-pulse font-mono">نيكسوس يفكر...</span>
-                                        </div>
-                                    ) : (
-                                        renderMessageContent(m.content)
-                                    )}
-                                    
-                                    {m.role === 'assistant' && !m.id.startsWith('typing_') && (
-                                        <div className="absolute left-0 -bottom-10 -translate-y-1/2 flex gap-1 translate-x-1/2 transition-all">
-                                            <button 
-                                                onClick={() => { navigator.clipboard.writeText(m.content); toast.success('تم النسخ'); setCopiedMessageId(m.id) }} 
-                                                className="p-1.5 bg-black border border-white/10 rounded-lg hover:bg-purple-600 transition-all shadow-xl text-gray-400 hover:text-white"
-                                            >
-                                                {copiedMessageId === m.id ? <Check size={12} /> : <Copy size={12} />}
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                <div className="mt-1 text-[9px] font-bold uppercase tracking-widest text-gray-600">
-                                    {m.timestamp.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                    <div className="space-y-6">
+                        {messages.map((msg) => (
+                            <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user' ? 'bg-emerald-600 text-white' : 'bg-[#0B0D14] border border-white/[0.08] text-gray-100'}`}>
+                                    {renderMessageContent(msg.content)}
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
                 )}
-                <div ref={messagesEndRef} className="h-20" />
             </div>
         </div>
 
-        {/* Floating Input Area */}
-        <footer className="p-6 relative z-20">
-            <div className="max-w-3xl mx-auto relative">
-                
-                {/* Attachments Preview Overlay */}
-                {(chatImage || chatDocument) && (
-                    <div className="absolute bottom-full left-0 mb-3 animate-fade-in-up flex gap-2">
-                        {chatImage && (
-                            <div className="relative p-1.5 bg-black border border-white/10 rounded-2xl shadow-xl">
-                                <img src={chatImage} alt="preview" className="w-16 h-16 rounded-xl object-cover" />
-                                <button onClick={() => setChatImage(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                                    <X size={12} strokeWidth={3} />
-                                </button>
-                            </div>
-                        )}
-                        {chatDocument && (
-                            <div className="relative p-3 bg-black border border-purple-500/30 rounded-2xl shadow-xl flex items-center gap-2">
-                                <FileText size={20} className="text-purple-400" />
-                                <div>
-                                    <div className="text-xs font-bold text-white truncate max-w-[120px]">{chatDocument.fileName}</div>
-                                    <div className="text-[9px] text-gray-500">وثيقة مرفقة</div>
-                                </div>
-                                <button onClick={() => setChatDocument(null)} className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                                    <X size={12} strokeWidth={3} />
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
-
+        {/* Fixed Bottom Input Area */}
+        <footer className="shrink-0 p-4 border-t border-white/[0.08] bg-[#0B0D14]/90 backdrop-blur-xl relative z-20">
+            <div className="max-w-4xl mx-auto">
                 <div className="relative group/input">
-                    <div className="relative bg-[#0d0d0d] border border-white/20 rounded-[2rem] p-2 flex items-end gap-2 transition-all focus-within:border-white/30 shadow-lg">
+                    <div className="relative bg-[#121520] border border-white/[0.08] rounded-2xl p-2 flex items-end gap-2 transition-all focus-within:border-emerald-500/50 shadow-lg">
                         {/* Image Upload Button */}
-                        <label className="flex mb-1 items-center justify-center w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 text-gray-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer group/file shrink-0" title="إرفاق صورة">
+                        <label className="flex mb-1 items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer group/file shrink-0" title="إرفاق صورة">
                             <input type="file" accept="image/*" className="hidden" onChange={handleChatImageUpload} />
                             <ImageIcon size={18} className="group-hover/file:rotate-6 transition-transform" />
                         </label>
                         
                         {/* Document Upload Button */}
-                        <label className="flex mb-1 items-center justify-center w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 text-gray-500 hover:text-purple-400 hover:bg-purple-500/10 active:scale-95 transition-all cursor-pointer group/doc shrink-0" title="إرفاق وثيقة (PDF, TXT, DOC)">
+                        <label className="flex mb-1 items-center justify-center w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 active:scale-95 transition-all cursor-pointer group/doc shrink-0" title="إرفاق وثيقة (PDF, TXT, DOC)">
                             <input type="file" accept=".pdf,.txt,.doc,.docx,application/pdf,text/plain" className="hidden" onChange={handleDocumentUpload} />
                             <Paperclip size={18} className="group-hover/doc:rotate-12 transition-transform" />
                         </label>
@@ -858,7 +749,7 @@ export default function ChatPage() {
                                 }}
                                 onKeyDown={handleChatKeyPress}
                                 placeholder="اسأل مساعد نيكسوس عن أي شيء..."
-                                className="w-full bg-transparent text-white px-2 py-0.5 focus:outline-none resize-none custom-scrollbar text-sm placeholder:text-gray-600 leading-relaxed font-medium"
+                                className="w-full bg-transparent text-white px-2 py-0.5 focus:outline-none resize-none custom-scrollbar text-sm placeholder:text-gray-500 leading-relaxed font-medium"
                                 rows={1}
                                 disabled={isLoadingChat}
                             />
@@ -867,10 +758,10 @@ export default function ChatPage() {
                         <button
                             onClick={isLoadingChat ? stopGeneration : sendChatMessage}
                             disabled={!isLoadingChat && (!inputMessage.trim() && !chatImage && !chatDocument)}
-                            className={`w-10 h-10 mb-1 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shrink-0 ${
+                            className={`w-10 h-10 mb-1 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shrink-0 ${
                                 isLoadingChat 
                                     ? 'bg-red-500 text-white hover:bg-red-600' 
-                                    : 'bg-white text-black disabled:bg-gray-800 disabled:text-gray-600'
+                                    : 'bg-emerald-600 text-white hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600'
                             }`}
                         >
                             {isLoadingChat ? (
@@ -879,14 +770,6 @@ export default function ChatPage() {
                                 <ArrowUp size={20} strokeWidth={3} />
                             )}
                         </button>
-                        <BorderBeam 
-                            size={100}
-                            duration={6}
-                            colorFrom="rgba(0, 255, 149, 1)"
-                            colorTo="rgba(0, 255, 149, 1)"
-                            initialOffset={50}
-                            borderWidth={1}
-                        />
                     </div>
                 </div>
 

@@ -1,8 +1,9 @@
-"use client"
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
+"use client";
+
+import { useState, useEffect } from "react";
+import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 interface Question {
   question_Id: number;
@@ -16,40 +17,42 @@ interface Question {
   } | string;
 }
 
-const Page = () => {
+const AdminQuestionsPage = () => {
   const { t, i18n } = useTranslation();
-  // Local state to manage questions
   const [questions, setQuestions] = useState<Question[]>([]);
   const [formData, setFormData] = useState({
-    question_en: '',
-    question_ar: '',
-    answer_en: '',
-    answer_ar: ''
+    question_en: "",
+    question_ar: "",
+    answer_en: "",
+    answer_ar: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Fetch questions directly
+
   const fetchQuestions = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + '/api/questions');
-      setQuestions(response.data);
+      const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/api/questions");
+      setQuestions(response.data || []);
     } catch (err) {
-      console.error('Error fetching questions:', err);
-      setError(t('questions.failedToLoad'));
+      console.error("Error fetching questions:", err);
+      setError(t("questions.failedToLoad") || "فشل في تحميل الأسئلة");
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Load questions on component mount
+
   useEffect(() => {
     fetchQuestions();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -57,7 +60,7 @@ const Page = () => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
-    
+
     try {
       const payload = {
         question: {
@@ -70,166 +73,220 @@ const Page = () => {
         },
       };
 
-      await axios.post(process.env.NEXT_PUBLIC_API_URL +'/api/questions', payload);
-      
-      // Refetch the questions to show the new one
+      await axios.post(process.env.NEXT_PUBLIC_API_URL + "/api/questions", payload);
       await fetchQuestions();
-      
-      setFormData({ question_en: '', question_ar: '', answer_en: '', answer_ar: '' }); // Reset form
-      
-      toast.success(t('questions.questionAdded'));
-      
+      setFormData({ question_en: "", question_ar: "", answer_en: "", answer_ar: "" });
+      toast.success(t("questions.questionAdded") || "تمت إضافة السؤال بنجاح");
     } catch (err: any) {
-      setError(err.response?.data?.error || t('questions.failedToAdd'));
-      toast.error(t('questions.failedToAdd'));
+      setError(err.response?.data?.error || t("questions.failedToAdd") || "فشل في إضافة السؤال");
+      toast.error(t("questions.failedToAdd") || "فشل في إضافة السؤال");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (questionId: number) => {
+    if (!confirm("هل أنت متأكد من حذف هذا السؤال؟")) return;
+    setDeletingId(questionId);
+
     try {
       await axios.delete(process.env.NEXT_PUBLIC_API_URL + `/api/questions/${questionId}`);
-      
-      // Refetch questions after deletion
       await fetchQuestions();
-      
-      toast.success(t('questions.questionDeleted'));
+      toast.success(t("questions.questionDeleted") || "تم حذف السؤال بنجاح");
     } catch (err: any) {
-      setError(err.response?.data?.error || t('questions.failedToDelete'));
-      toast.error(t('questions.failedToDelete'));
+      setError(err.response?.data?.error || t("questions.failedToDelete") || "فشل في حذف السؤال");
+      toast.error(t("questions.failedToDelete") || "فشل في حذف السؤال");
+    } finally {
+      setDeletingId(null);
     }
   };
 
   return (
     <>
       <Toaster position="top-right" reverseOrder={false} />
-      <div className="p-6 bg-transparent">
-        <div className="w-[100%] md:w-[80%] mx-auto bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] rounded-lg p-8">
-          <h1 className="text-2xl font-bold mb-6 text-center text-white">{t('questions.addQuestion')}</h1>
-          {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="question_en" className="block text-sm font-medium text-white mb-1">Question (English)</label>
-                <textarea
-                  id="question_en"
-                  name="question_en"
-                  value={formData.question_en}
-                  onChange={handleChange}
-                  className="p-3 bg-transparent border border-orange text-white rounded-lg w-full"
-                  placeholder="Enter question in English"
-                  required
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label htmlFor="question_ar" className="block text-sm font-medium text-white mb-1">Question (العربية)</label>
-                <textarea
-                  id="question_ar"
-                  name="question_ar"
-                  value={formData.question_ar}
-                  onChange={handleChange}
-                  className="p-3 bg-transparent border border-orange text-white rounded-lg w-full"
-                  placeholder="أدخل السؤال باللغة العربية"
-                  required
-                  rows={2}
-                />
-              </div>
+      <div className="p-4 md:p-6 min-h-screen text-slate-200 font-sans" dir="rtl">
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="pb-4 border-b border-white/[0.08]">
+            <h1 className="text-xl font-black tracking-tight text-emerald-400">
+              إدارة الأسئلة الشائعة (FAQ)
+            </h1>
+            <p className="text-slate-400 text-xs mt-1">
+              إضافة وإدارة الأسئلة الشائعة وإجاباتها المعروضة في الموقع باللغتين العربية والإنجليزية
+            </p>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-md flex items-center justify-between text-rose-400 text-xs font-semibold">
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="hover:text-white">إغلاق</button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="answer_en" className="block text-sm font-medium text-white mb-1">Answer (English)</label>
-                <textarea
-                  id="answer_en"
-                  name="answer_en"
-                  value={formData.answer_en}
-                  onChange={handleChange}
-                  className="p-3 bg-transparent border border-orange text-white rounded-lg w-full"
-                  placeholder="Enter answer in English"
-                  required
-                  rows={4}
-                />
+          )}
+
+          {/* Form Card */}
+          <div className="border border-white/[0.08] rounded-lg p-5 bg-[#0B0E17]">
+            <h2 className="text-base font-bold text-emerald-400 mb-4 pb-2 border-b border-white/[0.06]">
+              إضافة سؤال وإجابة جديدة
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Questions row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="question_ar" className="block text-xs font-semibold text-slate-300">
+                    السؤال (باللغة العربية)
+                  </label>
+                  <textarea
+                    id="question_ar"
+                    name="question_ar"
+                    value={formData.question_ar}
+                    onChange={handleChange}
+                    className="w-full p-2.5 bg-[#07090F] border border-white/10 text-white rounded-md text-xs outline-none focus:border-emerald-500 placeholder:text-slate-600 leading-relaxed"
+                    placeholder="أدخل نص السؤال باللغة العربية..."
+                    required
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="question_en" className="block text-xs font-semibold text-slate-300">
+                    Question (English)
+                  </label>
+                  <textarea
+                    id="question_en"
+                    name="question_en"
+                    value={formData.question_en}
+                    onChange={handleChange}
+                    className="w-full p-2.5 bg-[#07090F] border border-white/10 text-white rounded-md text-xs outline-none focus:border-emerald-500 placeholder:text-slate-600 leading-relaxed text-left"
+                    dir="ltr"
+                    placeholder="Enter question in English..."
+                    required
+                    rows={2}
+                  />
+                </div>
               </div>
-              <div>
-                <label htmlFor="answer_ar" className="block text-sm font-medium text-white mb-1">Answer (العربية)</label>
-                <textarea
-                  id="answer_ar"
-                  name="answer_ar"
-                  value={formData.answer_ar}
-                  onChange={handleChange}
-                  className="p-3 bg-transparent border border-orange text-white rounded-lg w-full"
-                  placeholder="أدخل الإجابة باللغة العربية"
-                  required
-                  rows={4}
-                />
+
+              {/* Answers row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="answer_ar" className="block text-xs font-semibold text-slate-300">
+                    الإجابة (باللغة العربية)
+                  </label>
+                  <textarea
+                    id="answer_ar"
+                    name="answer_ar"
+                    value={formData.answer_ar}
+                    onChange={handleChange}
+                    className="w-full p-2.5 bg-[#07090F] border border-white/10 text-white rounded-md text-xs outline-none focus:border-emerald-500 placeholder:text-slate-600 leading-relaxed"
+                    placeholder="أدخل نص الإجابة الشافية باللغة العربية..."
+                    required
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="answer_en" className="block text-xs font-semibold text-slate-300">
+                    Answer (English)
+                  </label>
+                  <textarea
+                    id="answer_en"
+                    name="answer_en"
+                    value={formData.answer_en}
+                    onChange={handleChange}
+                    className="w-full p-2.5 bg-[#07090F] border border-white/10 text-white rounded-md text-xs outline-none focus:border-emerald-500 placeholder:text-slate-600 leading-relaxed text-left"
+                    dir="ltr"
+                    placeholder="Enter answer in English..."
+                    required
+                    rows={3}
+                  />
+                </div>
               </div>
-            </div>
-            <button
-              type="submit"
-              className="w-full p-3 bg-[#00c48c] text-white rounded-lg hover:bg-[#ff8c00] focus:outline-none"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? t('questions.submitting') : t('questions.submit')}
-            </button>
-          </form>
-        </div>
-      </div>
-      
-      {questions.length === 0 && !error && (
-        <div className='flex items-center justify-center p-3 text-orange'>
-          {t('questions.noQuestions')}
-        </div>
-      )}
-      
-      {/* all questions and answers */}
-      {questions.length > 0 && (
-        <div className="flex flex-col items-center justify-center p-5">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full table-auto datatable-one">
-              <thead>
-                <tr className="bg-gray-800 shadow-xl text-orange bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)]">
-                  <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('questions.id')}</th>
-                  <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('questions.question')}</th>
-                  <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('questions.answer')}</th>
-                  <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('questions.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {questions.map(q => (
-                  <tr key={q.question_Id} className="border-b-2 border-gray-500 bg-[linear-gradient(135deg,rgba(79,0,140,0.54),rgba(25,2,55,0.5),rgba(25,2,55,0.3))]">
-                    <td className="p-3 text-white text-center text-xs md:text-sm">{q.question_Id}</td>
-                    <td className="p-3 text-white text-xs md:text-sm text-left">
-                      {(() => {
-                        const text = typeof q.question === 'object' ? q.question : { en: q.question, ar: q.question };
-                        return i18n.language === 'ar' ? text.ar || text.en : text.en || text.ar;
-                      })()}
-                    </td>
-                    <td className="p-3 text-white text-xs md:text-sm text-left">
-                      {(() => {
-                        const text = typeof q.answer === 'object' ? q.answer : { en: q.answer, ar: q.answer };
-                        return i18n.language === 'ar' ? text.ar || text.en : text.en || text.ar;
-                      })()}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-2 justify-center">
-                        <button
-                          className="text-xs md:text-sm bg-red px-3 py-1 rounded-lg text-white text-center hover:bg-red-600 transition"
-                          onClick={() => handleDelete(q.question_Id)}
-                        >
-                          {t('questions.delete')}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-md transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? "جاري الإضافة..." : "إضافة السؤال"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Questions List Table */}
+          <div className="border border-white/[0.08] rounded-lg p-5 bg-[#0B0E17]">
+            <h2 className="text-base font-bold text-emerald-400 mb-4 pb-2 border-b border-white/[0.06]">
+              قائمة الأسئلة الشائعة المسجلة ({questions.length})
+            </h2>
+
+            {loading ? (
+              <div className="py-10 text-center text-slate-400 text-xs font-semibold">
+                جاري تحميل الأسئلة...
+              </div>
+            ) : questions.length === 0 ? (
+              <div className="py-10 text-center text-slate-500 text-xs font-semibold">
+                لا توجد أسئلة شائعة مسجلة حالياً
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead>
+                    <tr className="border-b border-white/[0.08] text-slate-400 text-[11px] font-bold">
+                      <th className="pb-3 pr-2 w-16">المعرف</th>
+                      <th className="pb-3 w-1/3">السؤال</th>
+                      <th className="pb-3">الإجابة</th>
+                      <th className="pb-3 text-center w-24">الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.05]">
+                    {questions.map((q) => {
+                      const qObj = typeof q.question === "object" ? q.question : { ar: q.question, en: q.question };
+                      const aObj = typeof q.answer === "object" ? q.answer : { ar: q.answer, en: q.answer };
+                      const isDeleting = deletingId === q.question_Id;
+
+                      return (
+                        <tr key={q.question_Id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-3 pr-2 font-mono text-slate-500">#{q.question_Id}</td>
+                          <td className="py-3 font-semibold text-white space-y-1">
+                            <div>{qObj.ar || qObj.en}</div>
+                            {qObj.en && qObj.ar && (
+                              <div className="text-[11px] text-slate-400 font-normal" dir="ltr">
+                                {qObj.en}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 text-slate-300 leading-relaxed space-y-1">
+                            <p className="line-clamp-2">{aObj.ar || aObj.en}</p>
+                            {aObj.en && aObj.ar && (
+                              <p className="text-[11px] text-slate-500 line-clamp-1" dir="ltr">
+                                {aObj.en}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-3">
+                            <div className="flex items-center justify-center">
+                              <button
+                                onClick={() => handleDelete(q.question_Id)}
+                                disabled={isDeleting}
+                                className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded text-xs font-bold transition-colors disabled:opacity-50"
+                              >
+                                {isDeleting ? "جاري..." : "حذف"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </>
-  )
-}
+  );
+};
 
-export default Page;
+export default AdminQuestionsPage;

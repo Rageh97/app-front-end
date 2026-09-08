@@ -78,15 +78,46 @@ export default function PhotoColorizerPage() {
       if (res.status === 200) {
         const data = await res.json();
         if (data.success) {
-          setUserImages(data.images.map((img: any) => ({
-            id: img.image_id, url: img.image_url || img.cloudinary_url, date: img.created_at, prompt: img.prompt
-          })));
+          setUserImages(data.images.map((img: any) => ({id: img.image_id, url: img.image_url || img.cloudinary_url, date: img.created_at, prompt: img.prompt, is_public: img.is_public })));
         }
       }
     } catch (e) {} finally { setLoadingImages(false); }
   };
 
-  useEffect(() => {
+  
+  const handleDeleteSingle = async (id: number | string) => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/ai/user-images/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': getToken() as any, "User-Client": (global as any)?.clientId1328 }
+      });
+      setUserImages(prev => prev.filter(img => img.id !== id && img.image_id !== id));
+      toast.success('تم حذف النتيجة بنجاح');
+      if (selectedImage && (selectedImage.id === id || selectedImage.image_id === id)) {
+        setSelectedImage(null);
+      }
+    } catch (e) {
+      toast.error('فشل حذف النتيجة');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/ai/user-images?tool=colorization`, {
+        method: 'DELETE',
+        headers: { 'Authorization': getToken() as any, "User-Client": (global as any)?.clientId1328 }
+      });
+      setUserImages([]);
+      toast.success('تم حذف جميع النتائج السابقة');
+      setSelectedImage(null);
+    } catch (e) {
+      toast.error('فشل حذف النتائج');
+    }
+  };
+
+useEffect(() => {
     let cancelled = false;
     const init = async () => {
       try {

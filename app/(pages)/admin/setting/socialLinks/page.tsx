@@ -1,16 +1,29 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import {
+  Share2,
+  Plus,
+  Edit2,
+  Trash2,
+  ExternalLink,
+  UploadCloud,
+  X,
+  Save,
+  RefreshCw,
+  CheckCircle2,
+  Info
+} from 'lucide-react';
+import SettingSubNav from '@/components/Admin/SettingSubNav';
 
 interface SocialLink {
   id: number;
   name: string;
   url: string;
   icon_type: 'image' | 'react_icon';
-  icon_value: string; // Path for image or React Icon name
+  icon_value: string;
   display_order: number;
   is_active: boolean;
   createdAt?: string;
@@ -19,75 +32,77 @@ interface SocialLink {
 
 const SocialLinksPage = () => {
   const { t } = useTranslation();
-  const pathname = usePathname();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [isEditing, setIsEditing] = useState<SocialLink | null>(null);
-  const [formData, setFormData] = useState<Partial<SocialLink>>({
+  const [formData, setFormData] = useState<{
+    name: string;
+    url: string;
+    display_order: number;
+    is_active: boolean;
+  }>({
     name: '',
     url: '',
-    icon_value: '', // Will hold image path for edits, primarily for preview
     display_order: 0,
     is_active: true,
   });
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('a'); // Or however you get your admin token
-    setAdminToken(token);
-    if (token) {
-      fetchSocialLinks(token);
-    }
-  }, []);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-  const fetchSocialLinks = async (token: string) => {
+  const getHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('a') : null;
+    const clientId = typeof window !== 'undefined' ? localStorage.getItem('clientId1328') : '';
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (clientId) headers['user-client'] = clientId;
+    return headers;
+  };
+
+  const fetchSocialLinks = async () => {
     setIsLoading(true);
-    setError(null);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/social-links/social-links`, {
-        headers: { 'Authorization': `${token}` },
+      const response = await fetch(`${API_URL}/api/social-links/social-links`, {
+        headers: getHeaders(),
       });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errData.message || t('socialLinks.failedToFetch'));
+
+      if (response.ok) {
+        const data: SocialLink[] = await response.json();
+        setSocialLinks(Array.isArray(data) ? data : []);
+      } else {
+        toast.error('فشل في تحميل روابط التواصل');
       }
-      const data: SocialLink[] = await response.json();
-      setSocialLinks(data);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Fetch social links error:', err);
+      toast.error('حدث خطأ أثناء تحميل الروابط');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    let val = value;
-    if (type === 'checkbox') {
-      val = (e.target as HTMLInputElement).checked as any;
-    }
-    if (name === 'display_order') {
-        val = parseInt(value, 10) as any;
-    }
-    setFormData(prev => ({ ...prev, [name]: val }));
+  useEffect(() => {
+    fetchSocialLinks();
+  }, []);
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : name === 'display_order' ? parseInt(value, 10) || 0 : value,
+    }));
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setSelectedFile(null);
-      setImagePreview(null);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -96,225 +111,356 @@ const SocialLinksPage = () => {
     setFormData({
       name: '',
       url: '',
-      icon_value: '', // Will hold image path for edits, primarily for preview
       display_order: 0,
       is_active: true,
     });
     setSelectedFile(null);
-    setImagePreview(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleEditClick = (link: SocialLink) => {
+    setIsEditing(link);
+    setFormData({
+      name: link.name,
+      url: link.url,
+      display_order: link.display_order,
+      is_active: link.is_active,
+    });
+    setImagePreview(link.icon_value ? `${API_URL}${link.icon_value}` : null);
+    setSelectedFile(null);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!adminToken) {
-      setError(t('socialLinks.adminTokenMissing'));
+    if (!formData.name.trim() || !formData.url.trim()) {
+      toast.error('يرجى ملء اسم الرابط وعنوان URL');
       return;
     }
-    setIsLoading(true);
-    setError(null);
 
-    const payload = new FormData();
-    payload.append('name', formData.name || '');
-    payload.append('url', formData.url || '');
-    if (selectedFile) {
-      payload.append('socialIconImage', selectedFile);
-    } else if (isEditing && !formData.icon_value) {
-      // If editing and icon_value was cleared (e.g. if we add a delete image button in future)
-      // and no new file is selected, we might want to send a signal to clear the image.
-      // For now, if no file is selected, existing image is kept unless backend explicitly removes it.
+    if (!isEditing && !selectedFile) {
+      toast.error('يرجى اختيار أيقونة / صورة الرابط');
+      return;
     }
-    payload.append('icon_type', 'image'); // Always image type now
-    // icon_value is now managed by the backend based on file upload
-    payload.append('display_order', (formData.display_order || 0).toString());
-    payload.append('is_active', String(formData.is_active));
 
-    const endpoint = isEditing
-      ? `${process.env.NEXT_PUBLIC_API_URL}/api/social-links/admin/social-links/${isEditing.id}`
-      : `${process.env.NEXT_PUBLIC_API_URL}/api/social-links/admin/social-links`;
-    const method = isEditing ? 'PUT' : 'POST';
+    setIsSaving(true);
+    const dataToSend = new FormData();
+    dataToSend.append('name', formData.name.trim());
+    dataToSend.append('url', formData.url.trim());
+    dataToSend.append('icon_type', 'image');
+    dataToSend.append('display_order', String(formData.display_order));
+    dataToSend.append('is_active', String(formData.is_active));
+
+    if (selectedFile) {
+      dataToSend.append('iconImage', selectedFile);
+    }
 
     try {
-      const response = await fetch(endpoint, {
+      const url = isEditing
+        ? `${API_URL}/api/social-links/social-links/${isEditing.id}`
+        : `${API_URL}/api/social-links/social-links`;
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
         method,
-        headers: { 'Authorization': `${adminToken}` }, // FormData sets Content-Type automatically
-        body: payload,
+        headers: getHeaders(),
+        body: dataToSend,
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errData.message || t('socialLinks.failedToSave'));
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || 'فشل حفظ الرابط');
       }
-      await response.json(); // Or process the response data if needed
-      fetchSocialLinks(adminToken);
+
+      toast.success(isEditing ? 'تم تحديث الرابط بنجاح' : 'تم إضافة الرابط بنجاح');
       resetForm();
+      fetchSocialLinks();
     } catch (err: any) {
-      setError(err.message);
+      console.error('Submit error:', err);
+      toast.error(err.message || 'حدث خطأ أثناء الحفظ');
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
-
-  // const handleEdit = (link: SocialLink) => {
-  //   setIsEditing(link);
-  //   setFormData({
-  //       name: link.name,
-  //       url: link.url,
-  //       icon_value: link.icon_value || '', // Store existing image path
-  //       display_order: link.display_order,
-  //       is_active: link.is_active,
-  //   });
-  //   setSelectedFile(null);
-  //   if (link.icon_value) {
-  //       setImagePreview(`${process.env.NEXT_PUBLIC_API_URL}${link.icon_value}`);
-  //   } else {
-  //       setImagePreview(null);
-  //   }
-  // };
 
   const handleDelete = async (id: number) => {
-    if (!adminToken || !confirm(t('socialLinks.confirmDelete'))) return;
-    setIsLoading(true);
-    setError(null);
+    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الرابط؟')) return;
+
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/social-links/admin/social-links/${id}`, {
+      const response = await fetch(`${API_URL}/api/social-links/social-links/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${adminToken}` },
+        headers: getHeaders(),
       });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errData.message || t('socialLinks.failedToDelete'));
+
+      if (response.ok) {
+        toast.success('تم حذف الرابط بنجاح');
+        setSocialLinks((prev) => prev.filter((l) => l.id !== id));
+      } else {
+        toast.error('فشل في حذف الرابط');
       }
-      fetchSocialLinks(adminToken);
     } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+      console.error('Delete error:', err);
+      toast.error('حدث خطأ أثناء الحذف');
     }
   };
 
-  // Basic styling (consider moving to a CSS file or using a UI library)
-  const styles: { [key: string]: React.CSSProperties } = {
-    container: { padding: '20px', fontFamily: 'Arial, sans-serif' },
-    form: { marginBottom: '30px', padding: '20px', border: '1px solid #ccc', borderRadius: '5px' },
-    inputGroup: { marginBottom: '15px' },
-    label: { display: 'block', marginBottom: '5px', fontWeight: 'bold' },
-    input: { width: '100%', padding: '10px', boxSizing: 'border-box', borderRadius: '3px', border: '1px solid #ddd' },
-    select: { width: '100%', padding: '10px', boxSizing: 'border-box', borderRadius: '3px', border: '1px solid #ddd' },
-    checkboxLabel: { marginLeft: '5px' },
-    button: { padding: '10px 15px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '10px' },
-    cancelButton: { backgroundColor: '#6c757d' },
-    error: { color: 'red', marginBottom: '10px', border: '1px solid red', padding: '10px', borderRadius: '3px' },
-    success: { color: 'green', marginBottom: '10px', border: '1px solid green', padding: '10px', borderRadius: '3px' }, // You can add success state if needed
-    list: { listStyle: 'none', padding: 0 },
-    listItem: { border: '1px solid #eee', padding: '15px', marginBottom: '10px', borderRadius: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' },
-    itemDetails: { flexGrow: 1 },
-    itemActions: { marginTop: '10px' },
-    iconPreview: { maxWidth: '50px', maxHeight: '50px', marginRight: '10px', border: '1px solid #ddd' },
-  };
-
-  if (!adminToken) {
-    return <p style={styles.error}>{t('socialLinks.adminTokenMissing')}</p>;
-  }
-
   return (
-    <>
-    <div className="flex items-center justify-center flex-wrap md:gap-5 gap-2 p-3">
-    <Link className={`text-white text-xs md:text-lg inner-shadow md:px-5 px-2 py-2 rounded-md ${pathname === '/admin/setting/logo' ? 'bg-[#ff7720] inner-shadow-admin text-[#000000]' : 'bg-[#35214f]'}`} href="/admin/setting/logo">{t('settings.logo')}</Link>
-<Link className={`text-white text-xs md:text-lg inner-shadow md:px-5 px-2 py-2 rounded-md ${pathname === '/admin/setting/notifications' ? 'bg-[#ff7720] inner-shadow-admin text-[#000000]' : 'bg-[#35214f]'}`} href="/admin/setting/notifications">{t('settings.notifications')}</Link>
-<Link className={`text-white text-xs md:text-lg inner-shadow md:px-5 px-2 py-2 rounded-md ${pathname === '/admin/setting/socialLinks' ? 'bg-[#ff7720] inner-shadow-admin text-[#000000]' : 'bg-[#35214f]'}`} href="/admin/setting/socialLinks">{t('settings.socialLinks')}</Link>
-<Link className={`text-white text-xs md:text-lg inner-shadow md:px-5 px-2 py-2 rounded-md ${pathname === '/admin/setting/banners' ? 'bg-[#ff7720] inner-shadow-admin text-[#000000]' : 'bg-[#35214f]'}`} href="/admin/setting/banners">{t('settings.banners')}</Link>
-<Link className={`text-white inner-shadow md:px-5 px-2 text-xs md:text-lg py-2 rounded-md ${pathname === '/admin/setting/policy' ? 'bg-[#ff7720] inner-shadow-admin text-[#000000]' : 'bg-[#35214f]'}`} href="/admin/setting/policy">
-        {t('footer.returnPolicy')}
-        </Link>
-        <Link className={`text-white inner-shadow md:px-5 px-2 text-xs md:text-xl py-2 rounded-md ${pathname === '/admin/setting/condition' ? 'bg-[#ff7720] inner-shadow-admin text-[#000000]' : 'bg-[#35214f]'}`} href="/admin/setting/condition">
-        {t('footer.returnCondition')}
-        </Link>
-    </div>
-    <div className='flex w-full flex-col items-center justify-center p-5'>
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6" dir="rtl">
+      {/* Top Admin SubNav */}
+      <SettingSubNav />
 
-    <div className='flex p-4 flex-col items-center justify-center bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)] w-[100%] md:w-[60%] rounded-lg'>
-      <h1 className="text-2xl font-bold text-white text-center">{t('socialLinks.manageSocialLinks')}</h1>
-
-      {error && <p className="text-red">{error}</p>}
-      {/* {isLoading && <p>Loading...</p>} // Can be more granular */} 
-
-      <form onSubmit={handleSubmit} className='flex flex-col items-center justify-center gap-3'>
-        <h2 className='text-[#00c48c]'>{isEditing ? t('socialLinks.edit') : t('socialLinks.addNew')} {t('socialLinks.socialLink')}</h2>
-        <div className='w-full'>
-          <label htmlFor="name" className='text-[#00c48c]'>{t('socialLinks.name')}*:</label>
-          <input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} required className='w-full bg-white p-2 rounded-md' />
-        </div>
-        <div className='w-full'>
-          <label htmlFor="url" className='text-[#00c48c]'>{t('socialLinks.url')}*:</label>
-          <input type="url" id="url" name="url" value={formData.url} onChange={handleInputChange} required  className='w-full bg-white p-2 rounded-md'/>
-        </div>
-        <div>
-          <label htmlFor="socialIconImage" className='text-[#00c48c]'>{t('socialLinks.iconImage')}:</label>
-          <input type="file" id="socialIconImage" name="socialIconImage" onChange={handleFileChange} accept=".png,.jpg,.jpeg,.gif,.svg"  className='w-full bg-white p-2 rounded-md'/>
-          {imagePreview && <img src={imagePreview} alt="Preview" />}
-          {isEditing && formData.icon_value && !imagePreview && (
-            <small>{t('socialLinks.currentImage')}: <a href={`${process.env.NEXT_PUBLIC_API_URL}${formData.icon_value}`} target="_blank" rel="noopener noreferrer">{t('socialLinks.view')}</a>. {t('socialLinks.uploadNewImage')}</small>
-          )}
-          {isEditing && !formData.icon_value && <small>{t('socialLinks.noCurrentImage')}</small>}
-          {/* {!isEditing && <small>Optional: Upload an icon image.</small>} */}
+      {/* Header Info */}
+      <div className="rounded-lg border border-zinc-800 bg-[#0d1017] p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-md bg-[#00c48c]/10 text-[#00c48c] border border-[#00c48c]/20">
+            <Share2 className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-white">روابط وحسابات التواصل الاجتماعي</h2>
+            <p className="text-xs text-zinc-400">
+              إدارة الروابط التي تظهر في تذييل الموقع (Footer) وصفحات الهبوط
+            </p>
+          </div>
         </div>
 
-        <div className='w-full'>
-          <label htmlFor="display_order" className='text-[#00c48c]'>{t('socialLinks.displayOrder')}:</label>
-          <input type="number" id="display_order" name="display_order" value={formData.display_order} onChange={handleInputChange} className='w-full bg-white p-2 rounded-md' />
-        </div>
-        <div className='mt-3 '>
-          <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleInputChange} />
-          <label htmlFor="is_active" className='text-[#00c48c] mx-2'>{t('socialLinks.active')}</label>
-        </div>
-        <button type="submit" disabled={isLoading} className="text-white w-full mt-3 mb-3 bg-[#00c48c] px-5 py-2 rounded-md items-center justify-center">
-          {isLoading ? (isEditing ? t('socialLinks.updating') : t('socialLinks.adding')) : (isEditing ? t('socialLinks.updateLink') : t('socialLinks.addLink'))}
+        <button
+          type="button"
+          onClick={fetchSocialLinks}
+          disabled={isLoading}
+          className="p-1.5 rounded-md border border-zinc-800 bg-[#121620] text-zinc-400 hover:text-white transition"
+          title="تحديث"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
-        {isEditing && (
-          <button type="button" onClick={resetForm} className="text-white w-full mt-3 mb-3 bg-[#00c48c] px-5 py-2 rounded-md items-center justify-center" disabled={isLoading}>
-            {t('socialLinks.cancelEdit')}
-          </button>
-        )}
-      </form>
       </div>
-      <h2 className='text-white text-xl font-bold  mb-2 mt-5'>{t('socialLinks.existingSocialLinks')}</h2>
-      {isLoading && !socialLinks.length && <p>{t('socialLinks.loadingLinks')}</p>}
-      <table className="w-full table-auto datatable-one">
-        <thead>
-          <tr className='bg-gray-800 shadow-xl text-orange bg-[linear-gradient(135deg,_#4f008c,_#190237,_#190237)]'>
-            <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('socialLinks.icon')}</th>
-            <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('socialLinks.name')}</th>
-            <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('socialLinks.url')}</th>
-            <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('socialLinks.displayOrder')}</th>
-            <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('socialLinks.active')}</th>
-            <th className="p-3 text-center font-bold text-xs md:text-lg inner-shadow">{t('socialLinks.actions')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {socialLinks.map(link => (
-            <tr className="border-b border-gray-500 bg-[linear-gradient(135deg,rgba(79,0,140,0.7),rgba(25,2,55,0.7),rgba(25,2,55,0.5))]" key={link.id}>
-              <td className="p-3 text-white text-center text-xs md:text-sm">
-                {link.icon_value ? (
-                  <img src={`${process.env.NEXT_PUBLIC_API_URL}${link.icon_value}`} alt={link.name} style={styles.iconPreview} />
-                ) : (
-                  <span style={{...styles.iconPreview, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#f0f0f0', color: '#777', fontSize: '0.8em'}}>{t('socialLinks.noImage')}</span>
-                )}
-              </td>
-              <td className="p-3 text-white text-center text-xs md:text-sm"><strong>{link.name}</strong></td>
-              <td className="p-3 text-white text-center text-xs md:text-sm">{link.url}</td>
-              <td className="p-3 text-white text-center text-xs md:text-sm">{link.display_order}</td>
-              <td className="p-3 text-white text-center text-xs md:text-sm">{link.is_active ? t('socialLinks.active') : t('socialLinks.inactive')}</td>
-              <td className="p-3 text-white text-center text-xs md:text-sm" style={styles.itemActions}>
-                {/* <button onClick={() => handleEdit(link)} className='text-white px-2 py-1 text-md mx-1 rounded-md bg-orange' disabled={isLoading}>Edit</button> */}
-                <button onClick={() => handleDelete(link.id)} className='text-white px-2 py-1 text-md mx-1 rounded-md bg-red' disabled={isLoading}>{t('socialLinks.delete')}</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    
-   </div>
-    </>
+
+      {/* Form Card */}
+      <div className="rounded-lg border border-zinc-800 bg-[#0d1017] p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#00c48c]" />
+            <span>{isEditing ? `تعديل الرابط: ${isEditing.name}` : 'إضافة رابط تواصل جديد'}</span>
+          </h3>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800"
+            >
+              إلغاء التعديل
+            </button>
+          )}
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-zinc-300">اسم المنصة / الرابط:</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                placeholder="Telegram, WhatsApp, YouTube..."
+                className="w-full rounded-md border border-zinc-800 bg-[#121620] px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#00c48c] transition"
+              />
+            </div>
+
+            <div className="space-y-1 sm:col-span-2">
+              <label className="block text-xs font-semibold text-zinc-300">رابط الصفحة (URL):</label>
+              <input
+                type="url"
+                name="url"
+                value={formData.url}
+                onChange={handleInputChange}
+                required
+                placeholder="https://t.me/your_channel"
+                className="w-full rounded-md border border-zinc-800 bg-[#121620] px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#00c48c] transition text-left"
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 items-end">
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-zinc-300">ترتيب الظهور (Display Order):</label>
+              <input
+                type="number"
+                name="display_order"
+                value={formData.display_order}
+                onChange={handleInputChange}
+                className="w-full rounded-md border border-zinc-800 bg-[#121620] px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#00c48c] transition"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-zinc-300">أيقونة الرابط:</label>
+              {!imagePreview ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border border-dashed border-zinc-700 hover:border-[#00c48c]/60 rounded-md p-2 text-center cursor-pointer transition bg-[#121620]/40 flex items-center justify-center gap-2"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <UploadCloud className="w-4 h-4 text-zinc-400" />
+                  <span className="text-xs text-zinc-400">اختر صورة الأيقونة</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-1.5 rounded-md border border-zinc-700 bg-zinc-900">
+                  <img src={imagePreview} alt="Icon preview" className="w-6 h-6 object-contain" />
+                  <span className="text-xs text-zinc-400 flex-1 truncate">
+                    {selectedFile ? selectedFile.name : 'الأيقونة الحالية'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setImagePreview(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="p-1 text-zinc-400 hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pb-2">
+              <label className="flex items-center gap-2 text-xs font-semibold text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  checked={formData.is_active}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-[#00c48c] focus:ring-0"
+                />
+                <span>مفعل ونشط في الموقع</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end pt-2 border-t border-zinc-800">
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#00c48c] hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>جاري الحفظ...</span>
+                </>
+              ) : (
+                <>
+                  {isEditing ? <Save className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>{isEditing ? 'تحديث الرابط' : 'إضافة الرابط'}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Links List */}
+      <div className="rounded-lg border border-zinc-800 bg-[#0d1017] p-5 space-y-4">
+        <h3 className="text-sm font-bold text-white border-b border-zinc-800 pb-3">
+          الروابط الحالية ({socialLinks.length})
+        </h3>
+
+        {isLoading ? (
+          <div className="p-8 text-center text-zinc-400 flex flex-col items-center justify-center gap-2">
+            <div className="w-6 h-6 border-2 border-[#00c48c]/20 border-t-[#00c48c] rounded-full animate-spin" />
+            <span className="text-xs">جاري التحميل...</span>
+          </div>
+        ) : socialLinks.length === 0 ? (
+          <div className="p-6 text-center text-zinc-500 rounded-md border border-zinc-800/60">
+            <Info className="w-6 h-6 mx-auto mb-1 text-zinc-500" />
+            <p className="text-xs">لا توجد روابط مضافة حالياً</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-800">
+            {socialLinks.map((link) => (
+              <div
+                key={link.id}
+                className="py-3 flex items-center justify-between gap-3 hover:bg-zinc-900/30 px-2 rounded-md transition"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {link.icon_value ? (
+                    <img
+                      src={`${API_URL}${link.icon_value}`}
+                      alt={link.name}
+                      className="w-8 h-8 rounded-md p-1 bg-zinc-900 border border-zinc-800 object-contain"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center text-zinc-400">
+                      <Share2 className="w-4 h-4" />
+                    </div>
+                  )}
+
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white">{link.name}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded border ${
+                          link.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-zinc-800 text-zinc-500 border-zinc-700'
+                        }`}
+                      >
+                        {link.is_active ? 'نشط' : 'معطل'}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">الترتيب: {link.display_order}</span>
+                    </div>
+
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-zinc-400 hover:text-emerald-400 flex items-center gap-1 truncate max-w-xs sm:max-w-md text-left"
+                      dir="ltr"
+                    >
+                      <span>{link.url}</span>
+                      <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleEditClick(link)}
+                    className="p-1.5 rounded-md border border-zinc-800 bg-[#121620] text-zinc-300 hover:text-white transition"
+                    title="تعديل"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(link.id)}
+                    className="p-1.5 rounded-md border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition"
+                    title="حذف"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

@@ -21,11 +21,11 @@ import {
   HelpCircle,
   ArrowLeft,
   Calendar,
+  Layers,
+  Sparkle,
   X
 } from 'lucide-react';
-import { PremiumButton } from "@/components/PremiumButton";
 import { BorderBeam } from "@/components/ui/border-beam";
-import Image from "next/image";
 
 type Plan = {
   plan_id: number;
@@ -33,38 +33,10 @@ type Plan = {
   credits_per_period: number;
   amount: string;
   period: string;
-  allowed_tools?: string; // Added field
+  allowed_tools?: string;
   description?: string;
-  features?: string[];
   popular?: boolean;
   color?: string;
-  allowed_tools_list?: string[];
-};
-
-const ALL_TOOLS_MAPPING: Record<string, string> = {
-  'chat': 'نيكسوس تشات برو',
-  'image': 'انشاء صور احترافية',
-  'image-to-text': 'استخراج النص من الصورة',
-  'upscale': 'رفع دقة الصور',
-  'bg-remove': 'حذف الخلفية',
-  'clothes-extraction': 'استخراج الملابس الذكي',
-  'id-photo': 'صانع الصور الشخصية',
-  'restore': 'ترميم الصور',
-  'avatar': 'صانع الأفاتار',
-  'nano': 'نانو بانانا برو 🍌',
-  'product': 'نماذج لمنتجك',
-  'colorize': 'تلوين الصور',
-  'edit': 'المحرر الذكي',
-  'sketch': 'رسم إلى صورة',
-  'logo': 'صانع الشعارات',
-  'video': 'انشاء فيديوهات احترافية',
-  // 'lipsync': 'تحريك الشفاه',
-  // 'effects': 'تأثيرات الفيديو',
-  // 'long-video': 'الفيديو الطويل',
-  'motion': 'تحريك الصور',
-  // 'ugc': 'محتوى المستخدم',
-  // 'vupscale': 'تحسين الفيديو',
-  // 'resize': 'تحجيم الفيديو',
 };
 
 type CreditsRecord = {
@@ -77,6 +49,63 @@ type CreditsRecord = {
   remaining_credits: number;
   endedAt: string;
   createdAt: string;
+};
+
+const getPlanColor = (plan: any): string => {
+  if (plan.credits_per_period <= 100) return "from-[#804A00] via-[#B87333] to-[#4D2D00]";
+  if (plan.credits_per_period <= 500) return "from-[#71706E] via-[#E5E4E2] to-[#3B3C36]";
+  if (plan.credits_per_period <= 1000) return "from-[#BF953F] via-[#FCF6BA] to-[#AA771C]";
+  return "from-[#30CFD0] via-[#330867] to-[#30CFD0]";
+};
+
+const getPlanTierData = (plan: any, index: number, total: number) => {
+  const credits = Number(plan.credits_per_period) || 0;
+  
+  if (credits <= 200 || index === 0) {
+    return {
+      tierName: "باقة البداية",
+      description: "مثالية للمبتدئين وتجربة أدوات الذكاء الاصطناعي وتوليد الصور والمهام البسيطة.",
+      features: [
+        "جميع موديلات الذكاء الاصطناعي متاحة بالكامل",
+        "توليد وتعديل الصور والرسومات الذكية",
+        "سرعة معالجة قياسية في السيرفرات",
+        "دعم فني مستمر",
+      ]
+    };
+  } else if (credits <= 600 || (index === 1 && total >= 3)) {
+    return {
+      tierName: "باقة الانطلاق",
+      description: "لصناع المحتوى والمصممين لتوليد الصور والفيديوهات القصيرة بوتيرة منتظمة.",
+      features: [
+        "جميع موديلات الذكاء الاصطناعي متاحة بالكامل",
+        "توليد الفيديوهات، تحريك الصور، ونماذج المنتجات",
+        "سرعة معالجة عالية وجودة Full HD",
+        "أولوية متقدمة في طابور المعالجة",
+      ]
+    };
+  } else if (credits <= 1500 || (index === 2 && total === 4) || (index === 1 && total === 2)) {
+    return {
+      tierName: "باقة المحترفين",
+      description: "للمحترفين والمبدعين الذين يحتاجون إنتاجاً مستمراً ورصيداً وفيراً وسرعة مضاعفة.",
+      features: [
+        "جميع موديلات الذكاء الاصطناعي متاحة بالكامل",
+        "توليد الفيديو السينمائي، استنساخ الصوت، وتحريك الشفاه",
+        "جودة فائقة 4K مع أولوية معالجة سريعة (Priority Queue)",
+        "دعم فني مباشر وسريع",
+      ]
+    };
+  } else {
+    return {
+      tierName: "باقة النخبة",
+      description: "طاقة توليد قصوى ومفتوحة مخصصة للاستوديوهات والشركات ذات الاستهلاك اليومي المكثف.",
+      features: [
+        "جميع موديلات الذكاء الاصطناعي متاحة بالكامل",
+        "توليد غير مقيد لكافة أدوات الفيديو والصور والصوت",
+        "أعلى أولوية معالجة فورية بالسيرفرات (VIP Priority)",
+        "دعم فني VIP مخصص على مدار 24 ساعة",
+      ]
+    };
+  }
 };
 
 export default function PlansPage() {
@@ -106,7 +135,7 @@ export default function PlansPage() {
         headers: { 
           'Authorization': token as any, 
           'Content-Type': 'application/json', 
-          "User-Client": (global as any)?.clientId1328 
+          "User-Client": (global as any)?.clientId1328 || (typeof window !== 'undefined' ? localStorage.getItem("clientId1328") : "")
         } 
       });
       if (res.status === 200) {
@@ -129,10 +158,10 @@ export default function PlansPage() {
         const data = await res.json();
         const enhancedPlans = data.map((plan: Plan) => ({
           ...plan,
-          description: getPlanDescription(plan),
-          features: getPlanFeatures(plan),
-          allowed_tools_list: JSON.parse(plan.allowed_tools || '["*"]'),
-          popular: plan.plan_name.toLowerCase().includes('pro') || plan.plan_name.toLowerCase().includes('premium'),
+          popular: plan.plan_name.toLowerCase().includes('pro') || 
+                   plan.plan_name.toLowerCase().includes('premium') ||
+                   plan.plan_name.includes('المميزة') ||
+                   plan.plan_name.includes('بلس'),
           color: getPlanColor(plan)
         }));
         setPlans(enhancedPlans);
@@ -142,76 +171,6 @@ export default function PlansPage() {
     } finally {
       setLoadingPlans(false);
     }
-  };
-
-  const getPlanDescription = (plan: Plan): string => {
-    if (plan.credits_per_period <= 100) return "مثالي للبدء واستكشاف قدرات الذكاء الاصطناعي";
-    if (plan.credits_per_period <= 500) return "باقة رائعة للاستخدام اليومي والمنتظم";
-    if (plan.credits_per_period <= 1000) return "مصممة للمبدعين والمستخدمين المحترفين";
-    return "إبداع بلا حدود مخصص للمؤسسات والمحترفين";
-  };
-
-  const getPlanFeatures = (plan: Plan): string[] => {
-    const features: string[] = [`${plan.credits_per_period} نقطة ذكاء اصطناعي`];
-    
-    try {
-      // Parse allowed tools or default to all if "*" is present
-      const allowed = JSON.parse(plan.allowed_tools || '["*"]');
-      let toolsList: string[] = [];
-
-      if (allowed.includes('*')) {
-        // Show ALL tools definitely
-        // Prioritize specific tools: Nano, Video, then others
-        const priorityTools = ['nano', 'video'];
-        
-        // Add priority tools first
-        priorityTools.forEach(toolId => {
-            if (ALL_TOOLS_MAPPING[toolId]) {
-                toolsList.push(ALL_TOOLS_MAPPING[toolId]);
-            }
-        });
-
-        // Add remaining tools
-        Object.keys(ALL_TOOLS_MAPPING).forEach(toolId => {
-            if (!priorityTools.includes(toolId)) {
-                toolsList.push(ALL_TOOLS_MAPPING[toolId]);
-            }
-        });
-
-      } else {
-        // Show only specifically allowed tools
-        // Sort to prioritize Nano and Video if they exist in the allowed list
-        const sortedTools = allowed.sort((a: string, b: string) => {
-            if (a === 'nano') return -1;
-            if (b === 'nano') return 1;
-            if (a === 'video') return -1;
-            if (b === 'video') return 1;
-            return 0;
-        });
-
-        sortedTools.forEach((toolId: string) => {
-          if (ALL_TOOLS_MAPPING[toolId]) {
-            toolsList.push(ALL_TOOLS_MAPPING[toolId]);
-          }
-        });
-      }
-      
-      features.push(...toolsList);
-
-    } catch (e) {
-      // Fallback in case of JSON error
-      features.push("الوصول لكامل الأدوات");
-    }
-
-    return features;
-  };
-
-  const getPlanColor = (plan: Plan): string => {
-    // Hierarchy: Bronze (Small) -> Silver (Med) -> Gold (Large)
-    if (plan.credits_per_period <= 100) return "from-[#804A00] via-[#B87333] to-[#4D2D00]"; // Bronze (True Copper/Brown)
-    if (plan.credits_per_period <= 500) return "from-[#71706E] via-[#E5E4E2] to-[#3B3C36]"; // Silver (True Metallic Gray/White)
-    if (plan.credits_per_period <= 1000) return "from-[#BF953F] via-[#FCF6BA] to-[#AA771C]"; // Gold (True Rich Metallic Gold)
-    return "from-[#30CFD0] via-[#330867] to-[#30CFD0]"; // Platinum/Special
   };
 
   const onSelectPlan = async (plan: Plan) => {
@@ -225,63 +184,65 @@ export default function PlansPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white selection:bg-purple-500/30 font-sans overflow-x-hidden relative" dir="rtl">
+    <div className="min-h-screen bg-[#06070B] text-white selection:bg-purple-500/30 font-sans overflow-x-hidden relative" dir="rtl">
       {/* Background Ambience */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none z-0"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-900/10 blur-[120px] rounded-full pointer-events-none z-0"></div>
 
       {/* Navbar Container */}
-      <header className="h-20 flex items-center justify-between px-8 border-b border-white/5 bg-black/40 backdrop-blur-2xl sticky top-0 z-[60]">
-        <div className="flex items-center gap-6">
-            <Link href="/ai" className="p-3 hover:bg-white/5 rounded-2xl transition-all border border-transparent hover:border-white/10 text-gray-400 hover:text-white group">
-                <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
+      <header className="h-20 flex items-center justify-between px-6 sm:px-8 border-b border-white/[0.08] bg-[#0B0D14]/90 backdrop-blur-2xl sticky top-0 z-[60]">
+        <div className="flex items-center gap-4 sm:gap-6">
+            <Link href="/ai" className="p-2.5 sm:p-3 hover:bg-[#121520] rounded-xl transition-all border border-transparent hover:border-white/[0.08] text-gray-400 hover:text-white group">
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             
-            <div className="flex items-center gap-3">
-                <div className="relative w-fit rounded-full overflow-hidden">
-                              <Image
-                               src="/images/icon.png.png"
-                               alt="Logo"
-                               width={50}
-                               height={50}
-                               className="rounded-full"
-                             />
-                             <BorderBeam size={50} duration={1} className="rounded-full" />
-                            </div>
-                <div className="flex flex-col">
-                    <h2 className="text-lg font-black tracking-tight leading-none mb-1 uppercase">خُطط نيكسوس</h2>
-                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">اختر مسارك للإبداع</span>
-                </div>
+            <div className="flex flex-col">
+                <h2 className="text-base sm:text-lg font-bold tracking-tight leading-none mb-1">باقات واشتراكات الذكاء الاصطناعي</h2>
+                <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest">اختر الخطة المناسبة لإطلاق إبداعك</span>
             </div>
         </div>
 
-        <Link href="/ai" className="px-6 py-2.5 rounded-full bg-white text-black text-xs font-black transition-all hover:shadow-[0_15px_30px_-10px_rgba(255,255,255,0.4)] hover:scale-105 active:scale-95 flex items-center gap-2">
-            <span>الرئيسية </span>
+        <Link href="/ai" className="px-4 sm:px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5">
+            <span>العودة للاستوديو</span>
             <ChevronLeft size={14} strokeWidth={3} />
         </Link>
       </header>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-6 py-16">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         
         {/* Title Section */}
-        <div className="text-center mb-20">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 animate-fade-in">
-                <Sparkles size={14} className="text-purple-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">أسعار مرنة لجميع المستويات</span>
+        <div className="text-center mb-12 sm:mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#121520] border border-white/[0.08] mb-6">
+                <Sparkles size={14} className="text-amber-400" />
+                <span className="text-[11px] font-bold uppercase tracking-widest text-gray-300">خطط احترافية مع إتاحة كافة الموديلات</span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight tracking-tight">
-                استثمر في <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-cyan-400 to-blue-500 animate-gradient bg-300%">إبداعك</span>
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black mb-6 leading-tight tracking-tight text-white">
+                باقات رصيد الذكاء الاصطناعي
             </h1>
-            <p className="max-w-2xl mx-auto text-gray-500 text-lg md:text-xl font-bold leading-relaxed mb-12">
-                انطلق إلى آفاق جديدة مع باقات نيكسوس برو. احصل على نقاط إضافية، وصول غير محدود للأدوات المتقدمة، ودعم فني مخصص.
+
+            {/* Tabs for Website vs AI Plans */}
+            <div className="flex justify-center mb-8">
+              <div className="flex bg-[#190237] p-1.5 rounded-xl border border-[#ff7702]/30 shadow-xl">
+                <Link 
+                  href="/plans" 
+                  className="px-6 py-2.5 rounded-lg font-bold transition-all text-sm md:text-base text-gray-400 hover:text-white hover:bg-white/5"
+                >
+                  باقات المواقع
+                </Link>
+                <div className="px-6 py-2.5 rounded-lg font-bold transition-all text-sm md:text-base bg-[#ff7702] text-white shadow-lg cursor-default">
+                  باقات الذكاء الاصطناعي
+                </div>
+              </div>
+            </div>
+
+            <p className="max-w-2xl mx-auto text-gray-400 text-sm sm:text-base md:text-lg font-medium leading-relaxed mb-10">
+                انطلق إلى آفاق جديدة مع باقات نيكسوس برو. احصل على نقاط كافية، وصول كامل وغير مقيد لكافة الموديلات المتقدمة، وسرعة معالجة قصوى.
             </p>
 
             {/* Current Balance Card */}
             {balance && (
-                <div className="max-w-md mx-auto p-6 rounded-[2.5rem] bg-white/[0.03] border border-white/10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/10 blur-[50px] rounded-full -mr-16 -mt-16"></div>
+                <div className="max-w-md mx-auto p-6 rounded-[2.5rem] bg-white/[0.03] border border-white/10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all mb-12">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/15 blur-[50px] rounded-full -mr-16 -mt-16"></div>
                     
                     <div className="relative z-10 flex items-center justify-between gap-6">
                         <div className="text-right">
@@ -317,13 +278,13 @@ export default function PlansPage() {
 
                     <div className="mt-6 flex flex-col gap-2">
                         <div className="flex justify-between items-center text-[10px] font-black text-gray-500 uppercase tracking-tighter">
-                            <span>التقدم المتبقي</span>
-                            <span>{Math.round((balance.remaining_credits / balance.total_credits) * 100)}%</span>
+                            <span>الرصيد المتبقي</span>
+                            <span>{Math.round((balance.remaining_credits / (balance.total_credits || 1)) * 100)}%</span>
                         </div>
                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                             <div 
-                                className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-1000" 
-                                style={{ width: `${(balance.remaining_credits / balance.total_credits) * 100}%` }}
+                                className="h-full bg-gradient-to-r from-purple-500 to-emerald-500 transition-all duration-1000" 
+                                style={{ width: `${Math.min(100, Math.round((balance.remaining_credits / (balance.total_credits || 1)) * 100))}%` }}
                             ></div>
                         </div>
                     </div>
@@ -331,111 +292,122 @@ export default function PlansPage() {
             )}
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-24">
+        {/* Plans Grid - Identical to External Plans Design with Tiered Descriptions & Signature Button */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto w-full px-4 mb-24 justify-center">
             {loadingPlans ? (
-                Array(4).fill(0).map((_, i) => (
-                    <div key={i} className="h-[450px] rounded-[2.5rem] bg-white/5 animate-pulse border border-white/5"></div>
+                Array(2).fill(0).map((_, i) => (
+                    <div key={i} className="h-[520px] rounded-[2.5rem] bg-[#12141C] animate-pulse border border-white/10"></div>
                 ))
+            ) : plans.length === 0 ? (
+                <div className="col-span-full text-center py-16 text-zinc-400">
+                    لا توجد باقات معروضة حالياً
+                </div>
             ) : (
-                plans.map((plan) => (
-                    <div key={plan.plan_id} className={`group relative flex flex-col p-8 rounded-[2.5rem] bg-white/[0.03] border backdrop-blur-sm transition-all duration-500 hover:scale-[1.03] hover:-translate-y-2 ${plan.popular ? 'border-purple-500/30 bg-purple-500/[0.02] shadow-[0_30px_60px_-15px_rgba(168,85,247,0.15)]' : 'border-white/5 hover:border-white/10'}`}>
-                        
-                        {plan.popular && (
-                            <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 z-20">
-                                <div className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2 border border-white/20 whitespace-nowrap">
-                                    <Star size={12} fill="currentColor" />
-                                    <span>الأكثر طلباً</span>
-                                </div>
-                            </div>
-                        )}
+                [...plans]
+                  .sort((a: any, b: any) => (Number(a.credits_per_period) || 0) - (Number(b.credits_per_period) || 0))
+                  .map((plan, index, arr) => {
+                    const color = plan.color || getPlanColor(plan);
+                    const periodText = plan.period === 'year' ? 'سنوياً' : 'شهرياً';
+                    const tier = getPlanTierData(plan, index, arr.length);
 
-                        <div className="mb-8 text-center relative">
-                            <div className="relative mx-auto mb-6 w-fit group-hover:scale-110 transition-transform duration-500">
-                                {/* Glow Effect */}
-                                <div className={`absolute inset-0 bg-gradient-to-br ${plan.color} blur-[40px] opacity-30 rounded-full scale-150`}></div>
-                                
-                                <div className="relative z-10">
-                                    <svg width="0" height="0" className="absolute">
-                                        <defs>
-                                            <linearGradient id={`grad-${plan.plan_id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                                                {/* Define gradients based on plan logic - simplified mapping */}
-                                                <stop offset="0%" stopColor={plan.credits_per_period <= 100 ? "#804A00" : plan.credits_per_period <= 500 ? "#71706E" : plan.credits_per_period <= 1000 ? "#BF953F" : "#30CFD0"} />
-                                                <stop offset="100%" stopColor={plan.credits_per_period <= 100 ? "#B87333" : plan.credits_per_period <= 500 ? "#E5E4E2" : plan.credits_per_period <= 1000 ? "#FCF6BA" : "#330867"} />
-                                            </linearGradient>
-                                        </defs>
-                                    </svg>
-                                    
+                    return (
+                        <div 
+                            key={plan.plan_id} 
+                            className="group relative flex flex-col p-8 rounded-[2.5rem] bg-[#12141C] border border-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300"
+                        >
+                            {/* Crown & Title */}
+                            <div className="mb-6 text-center relative">
+                                <div className="relative mx-auto mb-4 w-fit">
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${color} blur-[30px] opacity-30 rounded-full scale-150`}></div>
                                     <Crown 
-                                        size={50} 
-                                        style={{ stroke: `url(#grad-${plan.plan_id})` }}
+                                        size={46} 
+                                        className="text-amber-400 drop-shadow-lg mx-auto relative z-10"
                                         strokeWidth={1.5}
-                                        className="drop-shadow-lg"
                                     />
                                 </div>
+                                
+                                <h3 className="text-xl font-black mb-1 text-white">{plan.plan_name}</h3>
+                                <p className="text-gray-400 text-xs font-medium leading-relaxed px-2">{tier.description}</p>
                             </div>
-                            
-                            <h3 className="text-xl font-black mb-1 text-white">{plan.plan_name}</h3>
-                            <p className="text-gray-500 text-xs font-bold leading-relaxed">{plan.description}</p>
-                        </div>
 
-                        <div className="mb-10 flex flex-col items-center">
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-4xl font-black text-white"><span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">
-  IQD
-</span>{plan.amount}</span>
-                                <span className="text-gray-500 text-xs font-bold">/ {plan.period === 'month' ? 'شهر' : 'سنة'}</span>
+                            {/* Price Section with IQD Gradient */}
+                            <div className="mb-6 flex flex-col items-center">
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-3xl sm:text-4xl font-black text-white">
+                                        <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD </span>
+                                        {Number(plan.amount).toLocaleString('en-US')}
+                                    </span>
+                                    <span className="text-gray-400 text-xs font-bold">/ {plan.period === 'year' ? 'سنة' : 'شهر'}</span>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="flex-1 mb-8 overflow-hidden flex flex-col">
-                            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                                {plan.features?.map((feature, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 group/feat transition-all hover:translate-x-1">
-                                        <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-500 group-hover/feat:bg-emerald-500/20">
-                                            <Check size={12} strokeWidth={3} />
+                            {/* Credits Info Box */}
+                            <div className="mb-6 flex flex-col justify-center">
+                                <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 text-center space-y-1.5">
+                                    <div className="text-emerald-400 font-extrabold text-base sm:text-lg">
+                                        {Number(plan.credits_per_period).toLocaleString('en-US')} نقطة / {periodText}
+                                    </div>
+                                    <p className="text-gray-300 text-[11px] sm:text-xs font-medium leading-relaxed">
+                                        صالحة لجميع أدوات واستوديو الذكاء الاصطناعي
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Features List - Tier Specific with All Models Included */}
+                            <div className="flex-1 mb-8 space-y-2.5">
+                                {tier.features.map((feat: string, fIdx: number) => (
+                                    <div key={fIdx} className="flex items-center gap-2 text-xs text-gray-300 font-medium">
+                                        <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${fIdx === 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-emerald-400'}`}>
+                                            <Check size={10} strokeWidth={3} />
                                         </div>
-                                        <span className="text-[11px] font-bold text-gray-400 group-hover/feat:text-gray-200 transition-colors">{feature}</span>
+                                        <span className={fIdx === 0 ? 'text-emerald-400 font-bold' : ''}>{feat}</span>
                                     </div>
                                 ))}
                             </div>
-                        </div>
 
-                        <PremiumButton 
-                            label="اختيار الباقة"
-                            icon={CreditCard}
-                            secondaryIcon={ArrowLeft}
-                            onClick={() => onSelectPlan(plan)}
-                            className={`w-full py-4 text-base ${plan.popular ? '' : 'bg-[#1a1a1a]'}`}
-                        />
+                            {/* Signature NEXUS Generate-Style Button */}
+                            <div className="w-full px-1.5 py-0.5 flex justify-center mt-auto">
+                                <button 
+                                    type="button"
+                                    onClick={() => onSelectPlan(plan)}
+                                    className="relative group w-full py-3.5 px-5 transition-all duration-300 font-bold text-sm select-none skew-x-[-22deg] rounded-[15px] overflow-hidden bg-[linear-gradient(135deg,_#4f008c_0%,_#3d006e_50%,_#190237_100%)] hover:bg-[linear-gradient(135deg,_#6100ad_0%,_#4c008a_50%,_#21034a_100%)] text-white border border-[#ff7702]/60 hover:border-[#ff7702] gradient-border-packet shadow-[0_4px_20px_rgba(79,0,140,0.4)] hover:shadow-[0_6px_25px_rgba(255,119,2,0.35),0_0_20px_rgba(79,0,140,0.5)] active:scale-[0.98]"
+                                >
+                                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.14] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none rounded-[15px]" />
+                                    <div className="skew-x-[22deg] flex items-center justify-center w-full gap-2 text-white">
+                                        <CreditCard size={16} className="text-[#ff9933] group-hover:scale-110 transition-transform duration-200 shrink-0" />
+                                        <span className="font-extrabold text-sm tracking-wide text-white">اختيار الباقة</span>
+                                        <ArrowLeft size={14} className="text-white/80 shrink-0" />
+                                    </div>
+                                </button>
+                            </div>
 
-                       
+                            {/* Border Beam Animation Effect */}
                             <BorderBeam 
-                                size={350}
+                                size={300}
                                 duration={8}
                                 colorFrom="#9c40ff"
                                 colorTo="#40ffaa"
-                                borderWidth={2}
+                                borderWidth={1.5}
                             />
-                       
-                    </div>
-                ))
+                        </div>
+                    );
+                })
             )}
         </div>
 
         {/* FAQ Section */}
         <section className="mb-24">
             <div className="text-center mb-16">
-                <h2 className="text-4xl font-black mb-4">الأسئلة الشائعة</h2>
+                <h2 className="text-3xl sm:text-4xl font-black mb-4">الأسئلة الشائعة</h2>
                 <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-blue-500 mx-auto rounded-full"></div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
                 {[
-                    { q: "ما هي نقاط نيكسوس (Credits)؟", a: "هي العملة الرقمية المستخدمة لتشغيل جميع أدوات الذكاء الاصطناعي في المنصة. كل عملية توليد صورة أو محادثة تستهلك عدداً معيناً من النقاط." },
-                    { q: "هل تنتهي صلاحية النقاط؟", a: "نعم، النقاط تتبع دورة اشتراكك. في الخطط الشهرية يتم تجديد النقاط كل 30 يوماً، وفي السنوية كل 365 يوماً." },
-                    { q: "كيف يمكنني الترقية؟", a: "يمكنك الترقية في أي وقت من خلال اختيار باقة أعلى. سيتم إضافة النقاط الجديدة إلى حسابك فور إتمام عملية الدفع." },
-                    // { q: "ما هي وسائل الدفع المدعومة؟", a: "ندعم جميع بطاقات الائتمان، PayPal، بالإضافة إلى وسائل الدفع المحلية المتاحة في منطقتك." }
+                    { q: "ما هي نقاط نيكسوس (Credits)؟", a: "هي الرصيد الرقمي المستخدم لتشغيل جميع أدوات الذكاء الاصطناعي في المنصة. كل عملية توليد صورة، فيديو، أو صوت تستهلك عدداً محدداً من النقاط." },
+                    { q: "هل جميع الموديلات متاحة في كل الباقات؟", a: "نعم، كافة الموديلات المتقدمة والمحركات الاحترافية (مثل Kling, Midjourney, Flux, Hailuo, Wan, Runway) متاحة لجميع المشتركين بدون أي قيود." },
+                    { q: "هل تنتهي صلاحية النقاط؟", a: "تتبع النقاط دورة اشتراكك المحددة (شهرياً أو سنوياً) ويتم تجديدها تلقائياً عند تجديد الباقة لضمان استمرارية استخدامك." },
+                    { q: "كيف يمكنني الترقية لباقة أعلى؟", a: "يمكنك الترقية في أي وقت بكل سهولة من خلال اختيار الباقة التي تناسبك وسيتم تفعيل رصيدك الإضافي فوراً." }
                 ].map((item, i) => (
                     <div key={i} className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all group">
                         <div className="flex items-start gap-4">
@@ -443,8 +415,8 @@ export default function PlansPage() {
                                 <HelpCircle size={20} className="text-purple-400" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-white mb-3">{item.q}</h3>
-                                <p className="text-gray-500 font-bold text-sm leading-relaxed">{item.a}</p>
+                                <h3 className="text-base sm:text-lg font-black text-white mb-2">{item.q}</h3>
+                                <p className="text-gray-400 font-medium text-xs sm:text-sm leading-relaxed">{item.a}</p>
                             </div>
                         </div>
                     </div>
@@ -453,20 +425,20 @@ export default function PlansPage() {
         </section>
 
         {/* Guarantee Banner */}
-        <div className="relative p-12 rounded-[3rem] bg-gradient-to-tr from-[#050505] to-[#0a0a0a] border border-white/5 text-center overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+        <div className="relative p-10 sm:p-12 rounded-[3rem] bg-gradient-to-tr from-[#080a14] to-[#121422] border border-white/10 text-center overflow-hidden group shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
             <div className="relative z-10 flex flex-col items-center">
-                <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
-                    <ShieldCheck size={32} className="text-emerald-400" />
+                <div className="w-16 h-16 bg-purple-500/10 border border-purple-500/20 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                    <ShieldCheck size={32} className="text-purple-400" />
                 </div>
-                <h2 className="text-3xl font-black mb-4">اشترك الآن بكل أمان</h2>
-                <p className="text-gray-500 font-bold max-w-xl mx-auto mb-8">
-                    نحن نضمن لك أسرع أداء وأدق النتائج بمساعدة تقنيات Gemini 2.0 و Stable Diffusion المتطورة.
+                <h2 className="text-2xl sm:text-3xl font-black mb-3">اشترك الآن بأعلى موثوقية وأمان</h2>
+                <p className="text-gray-400 font-medium text-xs sm:text-sm max-w-xl mx-auto mb-8 leading-relaxed">
+                    نضمن لك استقرار الأداء وسرعة تنفيذ خوارزميات التوليد، مع دعم فني مستمر لتجربة إبداعية استثنائية.
                 </p>
-                <div className="flex flex-wrap items-center justify-center gap-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-                    <span className="text-[10px] font-black uppercase tracking-widest">الفعالية 99.9%</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest">تشفير كامل للبيانات</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest">دعم فني فوري</span>
+                <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 opacity-70">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400">✓ الفعالية 99.9%</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest text-blue-400">✓ تشفير كامل للبيانات</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest text-purple-400">✓ دعم فني فوري</span>
                 </div>
             </div>
         </div>
@@ -475,16 +447,16 @@ export default function PlansPage() {
 
       {/* Payment Modal */}
       {openPaymentModal && selectedPlan && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[1000] p-6 animate-fade-in text-right">
-            <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-[#050505] border border-white/10 rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,1)] relative custom-scrollbar">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[1000] p-4 sm:p-6 animate-fade-in text-right">
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-[#050505] border border-white/10 rounded-[2.5rem] sm:rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,1)] relative custom-scrollbar">
                 <button 
                     onClick={() => setOpenPaymentModal(false)}
-                    className="absolute top-6 left-6 p-4 bg-white/5 hover:bg-white/10 rounded-full transition-all text-gray-500 hover:text-white z-50"
+                    className="absolute top-6 left-6 p-3 sm:p-4 bg-white/5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white z-50"
                 >
-                    <ArrowLeft size={24} />
+                    <ArrowLeft size={20} />
                 </button>
                 
-                <div className="p-10 pr-12">
+                <div className="p-6 sm:p-10 pr-8 sm:pr-12">
                     <PaymentModal
                       modalOpen={openPaymentModal}
                       setModalOpen={setOpenPaymentModal}
@@ -497,7 +469,7 @@ export default function PlansPage() {
                         monthly_price: selectedPlan.amount,
                         yearly_price: selectedPlan.amount,
                         tool_day_price: selectedPlan.amount,
-                        amount: selectedPlan.amount // هذا الحقل مطلوب لعرض السعر في ProductDetail
+                        amount: selectedPlan.amount
                       }}
                       onBuySuccess={() => {
                         setOpenPaymentModal(false);
@@ -520,22 +492,11 @@ export default function PlansPage() {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
         }
-        .bg-300% {
-            background-size: 300% 300%;
-        }
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .animate-gradient {
-            animation: gradient 8s linear infinite;
-        }
         .animate-fade-in {
-            animation: fadeIn 0.8s ease-out forwards;
+            animation: fadeIn 0.5s ease-out forwards;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
       `}</style>

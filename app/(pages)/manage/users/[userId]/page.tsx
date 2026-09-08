@@ -294,7 +294,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                 <IconButton
                   buttonType="Success"
                   onClick={() => {
-                    openDirectActivationModal();
+                    openDirectActivationModal({});
                   }}
                   title="تفعيل اشتراك يدوي"
                 >

@@ -12,10 +12,10 @@ export default function TextToImageRedirect() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0f23] via-[#1a1a2e] to-[#16213e] text-white flex items-center justify-center">
+    <div className="min-h-screen bg-[#06070B] text-white flex items-center justify-center">
       <div className="text-center">
-        <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
-        <div className="text-xl">Redirecting to AI Image Generator...</div>
+        <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="text-sm font-bold text-gray-400">جاري التحويل إلى استوديو الصور...</div>
       </div>
     </div>
   );

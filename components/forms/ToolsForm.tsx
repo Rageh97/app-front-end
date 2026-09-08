@@ -119,7 +119,7 @@ const initialValues: FormType = {
   external_link_10: "",
 };
 
-export const goalsSchema: Yup.ObjectSchema<FormType> = Yup.object().shape({
+export const goalsSchema = Yup.object().shape({
   tool_id: Yup.number(),
   tool_name: Yup.string().required("Please enter tool name."),
   tool_category: Yup.string().required("Please select tool category."),

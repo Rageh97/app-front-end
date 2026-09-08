@@ -1,89 +1,176 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { 
+  Sparkles, 
+  Upload, 
+  Download, 
+  Film, 
+  Video, 
+  CheckCircle2, 
+  X,
+  Play,
+  Layers,
+  Wand2
+, Trash2 } from "lucide-react";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import PaymentModal from "@/components/Modals/PaymentModal";
+import { toast, Toaster } from "react-hot-toast";
 import UpgradeModal from "@/components/Modals/UpgradeModal";
-import Link from "next/link";
-import { toast, Toaster } from 'react-hot-toast';
-import { ArrowRight, Wand2, Upload, Download, X, RefreshCw, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Sparkles, Play, Layers, Trash2, Coins } from 'lucide-react';
-import TextType from "@/components/TextType";
-import { PremiumButton } from "@/components/PremiumButton";
+import { 
+  AIToolHeader, 
+  AIGenerateButton, 
+  AIGenerationCard, 
+  AIResultModal, 
+  downloadMediaDirectly,
+  AIDeleteModal
+} from "@/components/ai";
+import { handleAuthError } from "@/utils/auth";
+import { useAiPricing } from '@/hooks/useAiPricing';
 
-type CreditsRecord = {
-  users_credits_id: number;
-  user_id: number;
-  plan_id: number;
-  plan_name: string;
-  period: "day" | "month" | "year" | string;
-  total_credits: number;
-  remaining_credits: number;
-  endedAt: string;
-  createdAt: string;
-  plan?: { 
-    plan_id: number; 
-    plan_name: string; 
-    period: string; 
-    video_profit: number;
-  };
-};
+interface GenerationResult {
+  id?: number | string;
+  video_url: string;
+  effects: string[];
+  time: string;
+}
 
-const VIDEO_EFFECTS = [
-    { id: 'blur', name: 'ضبابية', icon: '🌫️', category: 'فلاتر' },
-    { id: 'vintage', name: 'كلاسيكي', icon: '📼', category: 'فلاتر' },
-    { id: 'neon', name: 'نيون', icon: '💡', category: 'إضاءة' },
-    { id: 'glitch', name: 'ليتش', icon: '⚡', category: 'رقمي' },
-    { id: 'cinematic', name: 'سينمائي', icon: '🎬', category: 'احترافي' },
-    { id: 'slow_mo', name: 'بطيء', icon: '🐌', category: 'حركة' },
+const AVAILABLE_EFFECTS = [
+  { id: 'glitch', name: 'خلل رقمي Glitch', desc: 'تأثير تشويش إلكتروني عصري وسريع' },
+  { id: 'neon', name: 'توهج نيون Neon Glow', desc: 'إبراز الحواف بخطوط نيون متوهجة وحيوية' },
+  { id: 'vintage', name: 'فيلم كلاسيكي Vintage', desc: 'طابع سينمائي مع حبيبات وألوان ريترو' },
+  { id: 'speed_ramp', name: 'تسريع وإبطاء Speed Ramp', desc: 'تلاعب ديناميكي بالسرعة في اللقطات الحركية' },
+  { id: 'rgb_split', name: 'فصل لوني RGB Split', desc: 'فصل القنوات اللونية لإعطاء طابع ثلاثي الأبعاد' },
+  { id: 'dolly_zoom', name: 'زووم سينمائي Dolly Zoom', desc: 'تأثير فيرتيجو السينمائي لتكبير الخلفية' },
 ];
 
 export default function VideoEffectsPage() {
-  const [balance, setBalance] = useState<CreditsRecord | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(false);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [selectedEffects, setSelectedEffects] = useState<string[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [processingProgress, setProcessingProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4560', []);
+  const getToken = useCallback(() => typeof window !== 'undefined' ? localStorage.getItem("a") : null, []);
+  
+  // State
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedEffects, setSelectedEffects] = useState<string[]>(['glitch']);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  
+  const [history, setHistory] = useState<GenerationResult[]>([]);
+  const [selectedModalItem, setSelectedModalItem] = useState<GenerationResult | null>(null);
+  const [balance, setBalance] = useState<any>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'all';
+    id?: number | string | null;
+  }>({ isOpen: false, type: 'single', id: null });
+  const [isDeletingModal, setIsDeletingModal] = useState(false);
 
-  const [plans, setPlans] = useState<Array<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string }>>([]);
-  const [loadingPlans, setLoadingPlans] = useState(false);
-  const [openPaymentModal, setOpenPaymentModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<{ plan_id: number; plan_name: string; credits_per_period: number; amount: string; period: string } | null>(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
-  const baseCredits = 15;
-  const videoProfit = balance?.plan?.video_profit ?? 0;
-  const creditsNeeded = baseCredits + videoProfit;
-
-  const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
-
-  const getToken = () => {
-    if (typeof window !== 'undefined') return localStorage.getItem("a");
-    return null;
-  };
-
-  const fetchBalance = async () => {
-    if (!apiBase) return;
-    const token = getToken();
-    setLoadingBalance(true);
+  const handleConfirmDelete = async () => {
+    setIsDeletingModal(true);
     try {
-      const res = await fetch(`${apiBase}/api/credits/me/balance`, { 
-        headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 } 
-      });
-      if (res.status === 200) {
-        const data = (await res.json()) as CreditsRecord | null;
-        setBalance(data);
+      if (deleteModal.type === 'single' && deleteModal.id !== undefined && deleteModal.id !== null) {
+        await handleDeleteSingle(deleteModal.id, true);
+      } else if (deleteModal.type === 'all') {
+        await handleDeleteAll();
       }
-    } catch (e: any) {} finally {
-      setLoadingBalance(false);
+      setDeleteModal({ isOpen: false, type: 'single', id: null });
+    } finally {
+      setIsDeletingModal(false);
     }
   };
 
+  const { operationPrice } = useAiPricing();
+  const creditsNeeded = operationPrice('effects', 12);
+
+  const fetchBalance = useCallback(async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/credits/me/balance`, {
+        headers: { 
+          'Authorization': getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        }
+      });
+      if (res.status === 401 || res.status === 403) {
+        handleAuthError(res.status);
+        return;
+      }
+      if (res.ok) setBalance(await res.json());
+    } catch (e) {}
+  }, [apiBase, getToken]);
+
+  const fetchHistory = useCallback(async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/ai/user-videos?tool=video_effects&limit=50`, {
+        headers: { 
+          'Authorization': getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        }
+      });
+      if (res.status === 401 || res.status === 403) {
+        handleAuthError(res.status);
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.videos)) {
+          const mapped: GenerationResult[] = data.videos.map((v: any) => ({
+            id: v.id || v.video_id,
+            video_url: v.video_url || v.cloudinary_url,
+            effects: v.metadata?.effects || [v.prompt || 'تأثيرات سينمائية'],
+            time: v.created_at ? new Date(v.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : ''
+          }));
+          setHistory(mapped);
+        }
+      }
+    } catch (e) {}
+  }, [apiBase, getToken]);
+
+  const handleDeleteSingle = async (idOrIdx: number | string, isVideo = true) => {
+    if (!apiBase) return;
+    try {
+      const endpoint = isVideo
+        ? `${apiBase}/api/ai/user-videos/${idOrIdx}`
+        : `${apiBase}/api/ai/user-images/${idOrIdx}`;
+      await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': getToken() || '',
+          'User-Client': (global as any)?.clientId1328 || ''
+        }
+      });
+      setHistory(prev => prev.filter((item: any) => (item.id || item.time) !== idOrIdx));
+      toast.success('تم حذف النتيجة بنجاح');
+      if (selectedModalItem && ((selectedModalItem as any).id === idOrIdx || selectedModalItem.time === idOrIdx)) {
+        setSelectedModalItem(null);
+      }
+    } catch (e) {
+      toast.error('فشل حذف النتيجة');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!apiBase) return;
+    try {
+      await fetch(`${apiBase}/api/ai/user-videos?tool=video_effects`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': getToken() || '',
+          'User-Client': (global as any)?.clientId1328 || ''
+        }
+      });
+      setHistory([]);
+      toast.success('تم حذف جميع النتائج السابقة');
+      setSelectedModalItem(null);
+    } catch (e) {
+      toast.error('فشل حذف النتائج');
+    }
+  };
+
+
   useEffect(() => {
     let cancelled = false;
-    const ensureClientId = async () => {
+    const init = async () => {
       try {
         if (!(global as any)?.clientId1328) {
           const fp = await FingerprintJS.load();
@@ -92,390 +179,358 @@ export default function VideoEffectsPage() {
         }
         if (!cancelled) {
           fetchBalance();
-          void loadPlans();
+          fetchHistory();
         }
-      } catch (_) {}
+      } catch (e) {}
     };
-    ensureClientId();
+    init();
     return () => { cancelled = true; };
-  }, []);
+  }, [fetchBalance, fetchHistory]);
 
-  const loadPlans = async () => {
-    if (!apiBase) return;
-    setLoadingPlans(true);
-    try {
-      const res = await fetch(`${apiBase}/api/credits/plans`);
-      if (res.status === 200) {
-        const data = await res.json();
-        setPlans(data);
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      toast.error("يرجى اختيار ملف فيديو صالح (MP4, WebM)");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSelectedVideo(event.target?.result as string);
+      toast.success("تم رفع الفيديو بنجاح");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleEffect = (id: string) => {
+    if (selectedEffects.includes(id)) {
+      if (selectedEffects.length === 1) {
+        toast.error("يجب اختيار تأثير واحد على الأقل");
+        return;
       }
-    } finally {
-      setLoadingPlans(false);
+      setSelectedEffects(selectedEffects.filter(e => e !== id));
+    } else {
+      setSelectedEffects([...selectedEffects, id]);
     }
   };
 
-  const convertToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  };
+  const handleGenerate = async () => {
+    if (!selectedVideo) {
+      toast.error("يرجى رفع ملف فيديو أولاً");
+      return;
+    }
 
-  const toggleEffect = (effectId: string) => {
-      setSelectedEffects(prev => prev.includes(effectId) ? prev.filter(e => e !== effectId) : [...prev, effectId]);
-  };
-
-  const onProcess = async () => {
-    if (!apiBase || !videoFile || selectedEffects.length === 0) return;
-    
-    // فحص الرصيد قبل البدء
-    if (!balance || balance.remaining_credits < creditsNeeded) {
+    if (balance && balance.remaining_credits < creditsNeeded) {
       setShowUpgradeModal(true);
       return;
     }
-    
-    setIsProcessing(true);
-    setError('');
-    setResult(null);
-    setProcessingProgress(0);
-    
-    let progressValue = 0;
-    const progressInterval = setInterval(() => {
-      progressValue += Math.random() * 3 + 1;
-      if (progressValue >= 98) {
-        progressValue = 98;
-        clearInterval(progressInterval);
-      }
-      setProcessingProgress(progressValue);
-    }, 800);
-    
+
+    setIsGenerating(true);
+
     try {
-      const videoBase64 = await convertToBase64(videoFile);
-      const token = getToken();
-      
-      const res = await fetch(`${apiBase}/api/ai/video-effects`, {
+      const response = await fetch(`${apiBase}/api/ai/video-effects`, {
         method: "POST",
-        headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 },
-        body: JSON.stringify({ video: videoBase64, effects: selectedEffects }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": getToken() || '',
+          "User-Client": (global as any)?.clientId1328 || ""
+        },
+        body: JSON.stringify({
+          video: selectedVideo,
+          effects: selectedEffects
+        })
       });
-      
-      clearInterval(progressInterval);
-      setProcessingProgress(100);
-      
-      const data = await res.json();
-      if (data.success) {
-        setResult(data);
-        await fetchBalance();
-        toast.success('تم تطبيق التأثيرات بنجاح!');
-      } else {
-        setError(data.message || 'فشلت الإضافة');
+
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status);
+        return;
       }
-    } catch (e: any) {
-      clearInterval(progressInterval);
-      setError('خطأ في الاتصال');
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "فشلت عملية تطبيق التأثيرات");
+      }
+
+      const newResult: GenerationResult = {
+        id: data.video_id || data.id,
+        video_url: data.video_url,
+        effects: selectedEffects,
+        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setHistory(prev => [newResult, ...prev]);
+      setSelectedModalItem(newResult);
+      toast.success("تم تطبيق التأثيرات بنجاح!");
+      fetchBalance();
+
+    } catch (err: any) {
+      console.error("Video effects error:", err);
+      toast.error(err.message || "حدث خطأ أثناء المعالجة");
     } finally {
-      setIsProcessing(false);
+      setIsGenerating(false);
     }
   };
-
-  // Previous Works Logic
-  const [userVideos, setUserVideos] = useState<any[]>([]);
-  const [loadingVideos, setLoadingVideos] = useState(false);
-
-  const fetchUserVideos = async () => {
-    if (!apiBase) return;
-    const token = getToken();
-    setLoadingVideos(true);
-    try {
-      const res = await fetch(`${apiBase}/api/ai/user-videos?limit=12&tool=video_effects`, {
-        headers: { 'Authorization': token as any, 'Content-Type': 'application/json', "User-Client": (global as any)?.clientId1328 }
-      });
-      if (res.status === 200) {
-        const data = await res.json();
-        if (data.success) {
-            setUserVideos(data.videos.map((v: any) => ({
-                id: v.video_id,
-                url: v.video_url || v.cloudinary_url,
-                prompt: v.prompt
-            })));
-        }
-      }
-    } catch (e) {} finally { setLoadingVideos(false); }
-  };
-
-  const deleteVideo = async (videoId: number) => {
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos(userVideos.filter(v => v.id !== videoId));
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos/${videoId}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم الحذف');
-      } catch (e) {}
-  };
-
-  const deleteAllVideos = async () => {
-      if (!confirm('حذف السجل بالكامل؟')) return;
-      if (!apiBase) return;
-      const token = getToken();
-      setUserVideos([]);
-      try {
-          await fetch(`${apiBase}/api/ai/user-videos`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم مسح السجل');
-      } catch (e) {}
-  };
-
-  useEffect(() => {
-     if (typeof window !== 'undefined') {
-         fetchUserVideos();
-     }
-  }, []);
 
   return (
     <>
       <Toaster position="top-right" />
+      <UpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
 
-      <div className="min-h-screen bg-[#000000] text-white selection:bg-purple-500/30 font-sans" dir="rtl">
-        {/* Background Ambient */}
-        <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
-        <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-900/5 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-900/5 blur-[120px] rounded-full pointer-events-none"></div>
+      {/* Unified AI Result Modal */}
+      <AIResultModal
+        isOpen={!!selectedModalItem}
+        onClose={() => setSelectedModalItem(null)}
+        mediaUrl={selectedModalItem?.video_url || null}
+        mediaType="video"
+        title="مؤثرات الفيديو السينمائية (Video Effects AI)"
+        subtitle="فيديو معالج بالمؤثرات البصرية المتقدمة"
+        details={[
+          { label: "التأثيرات المطبقة", value: selectedModalItem?.effects?.map(e => AVAILABLE_EFFECTS.find(x => x.id === e)?.name || e).join(' + ') || "" },
+          { label: "الرصيد المستخدم", value: `${creditsNeeded} رصيد` },
+        ]}
+        timestamp={selectedModalItem?.time}
+        creditsUsed={creditsNeeded}
+      />
 
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-          <div className="max-w-[1600px] mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link href="/ai" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/10">
-                  <ArrowRight size={18} />
-                  <span>عودة</span>
-                </Link>
-                <span className="text-xl font-bold">تأثيرات الفيديو FX</span>
+      <div className="h-screen flex flex-col bg-[#06070B] text-white selection:bg-indigo-500/30 overflow-hidden font-sans" dir="rtl">
+        
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="مؤثرات وتعديل الفيديو (Video Effects)"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={() => setShowUpgradeModal(true)}
+          backHref="/ai"
+        />
+
+        {/* ─── Studio 2-Column Layout ─── */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          
+          {/* ─── Right Column: Control Sidebar (Compact, No Scrollbar) ─── */}
+          <aside className="w-full lg:w-[360px] xl:w-[380px] h-[calc(100vh-3.5rem)] bg-[#0B0D14] border-b lg:border-b-0 lg:border-l border-white/[0.08] p-4 flex flex-col justify-between shrink-0 overflow-hidden z-30 shadow-2xl relative">
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+              
+              <div>
+                <h2 className="text-sm font-bold text-white tracking-wide">إعدادات مؤثرات الفيديو</h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">تطبيق حزم مؤثرات بصرية وتعديل ألوان بالذكاء الاصطناعي</p>
               </div>
 
-               <div className="flex items-center gap-4">
-                 <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/5 rounded-xl border border-white/10">
-                  {loadingBalance ? (
-                    <span className="text-xs text-gray-400">جاري التحميل...</span>
-                  ) : balance ? (
-                    <div className="flex items-center gap-2">
-                       <CreditCard size={14} className="text-purple-400" />
-                      <span className={`text-sm font-bold ${balance.remaining_credits === 0 ? 'text-red-400' : 'text-purple-400'}`}>
-                        {balance.remaining_credits}
-                      </span>
+              {/* 1. Upload Video */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 block text-right">
+                  ملف الفيديو الأصلي
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                />
+
+                {selectedVideo ? (
+                  <div className="p-2.5 rounded-xl bg-[#121520] border border-white/[0.08] flex items-center justify-between gap-2.5 shadow-sm">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/20 bg-black shrink-0 flex items-center justify-center text-indigo-400">
+                        <Film size={18} />
+                      </div>
+                      <div className="text-right truncate">
+                        <span className="text-xs font-bold text-white block truncate">تم تحديد الفيديو</span>
+                        <span className="text-[10px] text-indigo-400 flex items-center gap-1 font-medium">
+                          <CheckCircle2 size={10} /> جاهز للتأثيرات
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    <span className="text-xs text-red-400">لا يوجد رصيد</span>
-                  )}
-                </div>
-                
-                <button
-                  onClick={() => setOpenPaymentModal(true)}
-                  className="relative inline-flex h-10 active:scale-95 transition overflow-hidden rounded-lg p-[1px] focus:outline-none"
-                >
-                  <span className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#a855f7_0%,#d946ef_50%,#a855f7_100%)]"></span>
-                  <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-lg bg-[#050505] px-4 text-xs font-black text-white backdrop-blur-3xl gap-2 transition-all hover:bg-black/40">
-                    <Crown size={14} className="text-purple-500" />
-                    شراء رصيد
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="max-w-[1600px] mx-auto p-6 pt-8">
-          <div className="grid lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Panel */}
-            <div className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-28">
-               <div className="bg-[#0c0c0c] rounded-3xl p-5 border border-white/5 relative group shadow-2xl overflow-hidden mb-4">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-fuchsia-600 to-pink-600 opacity-50"></div>
-                
-                <div className="relative space-y-5">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block">ملف الفيديو</span>
-                    <input type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} className="hidden" id="v-fx-up" />
-                    <label htmlFor="v-fx-up" className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 cursor-pointer hover:border-purple-500/30 transition-all">
-                        <span className="text-[10px] text-gray-400 max-w-[180px] truncate">{videoFile ? videoFile.name : "ارفع الفيديو هنا..."}</span>
-                        <Layers size={16} className="text-purple-500" />
-                    </label>
-                  </div>
-
-                  <div className="space-y-2">
-                     <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest block mb-2">اختر التأثيرات</span>
-                     <div className="grid grid-cols-3 gap-1.5">
-                         {VIDEO_EFFECTS.map((fx) => (
-                             <button
-                                key={fx.id}
-                                onClick={() => toggleEffect(fx.id)}
-                                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 border ${
-                                    selectedEffects.includes(fx.id)
-                                    ? 'bg-purple-500/10 border-purple-500/50 text-purple-300'
-                                    : 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10'
-                                }`}
-                             >
-                                <span className="text-lg">{fx.icon}</span>
-                                <span className="text-[8px] font-black truncate w-full">{fx.name}</span>
-                             </button>
-                         ))}
-                     </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-white/5 space-y-3">
-                     <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                                <Coins size={10} className="text-yellow-500" />
-                            </div>
-                            <span>التكلفة المتوقعه:</span>
-                        </div>
-                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                     </div>
-
-                    <PremiumButton 
-                        label={isProcessing ? "جاري المعالجة..." : "تطبيق التأثيرات"}
-                        icon={isProcessing ? RefreshCw : Wand2}
-                        onClick={onProcess}
-                        disabled={!videoFile || selectedEffects.length === 0 || isProcessing}
-                        className="w-full py-3 text-xs rounded-xl"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[10px] font-bold text-center flex items-center justify-center gap-2 truncate">
-                  <X size={14} />
-                  {error}
-                </div>
-              )}
-            </div>
-
-            {/* Right Panel */}
-            <div className="lg:col-span-8 order-2 space-y-6">
-              <div className="bg-[#080808] rounded-[3rem] border border-white/5 min-h-[500px] lg:min-h-[850px] flex items-center justify-center relative overflow-hidden group shadow-inner">
-                {result ? (
-                  <div className="relative w-full h-full p-8 flex flex-col items-center justify-center group/vid">
-                    <video src={result.video_url} controls className="max-h-[650px] w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-white/10 animate-fade-in" />
-                    <div className="mt-8 flex items-center gap-3">
-                        <button onClick={() => window.open(result.video_url)} className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl hover:bg-gray-200 transition-all font-black text-sm">
-                            <Download size={18} />
-                            <span>تحميل الفيديو</span>
-                        </button>
-                        <button onClick={() => setResult(null)} className="p-4 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/10">
-                            <RefreshCw size={20} />
-                        </button>
-                    </div>
-                  </div>
-                ) : isProcessing ? (
-                  <div className="text-center relative z-10 w-full max-w-sm px-8">
-                    <div className="w-24 h-24 relative mx-auto mb-8">
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-purple-500/10 scale-125"></div>
-                        <div className="absolute inset-0 rounded-[2.5rem] border-4 border-t-purple-500 animate-spin"></div>
-                        <Wand2 className="absolute inset-0 m-auto text-purple-400 animate-pulse" size={40} />
-                    </div>
-                    <h3 className="text-2xl font-black mb-2">جاري المعالجة البصرية...</h3>
-                    <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mt-6">
-                      <div className="bg-purple-500 h-full transition-all duration-700" style={{ width: `${processingProgress}%` }}></div>
-                    </div>
+                    <button
+                      onClick={() => setSelectedVideo(null)}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-900/50 text-gray-400 hover:text-rose-300 border border-white/10 transition-all shrink-0"
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
                 ) : (
-                  <div className="text-center relative z-10 p-12">
-                     <div className="w-32 h-32 bg-white/[0.02] rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-white/5 group-hover:scale-105 transition-all duration-700 shadow-inner">
-                      <Wand2 size={64} className="text-white/5 group-hover:text-purple-500/10 transition-colors" />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border border-dashed border-white/[0.08] hover:border-indigo-500/40 rounded-xl py-3 px-4 text-center cursor-pointer transition-all bg-[#121520] hover:bg-[#161a27] flex items-center justify-center gap-3 group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform shrink-0">
+                      <Upload size={14} />
                     </div>
-                    <p className="text-gray-600 max-w-xs mx-auto font-bold text-lg leading-relaxed">ارفع الفيديو واختر التأثيرات المطلوبة لترى السحر السينمائي.</p>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-gray-200 block group-hover:text-indigo-300 transition-colors">
+                        رفع مقطع فيديو
+                      </span>
+                      <span className="text-[10px] text-gray-500">MP4, MOV حتى 50MB</span>
+                    </div>
                   </div>
                 )}
               </div>
+
+              {/* 2. Effects Grid */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-400 block text-right">
+                  اختر التأثيرات المطلوبة (يمكن دمج أكثر من تأثير):
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {AVAILABLE_EFFECTS.map((eff) => {
+                    const isSelected = selectedEffects.includes(eff.id);
+                    return (
+                      <button
+                        key={eff.id}
+                        type="button"
+                        onClick={() => toggleEffect(eff.id)}
+                        className={`p-2.5 rounded-xl border text-right transition-all flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-indigo-500/15 border-indigo-500/50 shadow-sm'
+                            : 'bg-[#121520] border-white/[0.08] hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <span className={`text-xs font-bold ${isSelected ? 'text-indigo-300' : 'text-white'}`}>
+                            {eff.name}
+                          </span>
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />}
+                        </div>
+                        <span className="text-[10px] text-gray-400 line-clamp-1">{eff.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
-          </div>
 
-          {/* Previous Works Section - FX */}
-          <div className="mt-12 lg:col-span-12 border-t border-white/5 pt-8">
-                     <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-400 border border-purple-500/20">
-                              <Sparkles size={20} />
-                           </div>
-                           <div>
-                              <h3 className="text-lg font-bold text-white">تأثيراتك السابقة</h3>
-                              <p className="text-xs text-gray-500 font-medium">سجل بالفيديوهات التي قمت بتطبيق الفلاتر عليها</p>
-                           </div>
-                        </div>
-                        
-                        {userVideos.length > 0 && (
-                            <button 
-                              onClick={deleteAllVideos}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-xs font-bold transition-all"
-                            >
-                               <Trash2 size={14} />
-                               <span>حذف السجل</span>
-                            </button>
-                        )}
-                     </div>
+            {/* Bottom Generate Action */}
+            <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
+              <AIGenerateButton
+                onClick={handleGenerate}
+                isGenerating={isGenerating}
+                disabled={!selectedVideo}
+                cost={creditsNeeded}
+                label="تطبيق المؤثرات"
+                generatingLabel="جاري المعالجة والإنتاج..."
+                icon={Wand2}
+                variant="indigo"
+              />
+            </div>
+          </aside>
 
-                     {loadingVideos ? (
-                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 animate-pulse">
-                             {[...Array(6)].map((_, i) => (
-                                 <div key={i} className="aspect-square bg-white/5 rounded-2xl"></div>
-                             ))}
-                         </div>
-                     ) : userVideos.length > 0 ? (
-                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {userVideos.map((v: any) => (
-                                <div key={v.id} className="group relative aspect-square rounded-2xl overflow-hidden border border-white/5 bg-[#0c0c0c]">
-                                   <video 
-                                      src={v.url} 
-                                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                   />
-                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                       <button 
-                                          onClick={() => deleteVideo(v.id)}
-                                          className="p-2 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all"
-                                          title="حذف"
-                                       >
-                                           <Trash2 size={16} />
-                                       </button>
-                                       <button 
-                                          onClick={() => {
-                                              setResult({ video_url: v.url, success: true });
-                                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                                          }}
-                                          className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all"
-                                          title="فتح"
-                                       >
-                                           <ArrowRight size={16} className="rotate-180" />
-                                       </button>
-                                   </div>
-                                </div>
-                            ))}
-                         </div>
-                     ) : (
-                        <div className="py-16 text-center border border-dashed border-white/10 rounded-3xl bg-white/[0.01]">
-                           <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
-                              <Layers size={24} />
-                           </div>
-                           <p className="text-gray-500 font-bold text-sm">لا توجد سجلات سابقة</p>
-                        </div>
-                     )}
+          {/* ─── Left Column: Gallery Studio Grid (Slot 1 Loading & Results) ─── */}
+          <main className="flex-1 overflow-y-auto no-scrollbar bg-[#06070B] p-4 lg:p-6 flex flex-col justify-start">
+            
+            {/* Gallery Header */}
+            <div className="flex items-center justify-between mb-4 w-full">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white tracking-wide">النتائج والمعرض</h2>
+                <span className="text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                  {history.length} {history.length === 1 ? 'نتيجة' : 'نتائج'}
+                </span>
+              </div>
+              {history.length > 0 && (
+                <button
+                  onClick={() => setDeleteModal({ isOpen: true, type: 'all', id: null })}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 transition-colors px-2.5 py-1 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
+                  title="مسح سجل المؤثرات بالكامل"
+                >
+                  <Trash2 size={13} />
+                  <span>مسح السجل</span>
+                </button>
+              )}
+            </div>
+
+            {/* Gallery Grid starting at Slot 1 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 w-full">
+              
+              {/* 1. Ghost Loading Card in Slot 1 while generating */}
+              {isGenerating && (
+                <AIGenerationCard
+                  aspectRatio="aspect-video"
+                  icon={Wand2}
+                  className="border-indigo-500/30"
+                />
+              )}
+
+              {/* 2. Results Cards */}
+              {history.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  onClick={() => setSelectedModalItem(item)}
+                  className="group relative rounded-2xl overflow-hidden bg-black border border-white/[0.08] hover:border-indigo-500/50 transition-all duration-300 shadow-lg cursor-pointer aspect-video flex items-center justify-center"
+                >
+                  <video
+                    src={item.video_url}
+                    muted
+                    loop
+                    playsInline
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    onMouseEnter={(e) => e.currentTarget.play()}
+                    onMouseLeave={(e) => e.currentTarget.pause()}
+                  />
+
+                  {/* Floating Setting Badge */}
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-bold text-indigo-300 shadow-md flex items-center gap-1">
+                    <Film size={10} />
+                    <span>{item.effects?.length} تأثيرات</span>
                   </div>
 
-        <UpgradeModal 
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-        />
+                  {/* Hover Overlay & Direct Download / Delete */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex items-end justify-between">
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-white block">فيديو معالج</span>
+                      <span className="text-[10px] text-gray-300 block">{item.time}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteModal({ isOpen: true, type: 'single', id: item.id || idx });
+                        }}
+                        className="p-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-white shadow-lg transition-transform active:scale-95"
+                        title="حذف الفيديو"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadMediaDirectly(item.video_url, `effects-${Date.now()}.mp4`);
+                        }}
+                        className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg transition-transform active:scale-95"
+                        title="تحميل مباشر دون فتح صفحة جديدة"
+                      >
+                        <Download size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* 3. Clean Empty State if no history and not generating */}
+              {history.length === 0 && !isGenerating && (
+                <div className="col-span-full py-16 flex flex-col items-center justify-center text-center p-6 rounded-2xl border border-dashed border-white/[0.08] bg-[#0B0D14]/50">
+                  <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-indigo-400 mb-3">
+                    <Wand2 size={26} />
+                  </div>
+                  <h3 className="text-sm font-bold text-white">لا توجد نتائج سابقة بعد</h3>
+                </div>
+              )}
+
+            </div>
+
+          </main>
+
         </div>
       </div>
+      <AIDeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmDelete}
+        type={deleteModal.type}
+        itemType="فيديو"
+        isDeleting={isDeletingModal}
+      />
     </>
   );
 }

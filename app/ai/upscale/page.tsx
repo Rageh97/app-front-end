@@ -10,6 +10,8 @@ import { toast, Toaster } from 'react-hot-toast';
 import { ArrowRight, Maximize, Sparkles, Upload, Zap, Image as ImageIcon, Download, X, RefreshCw, CreditCard, Crown, ChevronLeft, ArrowLeft, ShieldCheck, Trash2, Coins } from 'lucide-react';
 import TextType from "@/components/TextType";
 import { PremiumButton } from "@/components/PremiumButton";
+import { AIToolHeader, AIGenerateButton, AILoadingOverlay, AIDeleteModal } from "@/components/ai";
+import { useAiPricing } from '@/hooks/useAiPricing';
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -21,7 +23,7 @@ type CreditsRecord = {
   remaining_credits: number;
   endedAt: string;
   createdAt: string;
-  plan?: { plan_id: number; plan_name: string; period: string; credits_per_image: number; tokens_per_credit: number };
+  plan?: { plan_id: number; plan_name: string; period: string; credits_per_image: number; tokens_per_credit: number; image_profit?: number; };
 };
 
 const UPSCALE_OPTIONS = [
@@ -41,6 +43,45 @@ export default function ImageUpscalePage() {
   const [error, setError] = useState<string | null>(null);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'all';
+    id?: number | string | null;
+  }>({ isOpen: false, type: 'single', id: null });
+  const [isDeletingModal, setIsDeletingModal] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    setIsDeletingModal(true);
+    try {
+      if (deleteModal.type === 'single' && deleteModal.id !== undefined && deleteModal.id !== null) {
+        const imageId = Number(deleteModal.id);
+        if (apiBase) {
+          const token = getToken();
+          setUserImages(prev => prev.filter(img => img.id !== imageId));
+          await fetch(`${apiBase}/api/ai/user-images/${imageId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
+          });
+          toast.success('تم الحذف');
+        }
+      } else if (deleteModal.type === 'all') {
+        if (apiBase) {
+          const token = getToken();
+          setUserImages([]);
+          await fetch(`${apiBase}/api/ai/user-images?tool=upscale`, {
+            method: 'DELETE',
+            headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
+          });
+          toast.success('تم حذف السجل');
+        }
+      }
+      setDeleteModal({ isOpen: false, type: 'single', id: null });
+    } catch (e) {
+      toast.error('حدث خطأ أثناء الحذف');
+    } finally {
+      setIsDeletingModal(false);
+    }
+  };
   const [upscaleProgress, setUpscaleProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -136,7 +177,8 @@ export default function ImageUpscalePage() {
   };
 
   const selectedOption = UPSCALE_OPTIONS.find(option => option.id === selectedScale);
-  const baseCredits = selectedOption ? selectedOption.credits : 2;
+  const { operationPrice } = useAiPricing();
+  const baseCredits = operationPrice('image-upscale', 12);
   const creditsNeeded = baseCredits + imageProfit;
   const canUpscale = clientReady && !!originalImage && !isUpscaling;
 
@@ -259,42 +301,15 @@ export default function ImageUpscalePage() {
       if (res.status === 200) {
         const data = await res.json();
         if (data.success) {
-            setUserImages(data.images.map((img: any) => ({
-                id: img.image_id,
+            setUserImages(data.images.map((img: any) => ({id: img.image_id,
                 url: img.image_url || img.cloudinary_url,
-                prompt: img.prompt
-            })));
+                prompt: img.prompt, is_public: img.is_public })));
         }
       }
     } catch (e) {} finally { setLoadingImages(false); }
   };
 
-  const deleteImage = async (imageId: number) => {
-      if (!apiBase) return;
-      const token = getToken();
-      setUserImages(userImages.filter(img => img.id !== imageId));
-      try {
-          await fetch(`${apiBase}/api/ai/user-images/${imageId}`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم الحذف');
-      } catch (e) {}
-  };
 
-  const deleteAllImages = async () => {
-      if (!confirm('حذف جميع الصور؟')) return;
-      if (!apiBase) return;
-      const token = getToken();
-      setUserImages([]);
-      try {
-          await fetch(`${apiBase}/api/ai/user-images`, {
-              method: 'DELETE',
-              headers: { 'Authorization': token as any, "User-Client": (global as any)?.clientId1328 }
-          });
-          toast.success('تم حذف السجل');
-      } catch (e) {}
-  };
 
   useEffect(() => {
      if (clientReady) {
@@ -348,82 +363,35 @@ export default function ImageUpscalePage() {
         }}
       />
 
-      <div className="h-full bg-[#000000] text-white selection:bg-indigo-500/30 font-sans" dir="rtl">
+      <div className="h-full bg-[#06070B] text-white selection:bg-emerald-500/30 font-sans" dir="rtl">
         {/* Background Ambience */}
         <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
-        <div className="fixed top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-900/5 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="fixed bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-900/5 blur-[120px] rounded-full pointer-events-none"></div>
 
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
-          <div className="max-w-[1600px] mx-auto px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link 
-                  href="/ai" 
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-all border border-white/10"
-                >
-                  <ArrowRight size={16} />
-                  <span className="text-sm font-bold">عودة</span>
-                </Link>
-                
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold">تحسين الجودة</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
-                  {loadingBalance ? (
-                    <span className="text-[10px] text-gray-400">جاري التحميل...</span>
-                  ) : balance ? (
-                    <div className="flex items-center gap-2">
-                       <CreditCard size={12} className="text-indigo-400" />
-                      <span className="text-xs text-gray-300">الرصيد:</span>
-                      <span className={`text-sm font-bold ${
-                        balance.remaining_credits === 0 ? 'text-red-400' : 'text-indigo-400'
-                      }`}>
-                        {balance.remaining_credits}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-red-400">لا يوجد رصيد</span>
-                  )}
-                </div>
-                
-                <button
-                  onClick={openBuyModal}
-                  className="relative inline-flex h-8 active:scale-95 transition overflow-hidden rounded-lg p-[1px] focus:outline-none"
-                >
-                  <span
-                    className="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#4f46e5_0%,#818cf8_50%,#6366f1_100%)]"
-                  >
-                  </span>
-                  <span
-                    className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-lg bg-[#050505] px-3 text-[10px] font-black text-white backdrop-blur-3xl gap-1.5 transition-all hover:bg-black/40"
-                  >
-                    <Crown size={12} className="text-indigo-500" />
-                    شراء كريديت
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="تحسين جودة وتكبير الصور"
+          description="رفع دقة ووضوح الصور حتى 8x ومعالجة التفاصيل الدقيقة"
+          badge="AI Upscaler HD"
+          icon={Maximize}
+          iconGradient="from-emerald-600 to-teal-600"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={openBuyModal}
+          backHref="/ai"
+        />
 
         {/* Main Content */}
         <div className="max-w-[1600px] mx-auto p-4 lg:p-6">
           <div className="grid lg:grid-cols-12 gap-6 items-start">
             
-            {/* Left Column - Actions */}
-            <aside className="order-1 lg:col-span-4 space-y-4 lg:sticky lg:top-24">
-                <div className="bg-[#0c0c0c] rounded-2xl p-4 border border-white/5">
-                    <label className="block text-[10px] font-bold text-gray-500 mb-2 px-1 uppercase tracking-wider flex items-center gap-1.5">
-                        <Upload size={12} className="text-indigo-400" />
+            {/* Right Column - Actions */}
+            <aside className="lg:col-span-4 space-y-4 lg:sticky lg:top-24">
+                <div className="bg-[#0B0D14] rounded-2xl p-4 border border-white/[0.08]">
+                    <label className="block text-[10px] font-bold text-gray-400 mb-2 px-1 uppercase tracking-wider flex items-center gap-1.5">
+                        <Upload size={12} className="text-emerald-400" />
                         <span>ارفع الصورة</span>
                     </label>
                     <div 
-                    className="border border-dashed border-white/10 rounded-xl p-4 text-center hover:border-indigo-500/30 transition-all cursor-pointer group bg-white/[0.02]"
+                    className="border border-dashed border-white/[0.08] rounded-xl p-4 text-center hover:border-emerald-500/30 transition-all cursor-pointer group bg-[#121520] hover:bg-[#161a27]"
                     onClick={() => fileInputRef.current?.click()}
                     >
                     {originalImage ? (
@@ -433,7 +401,7 @@ export default function ImageUpscalePage() {
                                 alt="Original" 
                                 className="max-w-full max-h-40 mx-auto rounded-lg shadow-lg"
                             />
-                            <div className="text-indigo-400 text-[10px] font-bold flex items-center justify-center gap-1.5">
+                            <div className="text-emerald-400 text-[10px] font-bold flex items-center justify-center gap-1.5">
                                 <RefreshCw size={12} />
                                 تغيير الصورة
                             </div>
@@ -441,7 +409,7 @@ export default function ImageUpscalePage() {
                     ) : (
                         <div className="space-y-2 py-4">
                             <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mx-auto group-hover:scale-105 transition-transform">
-                                <Upload size={16} className="text-gray-500 group-hover:text-indigo-400 transition-colors" />
+                                <Upload size={16} className="text-gray-400 group-hover:text-emerald-400 transition-colors" />
                             </div>
                             <div>
                                 <p className="text-white text-[10px] font-bold">اضغط لرفع الملف</p>
@@ -460,9 +428,9 @@ export default function ImageUpscalePage() {
                 </div>
 
               {/* Options */}
-              <div className="bg-[#0c0c0c] rounded-2xl p-4 border border-white/5 group">
+              <div className="bg-[#0B0D14] rounded-2xl p-4 border border-white/[0.08] group">
                 <div className="flex items-center gap-1.5 mb-2 px-1">
-                       <Maximize size={12} className="text-indigo-400" />
+                       <Maximize size={12} className="text-emerald-400" />
                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">معامل التكبير</span>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -470,10 +438,10 @@ export default function ImageUpscalePage() {
                     <button
                       key={option.id}
                       onClick={() => setSelectedScale(option.id)}
-                      className={`flex flex-col items-center gap-0.5 p-2 rounded-lg transition-all duration-300 border relative overflow-hidden group/opt ${
+                      className={`flex flex-col items-center gap-0.5 p-2 rounded-xl transition-all duration-300 border relative overflow-hidden group/opt ${
                         selectedScale === option.id
-                          ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-300 backdrop-blur-xl'
-                          : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10 hover:bg-white/[0.08] hover:text-white'
+                          ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-300 font-bold'
+                          : 'bg-[#121520] border-white/[0.08] text-gray-400 hover:border-white/10 hover:bg-[#161a27] hover:text-white'
                       }`}
                     >
                       <span className="text-xs font-black relative z-10">{option.multiplier}x</span>
@@ -483,23 +451,16 @@ export default function ImageUpscalePage() {
                 </div>
 
                 {/* Action Button */}
-                <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                     <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                                <Coins size={10} className="text-yellow-500" />
-                            </div>
-                            <span>التكلفة المتوقعه:</span>
-                        </div>
-                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                     </div>
-
-                    <PremiumButton 
-                        label={isUpscaling ? "جاري التحسين..." : "تحسين الصورة الآن"}
-                        icon={isUpscaling ? RefreshCw : Zap}
+                <div className="mt-4 pt-4 border-t border-white/[0.08] space-y-3">
+                    <AIGenerateButton 
+                        label="إنشاء"
+                        generatingLabel="جاري الإنشاء..."
+                        icon={Zap}
+                        cost={creditsNeeded}
                         onClick={onUpscale}
+                        isGenerating={isUpscaling}
                         disabled={!canUpscale}
-                        className="w-full py-3 text-xs rounded-xl"
+                        variant="emerald"
                     />
                 </div>
               </div>
@@ -513,9 +474,8 @@ export default function ImageUpscalePage() {
             </aside>
 
             {/* Left Column - Results */}
-            <div className="lg:col-span-8 order-2 lg:order-1 space-y-4">
-              <div className="bg-[#080808] rounded-3xl border border-white/5 min-h-[400px] lg:min-h-[600px] flex items-center justify-center relative overflow-hidden group shadow-inner">
-                <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none"></div>
+            <div className="lg:col-span-8 space-y-4">
+              <div className="bg-[#0B0D14] rounded-3xl border border-white/[0.08] min-h-[400px] lg:min-h-[600px] flex items-center justify-center relative overflow-hidden group shadow-inner">
                 
                 {upscaledImage ? (
                   <div className="relative w-full h-full p-6 flex flex-col items-center justify-center group/result">
@@ -542,27 +502,14 @@ export default function ImageUpscalePage() {
                     </div>
                   </div>
                 ) : isUpscaling ? (
-                  <div className="text-center relative z-10 w-full max-w-xs px-6">
-                    <div className="w-20 h-20 relative mx-auto mb-6">
-                        <div className="absolute inset-0 rounded-full border-2 border-indigo-500/10"></div>
-                        <div className="absolute inset-0 rounded-full border-2 border-t-indigo-500 animate-spin"></div>
-                        <Sparkles className="absolute inset-0 m-auto text-indigo-400 animate-pulse" size={24} />
-                    </div>
-                    <div className="text-lg font-bold mb-2">جاري المعالجة...</div>
-                    <p className="text-gray-500 text-xs mb-6 font-medium">نقوم حالياً بإعادة بناء تفاصيل الصورة بدقة عالية</p>
-                    
-                    <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden mb-2">
-                      <div 
-                        className="bg-gradient-to-r from-indigo-500 to-purple-400 h-full rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
-                        style={{ width: `${upscaleProgress}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-indigo-400 font-mono text-xs font-bold">{Math.floor(upscaleProgress)}%</div>
-                  </div>
+                  <AILoadingOverlay
+                    isGenerating={isUpscaling}
+                    icon={Maximize}
+                  />
                 ) : (
                   <div className="text-center relative z-10 p-8">
                     <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 group-hover:scale-105 transition-all duration-500 shadow-xl overflow-hidden">
-                       <ImageIcon size={24} className="text-white/20 group-hover:text-indigo-500/40 transition-all duration-500" />
+                       <ImageIcon size={24} className="text-white/20 group-hover:text-emerald-500/40 transition-all duration-500" />
                     </div>
                     <h2 className="text-lg font-bold mb-2 text-gray-300">قبل وبعد</h2>
                     <p className="text-gray-600 max-w-[250px] mx-auto text-xs font-medium leading-relaxed">بمجرد الانتهاء، ستتمكن من رؤية الفرق المذهل في الوضوح وتفاصيل الصورة هنا</p>
@@ -574,13 +521,13 @@ export default function ImageUpscalePage() {
               <div className="mt-8 lg:col-span-12 border-t border-white/5 pt-6 order-3">
                    <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                         <ImageIcon size={14} className="text-indigo-400" />
+                         <ImageIcon size={14} className="text-emerald-400" />
                          <span className="text-sm font-bold text-white">تحسيناتك السابقة</span>
                       </div>
                       
                       {userImages.length > 0 && (
                           <button 
-                            onClick={deleteAllImages}
+                            onClick={() => setDeleteModal({ isOpen: true, type: 'all', id: null })}
                             className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-md text-[10px] font-bold transition-all"
                           >
                              <Trash2 size={12} />
@@ -606,7 +553,7 @@ export default function ImageUpscalePage() {
                                  />
                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
                                      <button 
-                                        onClick={() => deleteImage(img.id)}
+                                        onClick={() => setDeleteModal({ isOpen: true, type: 'single', id: img.id })}
                                         className="p-1.5 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all"
                                         title="حذف"
                                      >
@@ -645,12 +592,12 @@ export default function ImageUpscalePage() {
       {/* Buy Credits Modal */}
       {showBuyModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#111] rounded-3xl w-full max-w-lg border border-white/10 overflow-hidden relative" dir="rtl">
-            <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+          <div className="bg-[#0B0D14] rounded-3xl w-full max-w-lg border border-white/[0.08] overflow-hidden relative" dir="rtl">
+            <div className="absolute top-0 right-0 w-full h-1 bg-emerald-500"></div>
             
             <div className="p-6 border-b border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400">
                     <Crown size={20} />
                 </div>
                 <h2 className="text-xl font-bold text-white">شراء باقة نقاط</h2>
@@ -663,7 +610,7 @@ export default function ImageUpscalePage() {
             <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
               {loadingPlans ? (
                 <div className="text-center py-12">
-                  <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4"></div>
+                  <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
                   <div className="text-gray-400">جاري جلب الباقات...</div>
                 </div>
               ) : plans.length === 0 ? (
@@ -674,14 +621,14 @@ export default function ImageUpscalePage() {
                     <button
                       key={p.plan_id}
                       onClick={() => onSelectPlan(p.plan_id)}
-                      className="w-full p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-right transition-all border border-white/5 hover:border-indigo-500/50 group"
+                      className="w-full p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-right transition-all border border-white/5 hover:border-emerald-500/50 group"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-bold text-white text-lg group-hover:text-indigo-400 transition-colors">{p.plan_name}</div>
+                          <div className="font-bold text-white text-lg group-hover:text-emerald-400 transition-colors">{p.plan_name}</div>
                           <div className="text-gray-400 text-sm mt-1">{p.credits_per_period} نقطة رصيد / {p.period}</div>
                         </div>
-                        <div className="text-white font-bold text-xl bg-white/10 px-3 py-1 rounded-lg group-hover:bg-indigo-600">
+                        <div className="text-white font-bold text-xl bg-white/10 px-3 py-1 rounded-lg group-hover:bg-emerald-600">
                             {p.amount} <span className="bg-gradient-to-r from-[#FF0000] via-[#FFFFFF] to-[#000000] bg-clip-text text-transparent font-bold">IQD</span>
                         </div>
                       </div>
@@ -724,6 +671,14 @@ export default function ImageUpscalePage() {
       <UpgradeModal 
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
+      />
+
+      <AIDeleteModal
+        isOpen={deleteModal.isOpen}
+        type={deleteModal.type}
+        isDeleting={isDeletingModal}
+        onClose={() => setDeleteModal({ isOpen: false, type: 'single', id: null })}
+        onConfirm={handleConfirmDelete}
       />
     </>
   );

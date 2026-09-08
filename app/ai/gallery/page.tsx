@@ -75,40 +75,29 @@ export default function ProfessionalGalleryPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#000000] text-white selection:bg-purple-500/30 overflow-x-hidden font-sans" dir="rtl">
+        <div className="min-h-screen bg-[#06070B] text-white selection:bg-emerald-500/30 overflow-x-hidden font-sans" dir="rtl">
             <Toaster position="top-right" />
             
             {/* Ambient Background */}
-            <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,#1a0b2e_0%,transparent_50%)] pointer-events-none opacity-40"></div>
             <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
 
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-2xl border-b border-white/5">
+            <header className="sticky top-0 z-50 bg-[#0B0D14] backdrop-blur-2xl border-b border-white/[0.08]">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-6">
-                        <Link href="/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-xs font-bold">
+                        <Link href="/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#121520] border border-white/[0.08] hover:bg-[#161a27] transition-all text-xs font-bold text-gray-300 hover:text-white">
                             <ArrowRight size={14} /> عودة
                         </Link>
                         <div className="flex items-center gap-3">
-                          <div className="relative w-fit rounded-full overflow-hidden">
-               <Image
-                src="/images/icon.png.png"
-                alt="Logo"
-                width={50}
-                height={50}
-                className="rounded-full"
-              />
-              <BorderBeam size={50} duration={1} className="rounded-full" />
-             </div>
                             <div>
-                                <h1 className="text-lg md:text-xl font-black tracking-tight">معرض المحترفين</h1>
+                                <h1 className="text-lg md:text-xl font-bold tracking-tight">معرض المحترفين</h1>
                                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">إبداعات مجتمع نيكسوس</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Filter Tabs */}
-                    <div className="flex items-center p-1 bg-white/5 backdrop-blur-3xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+                    <div className="flex items-center p-1 bg-[#121520] rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden">
                         {[
                             { id: 'all', label: 'الكل', icon: LayoutGrid },
                             { id: 'image', label: 'الصور', icon: ImageIcon },
@@ -117,17 +106,14 @@ export default function ProfessionalGalleryPage() {
                             <button
                                 key={tab.id}
                                 onClick={() => { setFilterType(tab.id as any); setPage(1); }}
-                                className={`relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all duration-500 overflow-hidden group ${
+                                className={`relative flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all duration-300 overflow-hidden group ${
                                     filterType === tab.id 
-                                    ? 'text-white shadow-lg shadow-purple-900/40 ring-1 ring-white/10' 
-                                    : 'text-gray-500 hover:text-gray-200 hover:bg-white/5'
+                                    ? 'bg-emerald-600 text-white shadow-sm' 
+                                    : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
                                 }`}
                             >
-                                {filterType === tab.id && (
-                                    <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-100"></div>
-                                )}
                                 <span className="relative z-10 flex items-center gap-2">
-                                    <tab.icon size={16} className={filterType === tab.id ? 'animate-pulse' : ''} />
+                                    <tab.icon size={15} />
                                     {tab.label}
                                 </span>
                             </button>
@@ -141,12 +127,12 @@ export default function ProfessionalGalleryPage() {
                 {loading && gallery.length === 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-pulse">
                         {[...Array(12)].map((_, i) => (
-                            <div key={i} className="aspect-[4/5] bg-white/5 rounded-3xl border border-white/5"></div>
+                            <div key={i} className="aspect-[4/5] bg-[#0B0D14] rounded-2xl border border-white/[0.08]"></div>
                         ))}
                     </div>
                 ) : gallery.length === 0 ? (
                     <div className="py-32 text-center">
-                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-700">
+                        <div className="w-20 h-20 bg-[#121520] rounded-full flex items-center justify-center mx-auto mb-6 text-gray-600">
                              <Info size={40} />
                         </div>
                         <h2 className="text-xl font-bold text-white mb-2">لا يوجد محتوى في المعرض حالياً</h2>
@@ -158,7 +144,7 @@ export default function ProfessionalGalleryPage() {
                             <div 
                                 key={`${item.id || item.image_id || item.video_id}-${index}`}
                                 onClick={() => setSelectedItem(item)}
-                                className="break-inside-avoid group relative rounded-[2rem] overflow-hidden bg-[#0c0c0c] border border-white/5 hover:border-purple-500/30 transition-all duration-500 cursor-pointer shadow-2xl hover:translate-y-[-8px]"
+                                className="break-inside-avoid group relative rounded-2xl overflow-hidden bg-[#0B0D14] border border-white/[0.08] hover:border-emerald-500/30 transition-all duration-500 cursor-pointer shadow-2xl hover:translate-y-[-4px]"
                             >
                                 {/* Media Content */}
                                 {item.media_type === 'video' ? (

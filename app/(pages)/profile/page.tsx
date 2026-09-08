@@ -1,20 +1,31 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import Link from "next/link";
+import { toast, Toaster } from "react-hot-toast";
+import { useQueryClient } from "react-query";
 import {
   CalendarDays,
   Crown,
   Layers,
   Mail,
   ShieldCheck,
-  UserRound,
   Zap,
+  Lock,
+  Eye,
+  EyeOff,
+  User,
+  ShoppingBag,
+  RefreshCw,
+  Save,
+  KeyRound,
+  ArrowUpLeft,
+  Globe
 } from "lucide-react";
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
-import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useTranslation } from "react-i18next";
+import api from "@/utils/api";
 
 type ActiveSubscription = {
   type: "plan" | "pack" | "tool" | "credit";
@@ -27,17 +38,40 @@ type ActiveSubscription = {
 const Profile = () => {
   const { data } = useMyInfo();
   const { i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const isArabic = i18n.language?.toLowerCase().startsWith("ar");
 
-  const firstName = data?.userData?.firstName ?? "";
-  const lastName = data?.userData?.lastName ?? "";
-  const fullName = [firstName, lastName].filter(Boolean).join(" ") || "Nexus Member";
-  const initials = fullName
-    .split(" ")
-    .filter(Boolean)
-    .map((segment) => segment.trim().charAt(0)?.toUpperCase())
-    .slice(0, 2)
-    .join("") || "NM";
+  // Tab State: 3 focused tabs
+  const [activeTab, setActiveTab] = useState<"overview" | "personal" | "security">("overview");
 
+  // Personal Info Form State
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Security Form State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  // Synchronize state from user data
+  useEffect(() => {
+    if (data?.userData) {
+      setFirstName(data.userData.firstName || "");
+      setLastName(data.userData.lastName || "");
+    }
+  }, [data?.userData]);
+
+  const fullName = [firstName, lastName].filter(Boolean).join(" ") || (isArabic ? "عضو نكسس" : "Nexus Member");
+
+  useEffect(() => {
+    document.title = `${fullName} | Nexus Toolz`;
+  }, [fullName]);
+
+  // Determine active subscription
   const activeSubscription = useMemo<ActiveSubscription | null>(() => {
     const selectSoonestByExpiry = (items?: any[]) => {
       if (!items?.length) return null;
@@ -52,7 +86,7 @@ const Profile = () => {
     if (planRecord) {
       return {
         type: "plan" as const,
-        name: planRecord?.plan_name ?? "",
+        name: planRecord?.plan_name ?? (isArabic ? "عضوية بريميوم" : "Premium Membership"),
         endsAt: planRecord?.endedAt,
         startsAt: planRecord?.createdAt,
       };
@@ -62,7 +96,7 @@ const Profile = () => {
     if (packRecord) {
       const packName =
         data?.packsData?.find((pack: any) => pack.pack_id === packRecord.pack_id)
-          ?.pack_name ?? "Pack Access";
+          ?.pack_name ?? (isArabic ? "باقة أدوات" : "Tool Pack");
       return {
         type: "pack" as const,
         name: packName,
@@ -75,7 +109,7 @@ const Profile = () => {
     if (toolRecord) {
       const toolName =
         data?.toolsData?.find((tool: any) => tool.tool_id === toolRecord.tool_id)
-          ?.tool_name ?? "Active Tool";
+          ?.tool_name ?? (isArabic ? "أداة مفعلة" : "Active Tool");
       return {
         type: "tool" as const,
         name: toolName,
@@ -86,17 +120,17 @@ const Profile = () => {
 
     const creditRecord = selectSoonestByExpiry(data?.userCreditsData?.filter((c: any) => c.remaining_credits > 0));
     if (creditRecord) {
-        return {
-            type: "credit" as const,
-            name: creditRecord.plan_id === 1 ? "Starter AI" : creditRecord.plan_id === 2 ? "Pro AI" : "Business AI",
-            endsAt: creditRecord.endedAt,
-            startsAt: creditRecord.createdAt,
-            remaining: creditRecord.remaining_credits
-        };
+      return {
+        type: "credit" as const,
+        name: creditRecord.plan_id === 1 ? "Starter AI" : creditRecord.plan_id === 2 ? "Pro AI" : "Business AI",
+        endsAt: creditRecord.endedAt,
+        startsAt: creditRecord.createdAt,
+        remaining: creditRecord.remaining_credits
+      };
     }
 
     return null;
-  }, [data?.packsData, data?.toolsData, data?.userPacksData, data?.userPlansData, data?.userToolsData, data?.userCreditsData]);
+  }, [data?.packsData, data?.toolsData, data?.userPacksData, data?.userPlansData, data?.userToolsData, data?.userCreditsData, isArabic]);
 
   const planEndsAt = activeSubscription?.endsAt ?? null;
   const planCreatedAt = activeSubscription?.startsAt ?? null;
@@ -104,356 +138,575 @@ const Profile = () => {
     ? Math.max(dayjs(planEndsAt).diff(dayjs(), "day"), 0)
     : null;
 
-  const isArabic = i18n.language?.toLowerCase().startsWith("ar");
+  // Calculate total credits
+  const totalCredits = useMemo(() => {
+    return data?.userCreditsData?.reduce(
+      (total: number, credit: any) => total + Number(credit?.remaining_credits || 0),
+      0
+    ) || 0;
+  }, [data?.userCreditsData]);
 
-  useEffect(() => {
-    document.title = `${fullName} | Nexus Toolz`;
-  }, [fullName]);
+  // Handle Profile Update
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName.trim()) {
+      toast.error(isArabic ? "يرجى كتابة الاسم الأول" : "First name is required");
+      return;
+    }
 
-  const copy = useMemo(
-    () => ({
-      heroHeading: isArabic ? "ملفك الشخصي" : "Your Personal Hub",
-      heroSubheading: isArabic
-        ? "راجع تفاصيل الحساب، راقب الاشتراك، وتحكّم بمستواك الاحترافي في مكان واحد."
-        : "Review account details, monitor your plan, and stay in control from one professional view.",
-      ctaLabel: isArabic ? "تحديث أو ترقية الاشتراك" : "Upgrade or manage subscription",
-      accountSectionTitle: isArabic ? "بيانات الحساب" : "Account Information",
-      subscriptionSectionTitle: isArabic ? "تفاصيل الاشتراك" : "Subscription Overview",
-      stats: {
-        plan: isArabic ? "الخطة الحالية" : "Current Plan",
-        expiry: isArabic ? "تاريخ الانتهاء" : "Renewal / Expiry",
-        tools: isArabic ? "أدوات مفعلة" : "Active Tools",
-        packs: isArabic ? "باقات نشطة" : "Active Packs",
-      },
-      placeholders: {
-        noPlan: isArabic ? "لا يوجد اشتراك فعال" : "No active subscription",
-        noDate: isArabic ? "غير متاح" : "Not available",
-      },
-      accountFields: [
-        { label: isArabic ? "الاسم الأول" : "First Name", value: firstName || "—" },
-        { label: isArabic ? "الاسم الأخير" : "Last Name", value: lastName || "—" },
-        { label: isArabic ? "البريد الإلكتروني" : "Email Address", value: data?.userData?.email ?? "—" },
-        // { label: isArabic ? "معرّف المستخدم" : "User ID", value: data?.userData?.userId ? `NT-${data.userData.userId}` : "—" },
-        // { label: isArabic ? "دور الحساب" : "Role", value: mapRoleLabel(data?.userData?.role, isArabic) },
-      ],
-      subscriptionBadges: {
-        standard: isArabic ? "الوصول القياسي" : "Standard Access",
-        premium: isArabic ? "باقة بريميوم" : "Premium Experience",
-        vip: isArabic ? "باقة VIP" : "VIP Elite Access",
-      },
-      subscriptionHighlights: {
-        // coverageTitle: isArabic ? "التغطية" : "Coverage",
-        expiresTitle: isArabic ? "ينتهي في" : "Expires on",
-        remainingTitle: isArabic ? "المدة المتبقية" : "Time remaining",
-        activatedTitle: isArabic ? "تم التفعيل" : "Activated on",
-        upgradeTitle: isArabic ? "احصل على خطة احترافية خلال ثوانٍ" : "Unlock a professional-grade plan in seconds",
-        upgradeSubtitle: isArabic
-          ? "ارفع حدودك مع خطط موثوقة وشراكات عالمية."
-          : "Push beyond limits with curated plans and enterprise-grade reliability.",
-        upgradeAction: isArabic ? "اكتشف الخطط" : "Explore plans",
-      },
-      emptySubscriptionHint: isArabic
-        ? "لم يتم ربط أي اشتراك بعد. لا تفوّت الأدوات الحصرية والدعم المميز."
-        : "No subscription linked yet. Don’t miss out on exclusive tools and priority support.",
-    }),
-    [data?.userData?.email, data?.userData?.role, data?.userData?.userId, firstName, isArabic, lastName]
-  );
+    setIsSavingProfile(true);
+    try {
+      const res = await api.put("/api/user/profile", {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
 
-  const subscriptionDisplayName = getSubscriptionDisplayName(
-    activeSubscription,
-    copy,
-    isArabic
-  );
+      if (res.data?.success) {
+        toast.success(res.data.message || (isArabic ? "تم حفظ التعديلات بنجاح" : "Profile updated successfully"));
+        await queryClient.invalidateQueries(["userData"]);
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || (isArabic ? "فشل تحديث البيانات" : "Failed to update profile"));
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
-  const statCards = [
-    {
-      label: copy.stats.plan,
-      value: subscriptionDisplayName,
-      caption: activeSubscription
-        ? getSubscriptionCaption(activeSubscription, isArabic)
-        : copy.placeholders.noPlan,
-      icon: <Crown size={26} className="text-[#E1FE26]" />,
-      accent: "from-[#7b2ff7] to-[#f107a3]",
-    },
-    {
-      label: copy.stats.expiry,
-      value: planEndsAt ? fullDateTimeFormat(planEndsAt) : copy.placeholders.noDate,
-      caption:
-        remainingDays !== null
-          ? `${remainingDays} ${isArabic ? "يوم متبقٍ" : "days left"}`
-          : isArabic
-          ? "تحديث الاشتراك يبقي خدماتك فعّالة"
-          : "Stay active by keeping your plan current",
-      icon: <CalendarDays size={26} className="text-[#FBD38D]" />,
-      accent: "from-[#ff7702] to-[#ff9865]",
-    },
-    {
-      label: copy.stats.tools,
-      value: data?.userToolsData?.length ?? 0,
-      caption: isArabic ? "أدوات قابلة للإطلاق الآن" : "Launch-ready tools today",
-      icon: <Layers size={26} className="text-[#6EE7B7]" />,
-      accent: "from-[#00c48c] to-[#038a87]",
-    },
-    {
-      label: copy.stats.packs,
-      value: data?.userPacksData?.length ?? 0,
-      caption: isArabic ? "باقات فعالة" : "Packs currently active",
-      icon: <ShieldCheck size={26} className="text-[#93C5FD]" />,
-      accent: "from-[#4f46e5] to-[#7c3aed]",
-    },
-  ];
+  // Handle Password Update
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      toast.error(isArabic ? "يرجى كتابة كلمة المرور الحالية" : "Current password required");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error(isArabic ? "كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل" : "New password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error(isArabic ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
+      return;
+    }
+
+    setIsSavingPassword(true);
+    try {
+      const res = await api.put("/api/user/password", {
+        currentPassword,
+        newPassword,
+      });
+
+      if (res.data?.success) {
+        toast.success(res.data.message || (isArabic ? "تم تحديث كلمة المرور بنجاح" : "Password updated successfully"));
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || (isArabic ? "كلمة المرور الحالية غير صحيحة" : "Failed to update password"));
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
   return (
-    <div className="space-y-8 py-8">
-      <section className="relative overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#4f008c,#190237,#0c061c)] p-6 md:p-10 text-white shadow-[0_25px_80px_rgba(15,3,41,0.55)] inner-shadow">
-        <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_55%)]" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/30 bg-white/10 text-2xl font-semibold tracking-widest">
-              {initials}
-            </div>
-            <div>
-              <p className="text-lg uppercase tracking-[0.3em] text-white">{copy.heroHeading}</p>
-              <h1 className="text-3xl font-bold md:text-4xl">{fullName}</h1>
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-1 text-sm text-white/80">
-                <Mail size={16} /> {data?.userData?.email ?? "user@nexustoolz.com"}
-              </div>
-            </div>
-          </div>
-          {/* <div className="space-y-3 text-sm text-white/80 lg:max-w-xl">
-            <p>{copy.heroSubheading}</p>
-            <Link
-              href="/plans"
-              className="inline-flex items-center gap-2 rounded-2xl bg-[#00c48c] px-5 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-lg transition duration-300 hover:bg-[#19f9b5]"
-            >
-              <Zap size={18} />
-              {copy.ctaLabel}
-            </Link>
-          </div> */}
-        </div>
-      </section>
+    <div className="min-h-screen bg-[#06070B] text-white -mx-2 sm:-mx-4 md:-mx-6 lg:-mx-8 py-8" dir={isArabic ? "rtl" : "ltr"}>
+      <Toaster position="top-center" reverseOrder={false} />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {statCards.map((card, index) => (
-          <div
-            key={card.label}
-            className={`relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#1a1030,#0d061f)] p-5 border border-white/10 shadow-lg`}
-          >
-            <div
-              className={`absolute inset-0 opacity-40 bg-gradient-to-br ${card.accent}`}
-            />
-            <div className="relative flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <p className="text-lg uppercase tracking-[0.2em] text-white">{card.label}</p>
-                <div className="rounded-full bg-black/20 p-2">{card.icon}</div>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-white">{card.value}</p>
-                {card.caption && <p className="text-sm text-white/70 mt-1">{card.caption}</p>}
-              </div>
-            </div>
-          </div>
-        ))}
-      </section>
+      <div className="mx-auto max-w-[1460px] px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        {/* ─── Hero Profile Header Card ─── */}
+        <section className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0B0D14] p-6 sm:p-8 shadow-2xl">
+          {/* Subtle Top Accent Sheen Line */}
+          <div className="pointer-events-none absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
+          
+          {/* Permanent Subtle Ambient Sheen */}
+          <div className="pointer-events-none absolute -top-16 -right-16 w-56 h-56 rounded-full bg-emerald-500/[0.06] blur-3xl" />
 
-      <section className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-3xl border border-white/10 bg-[#19023780] p-6 shadow-[0_20px_60px_rgba(4,0,20,0.35)]">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <UserRound className="text-[#00c48c]" />
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-[#00c48c]">{copy.accountSectionTitle}</p>
-                <h2 className="text-xl font-semibold text-white">{fullName}</h2>
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            
+            {/* User Identification Block (Clean name and email without avatar or badges) */}
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-black text-white">{fullName}</h1>
+              <div className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+                <Mail size={14} className="text-emerald-400" />
+                <span>{data?.userData?.email || "user@nexustoolz.com"}</span>
               </div>
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {copy.accountFields.map((field) => (
-                <div key={field.label} className="rounded-2xl bg-white/5 p-4 border border-white/10">
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#00c48c]">{field.label}</p>
-                  <p className="mt-1 text-lg font-semibold text-white">{field.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        <div className="rounded-3xl  bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_55%)] p-6 shadow-[0_25px_80px_rgba(10,0,20,0.8)]">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-            <Crown className="text-[#ffcc00]" />
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-[#00c48c]">{copy.subscriptionSectionTitle}</p>
-              <h3 className="text-xl font-semibold text-white">
-                {subscriptionDisplayName}
-              </h3>
-            </div>
-          </div>
-          {activeSubscription ? (
-            <div className="mt-6 space-y-5">
-              <InfoLine
-                title={copy.subscriptionHighlights.coverageTitle}
-                value={getSubscriptionCoverage(activeSubscription, isArabic)}
-              />
-              <InfoLine
-                title={copy.subscriptionHighlights.expiresTitle}
-                value={planEndsAt ? fullDateTimeFormat(planEndsAt) : copy.placeholders.noDate}
-              />
-              <InfoLine
-                title={copy.subscriptionHighlights.remainingTitle}
-                value={
-                  remainingDays !== null
-                    ? `${remainingDays} ${isArabic ? "يوم" : "days"}`
-                    : copy.placeholders.noDate
-                }
-              />
-              <InfoLine
-                title={copy.subscriptionHighlights.activatedTitle}
-                value={planCreatedAt ? fullDateTimeFormat(planCreatedAt) : copy.placeholders.noDate}
-              />
-              {/* <Link
-                href="/plans"
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/30 px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/10"
-              >
-                <ShieldCheck size={18} />
-                {copy.ctaLabel}
-              </Link> */}
-            </div>
-          ) : (
-            <div className="mt-6 space-y-4 text-white/80">
-              <p className="text-lg font-semibold">{copy.subscriptionHighlights.upgradeTitle}</p>
-              <p className="text-sm">{copy.subscriptionHighlights.upgradeSubtitle}</p>
-              <p className="rounded-2xl border border-dashed border-white/30 bg-white/5 p-4 text-sm">
-                {copy.emptySubscriptionHint}
-              </p>
+            {/* Quick Actions (Without devices button) */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-2 lg:pt-0">
               <Link
                 href="/plans"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#ff7702] px-4 py-3 text-sm font-semibold uppercase tracking-wide text-black shadow-lg transition hover:bg-[#ff9d4d]"
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-bold text-[#06080e] transition hover:bg-emerald-400 shadow-md shadow-emerald-500/20"
               >
-                <Zap size={18} />
-                {copy.subscriptionHighlights.upgradeAction}
+                <Crown size={15} />
+                <span>{isArabic ? "ترقية / تجديد الاشتراك" : "Upgrade / Renew"}</span>
+              </Link>
+              <Link
+                href="/orders"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-[#121520] px-4 py-2.5 text-xs font-bold text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                <ShoppingBag size={15} />
+                <span>{isArabic ? "سجل الطلبات" : "Order History"}</span>
               </Link>
             </div>
-          )}
+
+          </div>
+        </section>
+
+        {/* ─── 4 Sleek Key Metric Cards ─── */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          
+          {/* Stat 1: Current Plan */}
+          <div className="relative overflow-hidden rounded-xl bg-[#0B0D14] border border-white/[0.08] p-5 shadow-lg flex flex-col justify-between group hover:border-emerald-500/30 transition-all">
+            <div className="pointer-events-none absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-zinc-400">{isArabic ? "الخطة والاشتراك" : "Current Plan"}</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Crown size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-lg font-black text-white truncate">
+                {activeSubscription?.name || (isArabic ? "لا يوجد اشتراك نشط" : "No Active Plan")}
+              </p>
+              <p className="text-[11px] text-zinc-400 mt-1 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                {activeSubscription 
+                  ? (isArabic ? "خطة عضوية فعالة" : "Active Entitlement") 
+                  : (isArabic ? "اختر باقة للبدء" : "Select plan to activate")}
+              </p>
+            </div>
+          </div>
+
+          {/* Stat 2: Expiry & Renewal */}
+          <div className="relative overflow-hidden rounded-xl bg-[#0B0D14] border border-white/[0.08] p-5 shadow-lg flex flex-col justify-between group hover:border-sky-500/30 transition-all">
+            <div className="pointer-events-none absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-sky-400/20 to-transparent" />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-zinc-400">{isArabic ? "صلاحية الحساب" : "Expiration Date"}</span>
+              <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <CalendarDays size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-lg font-black text-white truncate">
+                {planEndsAt ? dayjs(planEndsAt).format("YYYY/MM/DD") : (isArabic ? "غير محدد" : "Not Set")}
+              </p>
+              <p className="text-[11px] text-zinc-400 mt-1">
+                {remainingDays !== null 
+                  ? `${remainingDays} ${isArabic ? "يوم متبقٍ في الاشتراك" : "days remaining"}` 
+                  : (isArabic ? "التجديد متاح في أي وقت" : "Renewal available anytime")}
+              </p>
+            </div>
+          </div>
+
+          {/* Stat 3: AI Credits */}
+          <div className="relative overflow-hidden rounded-xl bg-[#0B0D14] border border-white/[0.08] p-5 shadow-lg flex flex-col justify-between group hover:border-amber-500/30 transition-all">
+            <div className="pointer-events-none absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-amber-400/20 to-transparent" />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-zinc-400">{isArabic ? "رصيد نقاط AI" : "AI Balance"}</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Zap size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-white">{totalCredits.toLocaleString()}</span>
+                <span className="text-xs text-zinc-400">{isArabic ? "نقطة" : "pts"}</span>
+              </div>
+              <p className="text-[11px] text-amber-400/90 mt-1">
+                {totalCredits > 0 ? (isArabic ? "جاهز لجميع أدوات AI" : "Ready for AI Studio") : (isArabic ? "اشحن نقاط للبدء" : "Top up to generate")}
+              </p>
+            </div>
+          </div>
+
+          {/* Stat 4: Active Tools & Packs */}
+          <div className="relative overflow-hidden rounded-xl bg-[#0B0D14] border border-white/[0.08] p-5 shadow-lg flex flex-col justify-between group hover:border-violet-500/30 transition-all">
+            <div className="pointer-events-none absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-zinc-400">{isArabic ? "الأدوات والباقات" : "Active Tools & Packs"}</span>
+              <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                <ShieldCheck size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-white">
+                  {(data?.userToolsData?.length || 0) + (data?.userPacksData?.length || 0)}
+                </span>
+                <span className="text-xs text-zinc-400">{isArabic ? "خدمة مفعلة" : "active"}</span>
+              </div>
+              <p className="text-[11px] text-zinc-400 mt-1">
+                {isArabic ? "وصول سحابي مباشر ومحمي" : "Direct cloud protected access"}
+              </p>
+            </div>
+          </div>
+
+        </section>
+
+        {/* ─── Modern Tabs Navigation (3 Tabs) ─── */}
+        <div className="flex border-b border-white/[0.08] gap-2 overflow-x-auto no-scrollbar pb-px">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all shrink-0 ${
+              activeTab === "overview"
+                ? "border-emerald-400 text-emerald-400 bg-emerald-500/[0.04]"
+                : "border-transparent text-zinc-400 hover:text-white hover:border-zinc-700"
+            }`}
+          >
+            <Crown size={15} />
+            <span>{isArabic ? "نظرة عامة والاشتراك" : "Overview & Subscription"}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("personal")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all shrink-0 ${
+              activeTab === "personal"
+                ? "border-emerald-400 text-emerald-400 bg-emerald-500/[0.04]"
+                : "border-transparent text-zinc-400 hover:text-white hover:border-zinc-700"
+            }`}
+          >
+            <User size={15} />
+            <span>{isArabic ? "البيانات الشخصية" : "Personal Information"}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("security")}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-bold border-b-2 transition-all shrink-0 ${
+              activeTab === "security"
+                ? "border-emerald-400 text-emerald-400 bg-emerald-500/[0.04]"
+                : "border-transparent text-zinc-400 hover:text-white hover:border-zinc-700"
+            }`}
+          >
+            <Lock size={15} />
+            <span>{isArabic ? "الأمان وكلمة المرور" : "Security & Password"}</span>
+          </button>
         </div>
-      </section>
+
+        {/* ─── Tab 1: Overview & Subscription Details ─── */}
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Left: Active Subscription Details (7 cols) */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="rounded-xl border border-white/[0.08] bg-[#0B0D14] p-6 space-y-5">
+                <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <Crown size={18} className="text-emerald-400" />
+                    <h3 className="text-base font-bold text-white">
+                      {isArabic ? "تفاصيل الخطة والعضوية" : "Membership Plan Details"}
+                    </h3>
+                  </div>
+                  {activeSubscription ? (
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+                      {isArabic ? "نشط ومفعل" : "Active"}
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 text-xs font-bold">
+                      {isArabic ? "غير نشط" : "Inactive"}
+                    </span>
+                  )}
+                </div>
+
+                {activeSubscription ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-3.5 rounded-lg bg-[#121520] border border-white/[0.06] space-y-1">
+                      <span className="text-[10px] text-zinc-400 block font-medium">{isArabic ? "اسم الخطة" : "Plan Name"}</span>
+                      <p className="text-sm font-bold text-white">{activeSubscription.name}</p>
+                    </div>
+                    <div className="p-3.5 rounded-lg bg-[#121520] border border-white/[0.06] space-y-1">
+                      <span className="text-[10px] text-zinc-400 block font-medium">{isArabic ? "نوع الاشتراك" : "Type"}</span>
+                      <p className="text-sm font-bold text-emerald-400 uppercase">{activeSubscription.type}</p>
+                    </div>
+                    <div className="p-3.5 rounded-lg bg-[#121520] border border-white/[0.06] space-y-1">
+                      <span className="text-[10px] text-zinc-400 block font-medium">{isArabic ? "تاريخ التفعيل" : "Activated On"}</span>
+                      <p className="text-sm font-bold text-white">
+                        {planCreatedAt ? dayjs(planCreatedAt).format("YYYY/MM/DD") : "—"}
+                      </p>
+                    </div>
+                    <div className="p-3.5 rounded-lg bg-[#121520] border border-white/[0.06] space-y-1">
+                      <span className="text-[10px] text-zinc-400 block font-medium">{isArabic ? "تاريخ الانتهاء" : "Expires On"}</span>
+                      <p className="text-sm font-bold text-white">
+                        {planEndsAt ? dayjs(planEndsAt).format("YYYY/MM/DD") : "—"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 space-y-3">
+                    <p className="text-sm text-zinc-400 leading-relaxed">
+                      {isArabic 
+                        ? "لم يتم العثور على أي اشتراك نشط حالياً. اشترك الآن في باقات NEXUS للوصول لأقوى الأدوات العالمية واستوديو الذكاء الاصطناعي."
+                        : "No active subscription found. Upgrade now to get access to top-tier global tools and NEXUS AI Studio."}
+                    </p>
+                    <Link
+                      href="/plans"
+                      className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-xs font-bold text-[#06080e] transition hover:bg-emerald-400 shadow-md"
+                    >
+                      <Crown size={14} />
+                      <span>{isArabic ? "اكتشف الباقات والخطط" : "Explore Plans"}</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Active Entitlements & Tools (5 cols) */}
+            <div className="lg:col-span-5 space-y-6">
+              <div className="rounded-xl border border-white/[0.08] bg-[#0B0D14] p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck size={18} className="text-emerald-400" />
+                    <h3 className="text-base font-bold text-white">
+                      {isArabic ? "الخدمات المتاحة لحسابك" : "Your Activated Services"}
+                    </h3>
+                  </div>
+                  <Link href="/subscriptions" className="text-[11px] text-emerald-400 hover:text-emerald-300 transition-colors">
+                    {isArabic ? "عرض الكل" : "View All"}
+                  </Link>
+                </div>
+
+                <div className="space-y-2.5">
+                  {/* Web Tools Count */}
+                  <div className="p-3 rounded-lg bg-[#121520] border border-white/[0.06] flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <Globe size={15} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">{isArabic ? "أدوات المواقع الفردية" : "Individual Tools"}</span>
+                        <span className="text-[10px] text-zinc-400">{data?.userToolsData?.length || 0} {isArabic ? "أداة مفعلة" : "tools active"}</span>
+                      </div>
+                    </div>
+                    <Link href="/dashboard/web-tools" className="text-xs text-zinc-400 hover:text-white p-1">
+                      <ArrowUpLeft size={14} />
+                    </Link>
+                  </div>
+
+                  {/* Packs Count */}
+                  <div className="p-3 rounded-lg bg-[#121520] border border-white/[0.06] flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
+                        <Layers size={15} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">{isArabic ? "باقات الأدوات الشاملة" : "Tool Bundles"}</span>
+                        <span className="text-[10px] text-zinc-400">{data?.userPacksData?.length || 0} {isArabic ? "باقة مفعلة" : "packs active"}</span>
+                      </div>
+                    </div>
+                    <Link href="/subscriptions" className="text-xs text-zinc-400 hover:text-white p-1">
+                      <ArrowUpLeft size={14} />
+                    </Link>
+                  </div>
+
+                  {/* AI Studio Credits */}
+                  <div className="p-3 rounded-lg bg-[#121520] border border-white/[0.06] flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+                        <Zap size={15} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">{isArabic ? "استوديو الذكاء الاصطناعي" : "AI Studio Access"}</span>
+                        <span className="text-[10px] text-zinc-400">{totalCredits} {isArabic ? "نقطة رصيد متاحة" : "credits ready"}</span>
+                      </div>
+                    </div>
+                    <Link href="/ai" className="text-xs text-zinc-400 hover:text-white p-1">
+                      <ArrowUpLeft size={14} />
+                    </Link>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ─── Tab 2: Personal Information Form (Without Avatar) ─── */}
+        {activeTab === "personal" && (
+          <div className="max-w-2xl space-y-6">
+            <form onSubmit={handleUpdateProfile} className="rounded-xl border border-white/[0.08] bg-[#0B0D14] p-6 sm:p-8 space-y-6">
+              <div className="border-b border-white/[0.06] pb-4">
+                <h3 className="text-base font-bold text-white">
+                  {isArabic ? "تعديل البيانات الشخصية" : "Edit Personal Details"}
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {isArabic ? "حدّث اسمك الشخصي المسجل في حسابك بمنصة NEXUS." : "Update your personal name registered in NEXUS."}
+                </p>
+              </div>
+
+              {/* Name Inputs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-300 block">
+                    {isArabic ? "الاسم الأول" : "First Name"}
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder={isArabic ? "أدخل الاسم الأول..." : "First name"}
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#121520] border border-white/[0.08] text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-300 block">
+                    {isArabic ? "الاسم الأخير" : "Last Name"}
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder={isArabic ? "أدخل الاسم الأخير..." : "Last name"}
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#121520] border border-white/[0.08] text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+                  />
+                </div>
+              </div>
+
+              {/* Email (Readonly) */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  {isArabic ? "البريد الإلكتروني" : "Email Address"}
+                </label>
+                <input
+                  type="email"
+                  value={data?.userData?.email || ""}
+                  disabled
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#0E1017] border border-white/[0.04] text-zinc-400 text-xs sm:text-sm cursor-not-allowed"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-xs font-bold text-[#06080e] transition hover:bg-emerald-400 disabled:opacity-50 shadow-md shadow-emerald-500/20"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>{isArabic ? "جاري الحفظ..." : "Saving..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={14} />
+                      <span>{isArabic ? "حفظ التغييرات" : "Save Changes"}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ─── Tab 3: Security & Password ─── */}
+        {activeTab === "security" && (
+          <div className="max-w-2xl space-y-6">
+            <form onSubmit={handleUpdatePassword} className="rounded-xl border border-white/[0.08] bg-[#0B0D14] p-6 sm:p-8 space-y-6">
+              <div className="border-b border-white/[0.06] pb-4">
+                <h3 className="text-base font-bold text-white">
+                  {isArabic ? "تغيير كلمة المرور" : "Change Password"}
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1">
+                  {isArabic ? "اختر كلمة مرور قوية لحماية حسابك واشتراكاتك في المنصة." : "Choose a strong password to safeguard your account."}
+                </p>
+              </div>
+
+              {/* Current Password */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  {isArabic ? "كلمة المرور الحالية" : "Current Password"}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPass ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#121520] border border-white/[0.08] text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  >
+                    {showCurrentPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  {isArabic ? "كلمة المرور الجديدة" : "New Password"}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPass ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2.5 rounded-lg bg-[#121520] border border-white/[0.08] text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  >
+                    {showNewPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <span className="text-[10px] text-zinc-500 block">
+                  {isArabic ? "يجب ألا تقل عن 6 أحرف" : "Must be at least 6 characters"}
+                </span>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-300 block">
+                  {isArabic ? "تأكيد كلمة المرور الجديدة" : "Confirm New Password"}
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-[#121520] border border-white/[0.08] text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+                  required
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSavingPassword}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-5 py-2.5 text-xs font-bold text-[#06080e] transition hover:bg-emerald-400 disabled:opacity-50 shadow-md shadow-emerald-500/20"
+                >
+                  {isSavingPassword ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>{isArabic ? "جاري التحديث..." : "Updating..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound size={14} />
+                      <span>{isArabic ? "تحديث كلمة المرور" : "Update Password"}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 };
-
-const mapRoleLabel = (role?: string, isArabic?: boolean) => {
-  if (!role) {
-    return isArabic ? "عضو" : "Member";
-  }
-  const labels: Record<string, { ar: string; en: string }> = {
-    admin: { en: "Administrator", ar: "مسؤول" },
-    manager: { en: "Manager", ar: "مدير" },
-    supervisor: { en: "Supervisor", ar: "مشرف" },
-    employee: { en: "Team Member", ar: "موظف" },
-    user: { en: "Member", ar: "عضو" },
-  };
-  const normalized = role.toLowerCase();
-  return isArabic ? labels[normalized]?.ar ?? "عضو" : labels[normalized]?.en ?? "Member";
-};
-
-const getSubscriptionDisplayName = (
-  subscription: ActiveSubscription | null,
-  copy: any,
-  isArabic: boolean
-) => {
-  if (!subscription) {
-    return copy.placeholders.noPlan;
-  }
-
-  if (subscription.type === "plan") {
-    const key = subscription.name?.toLowerCase();
-    return (
-      copy.subscriptionBadges[key as keyof typeof copy.subscriptionBadges] ??
-      subscription.name?.toUpperCase()
-    );
-  }
-
-  if (subscription.type === "pack") {
-    return `${isArabic ? "باقة" : "Pack"} • ${subscription.name}`;
-  }
-  
-  if (subscription.type === "credit") {
-     return `${isArabic ? "خطة ذكاء" : "AI Plan"} • ${subscription.name}`;
-  }
-
-  return `${isArabic ? "أداة" : "Tool"} • ${subscription.name}`;
-};
-
-const getSubscriptionCaption = (
-  subscription: ActiveSubscription | null,
-  isArabic: boolean
-) => {
-  if (!subscription) {
-    return "";
-  }
-
-  switch (subscription.type) {
-    case "plan":
-      return isArabic ? "خطة عضوية فعّالة" : "Active membership plan";
-    case "pack":
-      return isArabic ? "باقات قيد التفعيل" : "Active pack entitlement";
-    case "credit":
-       return isArabic ? `رصيد نشط: ${subscription.remaining} نقطة` : `Active Balance: ${subscription.remaining} Credits`;
-    case "tool":
-    default:
-      return isArabic ? "أداة مفعّلة" : "Active tool access";
-  }
-};
-
-const getPlanCoverage = (planName: string, isArabic: boolean) => {
-  const coverage: Record<string, { ar: string; en: string }> = {
-    standard: {
-      en: "Essential toolkit with daily access to core services.",
-      ar: "أدوات أساسية مع وصول يومي إلى الخدمات الرئيسية.",
-    },
-    premium: {
-      en: "Extended catalog + faster support response windows.",
-      ar: "كتالوج موسّع مع سرعة أعلى في استجابة الدعم.",
-    },
-    vip: {
-      en: "Full suite, priority queue, and concierge onboarding.",
-      ar: "الوصول الكامل، دعم فوري، وخدمة مرافقة متخصصة.",
-    },
-  };
-  const normalized = planName?.toLowerCase();
-  return isArabic ? coverage[normalized]?.ar ?? coverage.standard.ar : coverage[normalized]?.en ?? coverage.standard.en;
-};
-
-const getSubscriptionCoverage = (
-  subscription: ActiveSubscription | null,
-  isArabic: boolean
-) => {
-  if (!subscription) {
-    return isArabic ? "لا يوجد اشتراك فعّال" : "No active subscription";
-  }
-
-  if (subscription.type === "plan") {
-    return getPlanCoverage(subscription.name, isArabic);
-  }
-
-  if (subscription.type === "credit") {
-      return isArabic ? "وصول شامل لأدوات الذكاء الاصطناعي مع رصيد نقاط." : "Full access to AI tools with credit balance.";
-  }
-
-  // if (subscription.type === "pack") {
-  //   return isArabic
-  //     ? "باقة أدوات مختارة بوقت صلاحية محدد."
-  //     : "Curated tool pack with a defined validity window.";
-  // }
-
-  // return isArabic
-  //   ? "وصول مخصص لأداة واحدة بمدة صلاحية محدودة."
-  //   : "Single tool entitlement with a limited validity period.";
-};
-
-const InfoLine = ({ title, value }: { title: string; value: string }) => (
-  <div className="rounded-2xl  bg-black/10 px-4 py-3 text-sm text-white/80">
-    <p className="text-xs uppercase tracking-[0.2em] text-[#00c48c]">{title}</p>
-    <p className="mt-1 text-base font-semibold text-white">{value}</p>
-  </div>
-);
 
 export default Profile;

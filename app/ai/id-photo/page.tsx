@@ -11,7 +11,9 @@ import {
   RefreshCw, Image as ImageIcon, CreditCard, Crown, 
   Trash2, Maximize2, Plus, Info, Coins, Check
 } from 'lucide-react';
-import { PremiumButton } from "@/components/PremiumButton";
+import { AIToolHeader, AIGenerateButton, AIGenerationCard, AIResultModal, AIResultsGallery, downloadMediaDirectly } from "@/components/ai";
+import { handleAuthError } from "@/utils/auth";
+import { useAiPricing } from '@/hooks/useAiPricing';
 
 type CreditsRecord = {
   users_credits_id: number;
@@ -50,10 +52,9 @@ export default function IDPhotoPage() {
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [openPaymentModal, setOpenPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
-  const [dynamicPricing, setDynamicPricing] = useState<any>({});
-
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL, []);
-  const baseCredits = dynamicPricing['id-photo'] || 13;
+  const { operationPrice } = useAiPricing();
+  const baseCredits = operationPrice('id-photo', 13);
   const imageProfit = balance?.plan?.image_profit ?? 0;
   const creditsNeeded = baseCredits + imageProfit;
 
@@ -79,15 +80,46 @@ export default function IDPhotoPage() {
       if (res.status === 200) {
         const data = await res.json();
         if (data.success) {
-          setUserImages(data.images.map((img: any) => ({
-            id: img.image_id, url: img.image_url || img.cloudinary_url, date: img.created_at, metadata: img.metadata
-          })));
+          setUserImages(data.images.map((img: any) => ({id: img.image_id, url: img.image_url || img.cloudinary_url, date: img.created_at, metadata: img.metadata, is_public: img.is_public })));
         }
       }
     } catch (e) {} finally { setLoadingImages(false); }
   };
 
-  useEffect(() => {
+  
+  const handleDeleteSingle = async (id: number | string) => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/ai/user-images/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': getToken() as any, "User-Client": (global as any)?.clientId1328 }
+      });
+      setUserImages(prev => prev.filter(img => img.id !== id && img.image_id !== id));
+      toast.success('تم حذف النتيجة بنجاح');
+      if (selectedImage && (selectedImage.id === id || selectedImage.image_id === id)) {
+        setSelectedImage(null);
+      }
+    } catch (e) {
+      toast.error('فشل حذف النتيجة');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!apiBase) return;
+    try {
+      const res = await fetch(`${apiBase}/api/ai/user-images?tool=id_photo`, {
+        method: 'DELETE',
+        headers: { 'Authorization': getToken() as any, "User-Client": (global as any)?.clientId1328 }
+      });
+      setUserImages([]);
+      toast.success('تم حذف جميع النتائج السابقة');
+      setSelectedImage(null);
+    } catch (e) {
+      toast.error('فشل حذف النتائج');
+    }
+  };
+
+useEffect(() => {
     let cancelled = false;
     const init = async () => {
       try {
@@ -100,21 +132,12 @@ export default function IDPhotoPage() {
           fetchBalance();
           fetchUserImages();
           loadPlans();
-          fetchDynamicPricing();
         }
       } catch (e) {}
     };
     init();
     return () => { cancelled = true; };
   }, []);
-
-  const fetchDynamicPricing = async () => {
-    if (!apiBase) return;
-    try {
-      const res = await fetch(`${apiBase}/api/settings/public/ai-pricing`);
-      if (res.ok) setDynamicPricing(await res.json());
-    } catch (e) {}
-  };
 
   const loadPlans = async () => {
     if (!apiBase) return;
@@ -222,151 +245,117 @@ export default function IDPhotoPage() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="h-screen flex flex-col bg-[#010101] text-white selection:bg-blue-500/30 overflow-hidden" dir="rtl">
-        <header className="shrink-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <Link href="/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-bold text-xs">
-                <ArrowRight size={14} /> عودة
-              </Link>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
-                <h1 className="text-lg font-bold">صانع الصور الشخصية AI</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg flex items-center gap-2">
-                <CreditCard size={12} className="text-blue-400" />
-                <span className="text-sm font-bold text-blue-400">{balance?.remaining_credits || 0}</span>
-              </div>
-              <button onClick={() => setShowBuyModal(true)} className="bg-blue-600 px-4 py-1.5 rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all flex items-center gap-2">
-                <Crown size={12} /> شراء
-              </button>
-            </div>
-        </header>
+      <div className="h-screen flex flex-col bg-[#06070B] text-white selection:bg-emerald-500/30 overflow-hidden" dir="rtl">
+        {/* Unified AI Tool Header */}
+        <AIToolHeader
+          title="صانع الصور الشخصية"
+          description="عزل الخلفية وتطبيق خلفيات الاستوديو الرسمية لمعاملات الهوية والجوازات"
+          badge="ID Photo Studio"
+          icon={Camera}
+          iconGradient="from-emerald-600 to-teal-600"
+          userCredits={balance?.remaining_credits}
+          onUpgradeClick={() => setShowUpgradeModal(true)}
+          backHref="/ai"
+        />
 
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-            <aside className="w-full lg:w-[350px] h-auto max-h-[45vh] lg:h-full lg:max-h-full border-b lg:border-b-0 lg:border-l border-white/10 bg-[#050505] overflow-y-auto custom-scrollbar flex flex-col shrink-0 order-1">
-                <div className="p-4 space-y-6">
+            <aside className="w-full lg:w-[380px] h-[calc(100vh-3.5rem)] bg-[#0B0D14] border-b lg:border-b-0 lg:border-l border-white/[0.08] p-5 flex flex-col justify-between shrink-0 overflow-hidden z-30 shadow-2xl relative">
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 pb-2">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-black text-white">صانع الصور الشخصية</h2>
+                    </div>
+
                     <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
-                            <Upload size={12} className="text-blue-400" /> رفع الصورة
+                        <label className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                            <Upload size={14} className="text-emerald-400" /> ارفع صورتك الشخصية
                         </label>
-                        <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-white/5 rounded-2xl p-6 text-center hover:bg-blue-500/5 hover:border-blue-500/40 cursor-pointer transition-all bg-white/[0.02]">
+                        <div onClick={() => fileInputRef.current?.click()} className="border border-dashed border-white/[0.08] rounded-xl p-4 text-center hover:bg-[#161a27] hover:border-emerald-500/40 cursor-pointer transition-all bg-[#121520]">
                             {originalImage ? (
-                                <div className="space-y-2">
-                                    <img src={originalImage} className="h-32 mx-auto rounded-xl object-cover shadow-2xl" />
-                                    <span className="text-[10px] text-blue-400 font-bold block">تغيير الصورة</span>
+                                <div className="space-y-1">
+                                    <img src={originalImage} className="h-28 mx-auto rounded-lg object-cover shadow-2xl" />
+                                    <span className="text-[10px] text-emerald-400 font-bold block">تغيير الصورة</span>
                                 </div>
                             ) : (
-                                <div className="py-4 font-bold flex flex-col items-center gap-3">
-                                    <Plus size={32} className="text-gray-600" />
-                                    <p className="text-[10px] text-gray-400">تحميل صورتك الشخصية</p>
+                                <div className="py-4">
+                                    <Plus size={22} className="mx-auto text-gray-400 mb-1" />
+                                    <p className="text-xs text-gray-300 font-bold">انقر لرفع صورة شخصية</p>
                                 </div>
                             )}
                         </div>
                         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                     </div>
 
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-bold text-gray-500 flex items-center gap-2 uppercase tracking-wide">
-                             لون الخلفية المطلوبة
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400">
+                             لون الخلفية الرسمية
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                            {BACKGROUND_COLORS.map(color => (
                                <button 
                                 key={color.id} 
                                 onClick={() => setSelectedBg(color.id)}
-                                className={`flex items-center gap-2 p-2 rounded-xl border transition-all ${selectedBg === color.id ? 'border-blue-500 bg-blue-500/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}
+                                className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${selectedBg === color.id ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300 font-bold' : 'border-white/[0.08] bg-[#121520] hover:bg-[#161a27] text-gray-400'}`}
                                >
-                                   <div className={`w-5 h-5 rounded-full border border-white/10 shadow-inner`} style={{ backgroundColor: color.color }}></div>
-                                   <span className="text-[10px] font-bold">{color.name}</span>
-                                   {selectedBg === color.id && <Check size={12} className="text-blue-400 ml-auto" />}
+                                   <div className={`w-4 h-4 rounded-full border border-white/20 shadow-inner`} style={{ backgroundColor: color.color }}></div>
+                                   <span className="text-xs">{color.name}</span>
+                                   {selectedBg === color.id && <Check size={14} className="text-emerald-400 ml-auto" />}
                                </button>
                            ))}
                         </div>
                     </div>
 
-                    <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/10 flex gap-3 items-start">
-                        <Info size={16} className="text-blue-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium">سيتم عزل الشخص من الخلفية تماماً وتطبيق اللون المختار بأبعاد رسمية (3:4) وجودة استوديو.</p>
+                    <div className="p-3 bg-[#121520] rounded-xl border border-white/[0.08] flex gap-2.5 items-start">
+                        <Info size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-gray-400 leading-relaxed">سيتم عزل الشخص وتطبيق الخلفية الرسمية بأبعاد استوديو 3:4 فورياً.</p>
                     </div>
                 </div>
 
-                <div className="mt-auto p-4 border-t border-white/5 bg-[#080808]">
-                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[9px] font-bold text-center truncate">{error}</div>}
+                <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14] z-20">
+                    {error && <div className="mb-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-[10px] font-bold text-center truncate">{error}</div>}
                     
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 mb-2 font-medium bg-white/5 p-2 rounded-lg border border-white/10">
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                                <Coins size={10} className="text-yellow-500" />
-                            </div>
-                            <span>التكلفة المتوقعة:</span>
-                        </div>
-                        <span className="text-white font-bold text-xs">{creditsNeeded}</span>
-                    </div>
-
-                    <PremiumButton label={isProcessing ? "جاري الإنتاج..." : "إنتاج الصورة الشخصية"} icon={isProcessing ? RefreshCw : Camera} onClick={onProcess} disabled={!originalImage || isProcessing} className="w-full py-3.5 text-xs rounded-xl" />
+                    <AIGenerateButton
+                        onClick={onProcess}
+                        isGenerating={isProcessing}
+                        disabled={!originalImage}
+                        cost={creditsNeeded}
+                        label="إنشاء"
+                        generatingLabel="جاري الإنشاء..."
+                        icon={Camera}
+                        variant="emerald"
+                    />
                 </div>
             </aside>
 
-            <main className="flex-1 overflow-y-auto bg-[#020202] p-6 custom-scrollbar order-2">
-                <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
-                    {isProcessing && (
-                         <div className="break-inside-avoid relative rounded-2xl overflow-hidden bg-white/5 aspect-[3/4] border border-white/10 ring-1 ring-blue-500/30 flex flex-col items-center justify-center p-4">
-                             <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-                             <span className="text-[10px] font-bold text-blue-400">{Math.floor(processingProgress)}%</span>
-                         </div>
-                    )}
-                    {userImages.length === 0 && !isProcessing && (
-                        <div className="col-span-full h-[400px] flex flex-col items-center justify-center text-gray-600 gap-4 opacity-30">
-                            <ImageIcon size={64} />
-                            <p className="font-bold text-sm">لا يوجد صور منتجة بعد</p>
-                        </div>
-                    )}
-                    {userImages.map((img) => (
-                        <div key={img.id} onClick={() => setSelectedImage(img)} className="break-inside-avoid relative rounded-2xl overflow-hidden bg-[#111] border border-white/5 cursor-pointer transition-all hover:translate-y-[-4px] mb-4 group shadow-xl">
-                            <img src={img.url} className="w-full h-auto object-cover relative z-10" />
-                            <div className="absolute top-2 right-2 z-20 px-2 py-0.5 bg-black/50 backdrop-blur rounded text-[8px] font-black text-white/70 uppercase">
-                                {img.metadata?.background || 'ID'}
-                            </div>
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 z-20">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[9px] text-gray-500">{new Date(img.date).toLocaleDateString('ar-EG')}</span>
-                                    <Maximize2 size={12} className="text-white" />
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+            <main className="flex-1 overflow-y-auto bg-[#06070B] p-6 custom-scrollbar">
+                <AIResultsGallery
+                    items={userImages}
+                    isGenerating={isProcessing}
+                    progress={processingProgress}
+                    generationIcon={Sparkles}
+                    onItemClick={(img) => setSelectedImage(img)}
+                    onDeleteItem={handleDeleteSingle}
+                    onDeleteAll={handleDeleteAll}
+                />
             </main>
         </div>
 
-        {selectedImage && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/95 backdrop-blur-3xl animate-fade-in" dir="rtl">
-                <button onClick={() => setSelectedImage(null)} className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-all z-20"><X size={24} /></button>
-                <div className="relative w-full h-full max-w-6xl flex items-center justify-center gap-8">
-                    <div className="flex-1 h-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden flex items-center justify-center">
-                        <img src={selectedImage.url} className="max-h-full max-w-full object-contain shadow-2xl" />
-                    </div>
-                    <div className="w-[300px] shrink-0 h-full max-h-[450px] bg-[#0c0c0c] border border-white/10 rounded-3xl p-6 hidden lg:flex flex-col">
-                        <h3 className="text-xs font-bold text-gray-500 mb-6 uppercase tracking-wider">تفاصيل الصورة الشخصية</h3>
-                        <div className="flex-1 space-y-4">
-                             <div className="bg-white/5 p-4 rounded-xl text-xs text-gray-500 leading-relaxed font-medium">
-                                 صورة هوية رسمية بخلفية {BACKGROUND_COLORS.find(c => c.id === selectedImage.metadata?.background)?.name || 'مخصصة'}.
-                                 <br/><br/>
-                                 الأبعاد: 800x1000 بكسل
-                                 <br/>
-                                 النوع: JPEG جودة عالية
-                             </div>
-                        </div>
-                        <div className="space-y-3 pt-6 border-t border-white/10">
-                             <button onClick={() => downloadUtils(selectedImage.url)} className="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 text-sm hover:bg-blue-700 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/20"><Download size={18} /> تحميل الصورة</button>
-                             <button onClick={(e) => deleteImage(selectedImage.id, e)} className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-500 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all text-sm"><Trash2 size={18} /> حذف السجل</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
+        {/* Unified AI Result Modal */}
+        <AIResultModal
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+          mediaUrl={selectedImage?.url || null}
+          mediaId={selectedImage?.id || selectedImage?.image_id}
+          isPublic={selectedImage?.is_public}
+          onDelete={() => selectedImage && handleDeleteSingle(selectedImage.id || selectedImage.image_id)}
+          mediaType="image"
+          title="صورة المعاملات والهوية الرسمية"
+          subtitle="صورة شخصية رسمية بالمعايير القياسية وخلفية ملونة"
+          details={[
+            { label: "نوع الخلفية", value: BACKGROUND_COLORS.find(c => c.id === selectedImage?.metadata?.background)?.name || "رسمية" },
+            { label: "الأبعاد", value: "800x1000 بكسل" },
+            { label: "التاريخ", value: selectedImage?.date ? new Date(selectedImage.date).toLocaleDateString('ar-EG') : "" },
+          ]}
+        />
 
         {/* Buy Credits Modal */}
         {showBuyModal && (

@@ -1,3 +1,4 @@
+import React from "react";
 import AlertIcon from "./svg/AlertIcon";
 
 interface ConfirmationModalProps {
@@ -5,14 +6,12 @@ interface ConfirmationModalProps {
   message: string;
   buttonMessage: string;
   modalOpen: any;
-  setModalOpen: Function;
-  action: Function;
+  setModalOpen: (open: boolean) => void;
+  action: () => void | Promise<void>;
   isLoading: boolean;
 }
 
-const ConfirmationModal: React.FC<
-  ConfirmationModalProps & { setModalOpen: Function; action: Function }
-> = ({
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   title,
   message,
   buttonMessage,
@@ -21,56 +20,55 @@ const ConfirmationModal: React.FC<
   action,
   isLoading,
 }) => {
+  if (!modalOpen) return null;
+
   return (
-    <div>
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 p-4">
       <div
-        className={`fixed top-0 left-0 z-999999 flex h-full min-h-screen w-full items-center justify-center bg-black/90 px-4 py-5 ${
-          modalOpen ? "block" : "hidden"
-        }`}
+        className="w-full max-w-md rounded-xl border border-white/10 bg-[#0F121C] p-6 text-center font-cairo"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          onFocus={() => setModalOpen(true)}
-          onBlur={() => setModalOpen(false)}
-          className="w-full max-w-142.5 rounded-lg bg-white py-12 px-8 text-center dark:bg-boxdark md:py-15 md:px-17.5"
-        >
-          <span className="mx-auto inline-block">
-            <AlertIcon />
-          </span>
-          <h3 className="mt-5.5 pb-2 text-xl font-bold text-black  sm:text-2xl">
-            {title}
-          </h3>
-          <p className="mb-10 text-black">{message}</p>
-          <div className="-mx-3 flex flex-wrap gap-y-4">
-            <div className="w-full px-3 2xsm:w-1/2">
-              <button
-                disabled={isLoading}
-                onClick={() => setModalOpen(false)}
-                className="block w-full rounded border border-stroke bg-gray p-3 text-center font-medium text-black transition hover:border-black hover:bg-black hover:text-white dark:border-strokedark dark:bg-meta-4 dark:text-white dark:hover:border-black dark:hover:bg-black"
-              >
-                إلغاء
-              </button>
-            </div>
-            <div className="w-full px-3 2xsm:w-1/2">
-              <button
-                disabled={isLoading}
-                onClick={async () => {
-                  try {
-                    await action();
-                    setModalOpen(false);
-                  } catch (error) {
-                    console.error('Error in action:', error);
-                  }
-                }}
-                className="block w-full rounded border border-meta-1 bg-meta-1 p-3 text-center font-medium text-white transition hover:bg-opacity-90"
-              >
-                {!isLoading ? (
-                  buttonMessage
-                ) : (
-                  <div className="inline-block h-[1.23rem] w-[1.23rem] animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-                )}
-              </button>
-            </div>
-          </div>
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/10 border border-rose-500/20">
+          <AlertIcon />
+        </div>
+
+        <h3 className="mb-2 text-base font-bold text-white">
+          {title}
+        </h3>
+
+        <p className="mb-6 text-xs text-white/70 leading-relaxed">
+          {message}
+        </p>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => setModalOpen(false)}
+            className="flex-1 rounded-lg border border-white/10 bg-white/[0.04] py-2.5 px-4 text-xs font-semibold text-white/80 transition-colors hover:bg-white/[0.08] hover:text-white disabled:opacity-50"
+          >
+            إلغاء
+          </button>
+
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={async () => {
+              try {
+                await action();
+                setModalOpen(false);
+              } catch (error) {
+                console.error("Error in action:", error);
+              }
+            }}
+            className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-rose-600 py-2.5 px-4 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+          >
+            {isLoading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent" />
+            ) : (
+              <span>{buttonMessage}</span>
+            )}
+          </button>
         </div>
       </div>
     </div>
