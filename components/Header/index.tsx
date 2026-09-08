@@ -7,7 +7,8 @@ import DropdownUser from "./DropdownUser";
 import Image from "next/image";
 import { useMyInfo } from "@/utils/user-info/getUserInfo";
 import nexusLogo from "@/public/images/nexus-logo.png"
-import { Bell, Globe, Menu, User, X, House, Crown, ShoppingBag, ShoppingCart, Vibrate, ShieldCheck, ShieldUser, LogOut, Sparkles, TypeOutline, Video } from "lucide-react";
+import { Bell, Globe, Menu, User, X, House, Crown, ShoppingBag, ShoppingCart, Vibrate, ShieldCheck, ShieldUser, LogOut, Sparkles, TypeOutline, Video, Star } from "lucide-react";
+import ReviewModal from "@/components/Modals/ReviewModal";
 import { useTranslation } from "react-i18next";
 import { useGetDevices } from "@/hooks/useGetDevices";
 import axios from "axios";
@@ -26,6 +27,7 @@ const Header = (props: {
   const { t } = useTranslation();
   const { devices, active_sessions } = useGetDevices();
   const [mounted, setMounted] = useState(false);
+  const [openReviewModal, setOpenReviewModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -298,21 +300,30 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
     <div className="sticky top-0 z-[9999] w-full shadow-lg backdrop-blur-md bg-[#190237]/80 dark:bg-[#08090E]/95 border-b border-white/5 dark:border-zinc-800/80 transition-all duration-300">
       <div className="flex items-center justify-between px-4 py-2.5 max-w-[1760px] mx-auto w-full h-full gap-2">
         {/* Mobile menu button */}
-        <div className="md:hidden flex items-center gap-4">
+        <div className="md:hidden flex items-center gap-3">
           <button 
             className="md:hidden text-white p-2"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? <X size={30} /> : <Menu strokeWidth={3} className="text-[#00c48c]" size={30} />}
+            {isMobileMenuOpen ? <X size={28} /> : <Menu strokeWidth={3} className="text-[#00c48c]" size={28} />}
           </button>
           <Link href="/notifications" className="relative md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-            <Bell color="#00c48c" size={24}/>
+            <Bell color="#00c48c" size={22}/>
             {unreadCount > 0 && (
-              <div className="absolute -top-2 -right-1 bg-orange text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+              <div className="absolute -top-2 -right-1 bg-orange text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </div>
             )}
           </Link>
+          <button
+            type="button"
+            onClick={() => setOpenReviewModal(true)}
+            className="group relative flex items-center justify-center p-2 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] active:scale-95 cursor-pointer"
+            title="تقييم المنصة / أضف رأيك"
+            aria-label="تقييم المنصة"
+          >
+            <Star size={18} className="text-amber-400 fill-amber-400/40 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+          </button>
         </div>
 
         {/* Logo - left side on desktop */}
@@ -369,6 +380,21 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
 
         {/* Desktop user info, language, notifications, logout, upgrade and controls */}
         <div className="hidden md:flex items-center gap-2 lg:gap-3">
+          {/* Star Review Button - Next to User icon */}
+          <button
+            type="button"
+            onClick={() => setOpenReviewModal(true)}
+            className="group relative flex items-center justify-center p-2 rounded-full border border-amber-400/40 hover:border-amber-400 bg-amber-400/10 hover:bg-amber-400/20 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)] hover:shadow-[0_0_25px_rgba(245,158,11,0.5)] transition-all duration-300 active:scale-95 cursor-pointer"
+            title="تقييم المنصة / أضف رأيك"
+            aria-label="تقييم المنصة"
+          >
+            <Star size={19} className="text-amber-400 fill-amber-400/30 group-hover:fill-amber-400 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)]" />
+            <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+            </span>
+          </button>
+
           <Link
             href="/profile"
             className="flex items-center justify-center p-2 rounded-full border border-transparent border-white/20 bg-white/5 dark:bg-[#12141F] dark:border-zinc-800 dark:hover:bg-zinc-800 text-[#00c48c] hover:scale-105 transition-transform"
@@ -444,30 +470,45 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
                   </button>
                 </div>
 
-                {/* User Info */}
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-3 border-b border-gray-700 dark:border-zinc-800 pb-4"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  aria-label="Open profile page"
-                >
-                  <div className="p-2 rounded-full bg-white/5 dark:bg-zinc-800 border border-white/10 dark:border-zinc-700">
-                    <User size={32} color="#00c48c"/>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="text-white font-bold text-base truncate">
-                      {data?.userData?.firstName + " " + data?.userData?.lastName}
-                    </p>
-                    <div className="flex items-center justify-between mt-1">
-                      <div className="px-2.5 py-0.5 bg-[#00c48c]/20 text-[#00c48c] rounded-full text-xs font-bold border border-[#00c48c]/30">
-                        {data?.userToolsData?.length === 0 && data?.userPlansData?.length === 0 && data?.userPacksData?.length === 0 
-                          ? t('dashboard.subscribeNow')
-                          : t('dashboard.youHaveAPlan')
-                        }
+                {/* User Info & Review Star */}
+                <div className="flex items-center justify-between gap-2 border-b border-gray-700 dark:border-zinc-800 pb-4">
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-3 flex-1 overflow-hidden"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    aria-label="Open profile page"
+                  >
+                    <div className="p-2 rounded-full bg-white/5 dark:bg-zinc-800 border border-white/10 dark:border-zinc-700 shrink-0">
+                      <User size={32} color="#00c48c"/>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-white font-bold text-base truncate">
+                        {data?.userData?.firstName + " " + data?.userData?.lastName}
+                      </p>
+                      <div className="flex items-center justify-between mt-1">
+                        <div className="px-2.5 py-0.5 bg-[#00c48c]/20 text-[#00c48c] rounded-full text-xs font-bold border border-[#00c48c]/30">
+                          {data?.userToolsData?.length === 0 && data?.userPlansData?.length === 0 && data?.userPacksData?.length === 0 
+                            ? t('dashboard.subscribeNow')
+                            : t('dashboard.youHaveAPlan')
+                          }
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setOpenReviewModal(true);
+                    }}
+                    className="p-2.5 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.25)] hover:bg-amber-400/20 active:scale-95 shrink-0"
+                    title="تقييم المنصة"
+                    aria-label="تقييم المنصة"
+                  >
+                    <Star size={20} className="text-amber-400 fill-amber-400/40 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+                  </button>
+                </div>
                 
 
                 
@@ -533,6 +574,9 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
           </div>,
           document.body
         )}
+
+      {/* Review Modal */}
+      <ReviewModal modalOpen={openReviewModal} setModalOpen={setOpenReviewModal} />
       </div>
   );
 };

@@ -287,7 +287,7 @@ export default function DashboardPage() {
           <div className="mb-6">
             <h2 id="trend-tools" className="inline-block text-2xl font-black animate-fuchsia-shimmer">أدوات الترند </h2>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {TREND_AI_TOOLS.map((tool) => <AIToolCard key={tool.id} tool={tool} image={getToolImage(tool.id, tool.image)} compact />)}
           </div>
         </section>

@@ -59,7 +59,7 @@ export const NEXUS_AI_TOOLS: NexusAITool[] = [
   { id: 'colorize', title: 'تلوين الصور', description: 'أعد الحياة للصور القديمة باللونين الأبيض والأسود بألوان واقعية.', category: 'edit', href: '/ai/colorize', image: '/images/تلوين الصورة.png', icon: Palette, status: 'ready' },
   { id: 'edit', title: 'المحرر الذكي', description: 'أضف أو احذف أو عدّل أي عنصر في الصورة باستخدام التعليمات النصية.', category: 'edit', href: '/ai/edit', image: '/images/تعديل الصور.png', icon: Brush, status: 'ready' },
   { id: 'upscale', title: 'رفع جودة الصور', description: 'كبّر الصور وحسّن وضوح التفاصيل بدون أي تشويش.', category: 'edit', href: '/ai/upscale', image: '/images/رفع جودة الصور.png', icon: Maximize2, status: 'ready' },
-  { id: 'relight', title: 'إعادة الإضاءة', description: 'أعد بناء وتوزيع إضاءة الصورة بأسلوب استوديو ومن اتجاهات متعددة.', category: 'edit', href: '/ai/relight', image: '/images/relight.png', icon: SunMedium, status: 'new' },
+  { id: 'relight', title: 'إعادة الإضاءة', description: 'أعد بناء وتوزيع إضاءة الصورة بأسلوب استوديو ومن اتجاهات متعددة.', category: 'trend', href: '/ai/relight', image: '/images/relight.png', icon: SunMedium, status: 'new', badge: 'تريند' },
 
   // Video & Motion (Grouped Together)
   { id: 'video', title: 'استوديو الفيديو', description: 'فيديو سينمائي من النص أو الصورة مع صوت أصلي متزامن عالي الدقة.', category: 'video', href: '/ai/video', image: '/images/تاثيرات الفيديو.png', icon: Video, status: 'ready', badge: 'Omni + Veo', featured: true },
@@ -81,7 +81,7 @@ export const READY_AI_TOOLS = NEXUS_AI_TOOLS;
 export const FEATURED_AI_TOOLS = NEXUS_AI_TOOLS.filter((tool) => tool.featured);
 
 const CORE_TOOL_ORDER = ['image', 'video', 'nano', 'gpt-image', 'text-to-speech', 'music'];
-const TREND_TOOL_ORDER = ['hair-style', 'clothes-swap', 'age-journey', 'fisheye-night', 'celebrity-mode'];
+const TREND_TOOL_ORDER = ['relight', 'hair-style', 'clothes-swap', 'age-journey', 'fisheye-night', 'celebrity-mode'];
 
 const orderTools = (ids: string[]) => ids
   .map((id) => NEXUS_AI_TOOLS.find((tool) => tool.id === id))
