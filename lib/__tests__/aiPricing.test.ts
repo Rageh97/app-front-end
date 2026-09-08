@@ -9,7 +9,14 @@ import {
   syncModelsWithDynamicPricing,
   syncVideoWithDynamicPricing,
 } from '../ai-models-config';
-import { DEFAULT_AI_PRICING, modelDurationPriceKey, modelPriceKey } from '../ai-pricing-catalog';
+import {
+  DEFAULT_AI_PRICING,
+  PRICING_OPERATIONS,
+  PRICING_VIDEO_MODELS,
+  linkedOperationPrice,
+  modelDurationPriceKey,
+  modelPriceKey,
+} from '../ai-pricing-catalog';
 
 describe('central AI pricing catalog', () => {
   it('contains a direct key for every selectable image and video model', () => {
@@ -34,5 +41,20 @@ describe('central AI pricing catalog', () => {
     });
     expect(video[0].baseCostCredits).toBe(55);
     expect(video[0].creditsByDuration[8]).toBe(91);
+  });
+
+  it('keeps every duration when the same video model is used by multiple tools', () => {
+    const fast = PRICING_VIDEO_MODELS.find((model) => model.id === 'veo-3.1-fast-generate-preview');
+    expect(fast?.supportedDurations).toEqual([4, 6, 8, 20, 30, 40, 60]);
+    expect(fast?.creditsByDuration[60]).toBe(675);
+  });
+
+  it('derives model-backed tool prices from the configured model', () => {
+    const relight = PRICING_OPERATIONS.find((operation) => operation.key === 'operation:relight');
+    expect(relight).toBeDefined();
+    expect(linkedOperationPrice(relight!, {
+      [modelPriceKey('gemini-3-pro-image')]: 44,
+      'operation:relight': 2,
+    })).toBe(44);
   });
 });

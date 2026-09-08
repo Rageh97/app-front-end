@@ -1,7 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { DEFAULT_AI_PRICING, modelDurationPriceKey, modelPriceKey } from '@/lib/ai-pricing-catalog';
+import {
+  DEFAULT_AI_PRICING,
+  PRICING_OPERATIONS,
+  linkedOperationPrice,
+  modelDurationPriceKey,
+  modelPriceKey,
+} from '@/lib/ai-pricing-catalog';
 
 export function useAiPricing() {
   const [prices, setPrices] = useState<Record<string, number>>(DEFAULT_AI_PRICING);
@@ -21,6 +27,10 @@ export function useAiPricing() {
 
   const operationPrice = useCallback((operation: string, fallback: number, mode?: string) => {
     const exactKey = mode ? `operation:${operation}:${mode}` : '';
+    const linkedOperation = PRICING_OPERATIONS.find((item) =>
+      item.key === exactKey || (!exactKey && item.key === `operation:${operation}`),
+    );
+    if (linkedOperation?.derivedFrom) return linkedOperationPrice(linkedOperation, prices);
     return Number((exactKey && prices[exactKey] !== undefined ? prices[exactKey] : prices[`operation:${operation}`]) ?? fallback);
   }, [prices]);
 

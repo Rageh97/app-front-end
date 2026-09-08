@@ -8,6 +8,7 @@ import {
   PRICING_IMAGE_MODELS,
   PRICING_OPERATIONS,
   PRICING_VIDEO_MODELS,
+  linkedOperationPrice,
   modelDurationPriceKey,
   modelPriceKey,
 } from '@/lib/ai-pricing-catalog';
@@ -209,10 +210,16 @@ export default function AdminCreditsPage() {
     if (!apiBase) return;
     setSavingPrices(true);
     try {
+      // Linked tools always inherit their generation model price. Remove old
+      // operation overrides so a stale hidden value can never win server-side.
+      const pricesToSave = { ...aiModelPrices };
+      PRICING_OPERATIONS.forEach((operation) => {
+        if (operation.derivedFrom) delete pricesToSave[operation.key];
+      });
       const res = await fetch(`${apiBase}/api/admin/settings/ai_pricing_config`, {
         method: 'PUT',
         headers,
-        body: JSON.stringify({ value: JSON.stringify(aiModelPrices) }),
+        body: JSON.stringify({ value: JSON.stringify(pricesToSave) }),
       });
       if (res.status === 200) {
         toast.success("تم حفظ أسعار الموديلات بنجاح");
@@ -237,6 +244,8 @@ export default function AdminCreditsPage() {
 
   const imageModelList = PRICING_IMAGE_MODELS;
   const videoModelList = PRICING_VIDEO_MODELS;
+  const linkedOperations = PRICING_OPERATIONS.filter((operation) => operation.derivedFrom);
+  const fixedOperations = PRICING_OPERATIONS.filter((operation) => !operation.derivedFrom);
 
   const startEdit = (plan: CreditPlan) => {
     setEditingId(plan.plan_id);
@@ -452,8 +461,8 @@ export default function AdminCreditsPage() {
                           <span className="block truncate text-xs font-semibold text-slate-200">{m.name}</span>
                           <span className="block text-[10px] text-slate-500 font-mono" dir="ltr">{m.id.replace(/^models\//, '')}</span>
                         </div>
-                        <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
-                          <span>أساسي</span>
+                        <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-400" title="يُستخدم فقط إذا لم يوجد سعر للمدة المطلوبة">
+                          <span>احتياطي</span>
                           <input
                             type="number"
                             min="0"
@@ -463,6 +472,12 @@ export default function AdminCreditsPage() {
                           />
                         </label>
                       </div>
+                      <p className="text-[10px] leading-4 text-slate-500">
+                        أسعار المدد نهائية وليست مضافة إلى السعر الاحتياطي.
+                        {m.id.includes('veo-3.1-generate') && ' دقة 4K تُحسب ×1.5.'}
+                        {m.id.includes('fast') && ' دقة 1080p تُحسب ×1.2 و4K ×3.'}
+                        {m.id.includes('lite') && ' دقة 1080p تُحسب ×1.6.'}
+                      </p>
                       <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/[0.04]">
                         {(m.supportedDurations || Object.keys(m.creditsByDuration).map(Number)).map(dur => {
                           const key = modelDurationPriceKey(m.id, dur);
@@ -489,11 +504,37 @@ export default function AdminCreditsPage() {
             {/* General Operations Pricing */}
             <div className="pt-4 border-t border-white/[0.06] space-y-3">
               <div>
-                <h3 className="text-xs font-bold text-emerald-400 tracking-wide">تسعير العمليات والأدوات المباشرة</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">للأدوات التي تنفذ عمليات معالجة أو تحسين بدون تحديد موديل</p>
+                <h3 className="text-xs font-bold text-emerald-400 tracking-wide">الأدوات المرتبطة بالموديلات</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">تتغير تلقائيًا عند تعديل سعر الموديل المرتبط، ولا تُضاف عليها تكلفة أداة منفصلة.</p>
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {PRICING_OPERATIONS.map((op) => (
+                {linkedOperations.map((op) => {
+                  const source = op.derivedFrom!;
+                  const model = [...imageModelList, ...videoModelList].find((item) => item.id === source.modelId);
+                  return (
+                    <div key={op.key} className="flex items-center justify-between gap-3 rounded-md border border-white/[0.06] bg-[#0F1322] p-2.5">
+                      <div className="min-w-0">
+                        <span className="block truncate text-xs font-semibold text-slate-200">{op.label}</span>
+                        <span className="block truncate text-[10px] text-slate-500">
+                          يتبع {model?.name || source.modelId}{source.duration ? ` — ${source.duration} ثوانٍ` : ''}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-xs font-bold text-emerald-400">
+                        {linkedOperationPrice(op, aiModelPrices)} نقطة
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/[0.06] space-y-3">
+              <div>
+                <h3 className="text-xs font-bold text-emerald-400 tracking-wide">العمليات المستقلة</h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">تسعير منفصل فقط للمعالجة التي لا تعتمد على موديل الصور أو الفيديو أعلاه.</p>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {fixedOperations.map((op) => (
                   <label key={op.key} className="flex items-center justify-between gap-3 rounded-md border border-white/[0.06] bg-[#0F1322] p-2.5">
                     <div className="min-w-0">
                       <span className="block truncate text-xs font-semibold text-slate-200">{op.label}</span>
