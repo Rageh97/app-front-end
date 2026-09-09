@@ -567,7 +567,11 @@ export default function UnifiedVideoGenerationPage() {
         const validationMessage = Array.isArray(data.errors)
           ? data.errors.map((error: any) => error?.msg).filter(Boolean).join(" — ")
           : "";
-        toast.error(validationMessage || data.message || "فشل توليد الفيديو");
+        const userMessage = validationMessage || data.message || "فشل توليد الفيديو";
+        toast.error(userMessage, {
+          duration: data.code === 'SAFETY_VIOLATION' ? 12000 : 7000
+        });
+        if (data.credits_refunded) void fetchBalance();
       }
     } catch (err: any) {
       toast.error(err.message || "حدث خطأ أثناء معالجة الفيديو");
@@ -947,6 +951,7 @@ export default function UnifiedVideoGenerationPage() {
                   rows={4}
                   className="w-full bg-transparent text-xs sm:text-sm text-white placeholder:text-gray-500 outline-none resize-none leading-relaxed custom-scrollbar"
                 />
+              
               </div>
 
               {/* REFERENCE MEDIA & FIRST-LAST FRAME CONTROLS */}
