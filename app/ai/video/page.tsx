@@ -374,9 +374,17 @@ export default function UnifiedVideoGenerationPage() {
     if (file) {
       const isVideo = file.type.startsWith("video");
       const isOmni = selectedModel.id.includes('omni');
+      const supportedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+      if (!isVideo && !supportedImageTypes.includes(file.type.toLowerCase())) {
+        toast.error("استخدم صورة JPG أو PNG أو WebP");
+        e.target.value = "";
+        return;
+      }
 
       if (isVideo && !isOmni) {
         toast.error("رفع الفيديو المرجعي متاح مع Gemini Omni فقط");
+        e.target.value = "";
         return;
       }
 
@@ -386,6 +394,7 @@ export default function UnifiedVideoGenerationPage() {
           isVideo ? "حجم الفيديو يجب ألا يتجاوز 50 ميجابايت" :
           "حجم الصورة يجب ألا يتجاوز 10 ميجابايت"
         );
+        e.target.value = "";
         return;
       }
 
@@ -397,7 +406,15 @@ export default function UnifiedVideoGenerationPage() {
           toast.success("تم رفع الفيديو كمرجع للتعديل بالمحادثة");
         } else {
           setReferenceType("image");
-          toast.success(omniMode === 'first_last' ? "تم رفع إطار البداية (Start Frame)" : "تم رفع الصورة كمرجع للتحريك");
+          // Google requires an 8-second native Veo generation whenever an
+          // image is supplied. Keep long extension choices intact, but repair
+          // incompatible 4/6-second short requests automatically.
+          if (!isOmni && durationSec <= 10 && durationSec !== 8) {
+            setDurationSec(8);
+            toast.success("تم رفع الصورة وضبط مدة Veo تلقائيًا إلى 8 ثوانٍ");
+          } else {
+            toast.success(omniMode === 'first_last' ? "تم رفع إطار البداية (Start Frame)" : "تم رفع الصورة كمرجع للتحريك");
+          }
         }
       };
       reader.readAsDataURL(file);
@@ -408,8 +425,14 @@ export default function UnifiedVideoGenerationPage() {
   const handleEndMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type.toLowerCase())) {
+        toast.error("استخدم صورة JPG أو PNG أو WebP");
+        e.target.value = "";
+        return;
+      }
       if (file.size > 10 * 1024 * 1024) {
         toast.error("حجم الصورة يجب ألا يتجاوز 10 ميجابايت");
+        e.target.value = "";
         return;
       }
 
@@ -910,7 +933,7 @@ export default function UnifiedVideoGenerationPage() {
                           <input
                             ref={fileInputRef}
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             onChange={handleMediaUpload}
                             className="hidden"
                           />
@@ -945,7 +968,7 @@ export default function UnifiedVideoGenerationPage() {
                           <input
                             ref={endFileInputRef}
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             onChange={handleEndMediaUpload}
                             className="hidden"
                           />
@@ -989,7 +1012,9 @@ export default function UnifiedVideoGenerationPage() {
                         <input
                           ref={fileInputRef}
                           type="file"
-                          accept={selectedModel.id.includes('omni') ? "image/*,video/*" : "image/*"}
+                          accept={selectedModel.id.includes('omni')
+                            ? "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+                            : "image/jpeg,image/png,image/webp"}
                           onChange={handleMediaUpload}
                           className="hidden"
                         />
