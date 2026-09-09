@@ -53,6 +53,7 @@ export const useMyInfo = (enabled = true) => {
     enabled: enabled,
     cacheTime: Infinity,
     staleTime: Infinity,
+    retry: false,
   });
 };
 

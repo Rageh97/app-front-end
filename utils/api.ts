@@ -54,10 +54,27 @@ axiosInstance.interceptors.request.use(authRequestInterceptor, (error) => {
 });
 
 function authErrorInterceptor(error: any) {
-  if (error?.response?.status === 401 || error?.response?.status === 403) {
-    localStorage.removeItem("a");
-    if (typeof window !== "undefined" && window.location.pathname !== "/signin") {
-      window.location.replace("/signin");
+  const status = error?.response?.status;
+  const data = typeof error?.response?.data === "string" ? error.response.data : JSON.stringify(error?.response?.data || "");
+  const isAuthError =
+    status === 401 ||
+    status === 403 ||
+    (status === 400 && (data.includes("token") || data.includes("unauthorized") || data.includes("Bad request : token required")));
+
+  if (isAuthError) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("a");
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      if ((global as any).userData) {
+        delete (global as any).userData;
+      }
+      if ((global as any).userRole) {
+        delete (global as any).userRole;
+      }
+      if (window.location.pathname !== "/signin") {
+        window.location.replace("/signin");
+      }
     }
   }
   return Promise.reject<any>(error);

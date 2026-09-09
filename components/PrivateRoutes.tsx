@@ -26,11 +26,21 @@ const PrivateRoutes: React.FC<{ children: React.ReactNode }> = ({
   const { refetch } = useMyInfo(false);
 
   const forceLogout = () => {
-    localStorage.removeItem("a");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("a");
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      if ((global as any).userData) {
+        delete (global as any).userData;
+      }
+      if ((global as any).userRole) {
+        delete (global as any).userRole;
+      }
+    }
     isSessionVerifiedGlobally = false;
     setIsAllowed(false);
     setIsErrorState(true);
-    if (pathName !== "/signin" && typeof window !== "undefined") {
+    if (typeof window !== "undefined" && window.location.pathname !== "/signin") {
       window.location.replace("/signin");
     }
   };
@@ -57,6 +67,12 @@ const PrivateRoutes: React.FC<{ children: React.ReactNode }> = ({
     verifyingRef.current = true;
 
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("a") : null;
+      if (!token) {
+        forceLogout();
+        return;
+      }
+
       // If we already have user role globally and session was verified, check role immediately
       if ((global as any).userRole && isSessionVerifiedGlobally) {
         checkRoleAndAccess(global.userData, (global as any).userRole);
@@ -72,22 +88,34 @@ const PrivateRoutes: React.FC<{ children: React.ReactNode }> = ({
         isSessionVerifiedGlobally = true;
         
         checkRoleAndAccess(userData, userRole);
-      } else if (result.error?.response?.status === 401 || result.error?.response?.status === 403) {
-        // Only force logout on explicit 401 / 403 unauthorized responses
-        forceLogout();
       } else {
-        // In case of network glitch or timeout, if token exists, do NOT kick user out
-        if (typeof window !== "undefined" && localStorage.getItem("a")) {
+        const status = result.error?.response?.status;
+        const errorData = typeof result.error?.response?.data === 'string'
+          ? result.error.response.data
+          : JSON.stringify(result.error?.response?.data || '');
+
+        const isAuthError =
+          status === 401 ||
+          status === 403 ||
+          (status === 400 && (errorData.includes("token") || errorData.includes("unauthorized") || errorData.includes("bad request: token required")));
+
+        if (isAuthError) {
+          // Explicit unauthorized response -> force logout immediately
+          forceLogout();
+        } else if (typeof window !== "undefined" && localStorage.getItem("a") && !result.error?.response) {
+          // ONLY treat as temporary offline if there was NO server response (network down)
           setIsAllowed(true);
         } else {
+          // Any other explicit failure -> log out cleanly
           forceLogout();
         }
       }
     } catch (e: any) {
-      if (e?.response?.status === 401 || e?.response?.status === 403) {
+      const status = e?.response?.status;
+      const errorData = typeof e?.response?.data === 'string' ? e.response.data : '';
+      if (status === 401 || status === 403 || (status === 400 && errorData.includes("token"))) {
         forceLogout();
-      } else if (typeof window !== "undefined" && localStorage.getItem("a")) {
-        // Keep user logged in during network glitches
+      } else if (typeof window !== "undefined" && localStorage.getItem("a") && !e?.response) {
         setIsAllowed(true);
       } else {
         forceLogout();
@@ -102,9 +130,7 @@ const PrivateRoutes: React.FC<{ children: React.ReactNode }> = ({
 
     const token = localStorage.getItem("a");
     if (!token) {
-      if (pathName !== "/signin") {
-        window.location.replace("/signin");
-      }
+      forceLogout();
       return;
     }
 
@@ -120,6 +146,20 @@ const PrivateRoutes: React.FC<{ children: React.ReactNode }> = ({
       verify();
     }
   }, [pathName]);
+
+  // Safety fallback: if verification takes too long, re-evaluate token
+  useEffect(() => {
+    if (isAllowed) return;
+    const timeout = setTimeout(() => {
+      if (!isSessionVerifiedGlobally && !isAllowed) {
+        const token = typeof window !== "undefined" ? localStorage.getItem("a") : null;
+        if (!token) {
+          forceLogout();
+        }
+      }
+    }, 4000);
+    return () => clearTimeout(timeout);
+  }, [isAllowed]);
 
   if (isAllowed) return <>{children}</>;
 

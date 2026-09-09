@@ -14,12 +14,38 @@ export const handleAuthError = (status?: number) => {
       if ((global as any).userData) {
         delete (global as any).userData;
       }
+      if ((global as any).userRole) {
+        delete (global as any).userRole;
+      }
       if (window.location.pathname !== "/signin") {
         window.location.replace("/signin");
       }
     }
   }
 };
+
+// Client-side global fetch interceptor to catch 401/403 responses across all AI tools and platform
+if (typeof window !== "undefined" && !(window as any).__nexusFetchPatched) {
+  (window as any).__nexusFetchPatched = true;
+  const originalFetch = window.fetch;
+  window.fetch = async function (...args) {
+    const response = await originalFetch.apply(this, args);
+    try {
+      const url = typeof args[0] === "string" ? args[0] : (args[0] as any)?.url || "";
+      if (
+        (response.status === 401 || response.status === 403) &&
+        url.includes("/api/") &&
+        !url.includes("/signin") &&
+        !url.includes("/login")
+      ) {
+        handleAuthError(response.status);
+      }
+    } catch {
+      // Ignore interceptor errors
+    }
+    return response;
+  };
+}
 
 /**
  * Standardized headers helper for AI tools and backend API calls
