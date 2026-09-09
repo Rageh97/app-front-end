@@ -357,11 +357,11 @@ export default function NanoBananaPage() {
                                 value={prompt} 
                                 onChange={(e) => setPrompt(e.target.value)} 
                                 placeholder="اكتب ما تتخيله هنا..." 
-                                maxLength={20000} 
+                                maxLength={30000} 
                                 className="w-full min-h-[100px] max-h-[250px] p-3 rounded-xl bg-white/5 border border-white/5 focus:border-yellow-500/40 outline-none resize-none transition-all text-xs leading-relaxed custom-scrollbar overflow-y-auto" 
                             />
                             <div className="absolute bottom-2 right-2 text-[8px] bg-black/50 px-1.5 py-0.5 rounded text-gray-400 border border-white/5">
-                                {prompt.length}/20000
+                                {prompt.length}/30000
                             </div>
                         </div>
                     </div>

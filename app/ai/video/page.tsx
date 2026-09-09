@@ -29,7 +29,9 @@ import {
   ExternalLink,
   CheckCircle2,
   CreditCard,
-  Eye
+  Eye,
+  ShieldAlert,
+  AlertTriangle
 } from "lucide-react";
 import { AIToolHeader, AIGenerateButton, AILoadingOverlay, downloadMediaDirectly, AIDeleteModal, AIResultModal } from "@/components/ai";
 import { handleAuthError } from "@/utils/auth";
@@ -98,6 +100,7 @@ export default function UnifiedVideoGenerationPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [generationError, setGenerationError] = useState<{ message: string; isSafety: boolean } | null>(null);
 
   useEffect(() => {
     if (!isGenerating) {
@@ -511,6 +514,7 @@ export default function UnifiedVideoGenerationPage() {
     }
 
     setIsGenerating(true);
+    setGenerationError(null);
     setIsModelDropdownOpen(false);
     setIsRatioDropdownOpen(false);
     setIsDurationDropdownOpen(false);
@@ -556,10 +560,17 @@ export default function UnifiedVideoGenerationPage() {
         body: JSON.stringify(payload)
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        data = { message: res.statusText || "حدث خطأ غير متوقع في الخادم" };
+      }
+
       if (!isMountedRef.current) return;
 
-      if (data.success && data.video_url) {
+      if (res.ok && data.success && data.video_url) {
+        setGenerationError(null);
         toast.success("🎉 تم إنتاج الفيديو بنجاح!");
         playbackRetryCountRef.current = 0;
         setCurrentVideoUrl(data.video_url);
@@ -593,8 +604,15 @@ export default function UnifiedVideoGenerationPage() {
           ? data.errors.map((error: any) => error?.msg).filter(Boolean).join(" — ")
           : "";
         const userMessage = validationMessage || data.message || "فشل توليد الفيديو";
+        const isSafety = data.code === 'SAFETY_VIOLATION' || /أمان|حظر|safety|policy|violation|حساسة/i.test(userMessage);
+
+        setGenerationError({
+          message: userMessage,
+          isSafety
+        });
+
         toast.error(userMessage, {
-          duration: data.code === 'SAFETY_VIOLATION' ? 12000 : 7000
+          duration: isSafety ? 12000 : 7000
         });
         if (data.credits_refunded) void fetchBalance();
       }
@@ -602,7 +620,12 @@ export default function UnifiedVideoGenerationPage() {
       if (err.name === 'AbortError' || !isMountedRef.current) {
         return; // User navigated away, handle silently without crash
       }
-      toast.error(err.message || "حدث خطأ أثناء معالجة الفيديو");
+      const msg = err.message || "حدث خطأ أثناء معالجة الفيديو";
+      setGenerationError({
+        message: msg,
+        isSafety: /أمان|حظر|safety|policy|violation|حساسة/i.test(msg)
+      });
+      toast.error(msg);
     } finally {
       if (isMountedRef.current) {
         setIsGenerating(false);
@@ -1340,6 +1363,34 @@ export default function UnifiedVideoGenerationPage() {
               </div>
             </div>
 
+            {/* ERROR ALERT IN SIDEBAR */}
+            {generationError && (
+              <div className={`p-3 rounded-xl border text-xs leading-relaxed flex items-start gap-2.5 animate-in fade-in duration-200 shrink-0 ${
+                generationError.isSafety
+                  ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
+                  : 'bg-amber-500/10 border-amber-500/40 text-amber-200'
+              }`}>
+                {generationError.isSafety ? (
+                  <ShieldAlert size={18} className="shrink-0 mt-0.5 text-rose-400" />
+                ) : (
+                  <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-400" />
+                )}
+                <div className="flex-1 space-y-1">
+                  <p className="font-bold text-xs">
+                    {generationError.isSafety ? 'تنبيه فلاتر أمان Google:' : 'تعذر التوليد:'}
+                  </p>
+                  <p className="text-[11px] opacity-90 leading-normal">{generationError.message}</p>
+                </div>
+                <button
+                  onClick={() => setGenerationError(null)}
+                  className="text-gray-400 hover:text-white p-0.5"
+                  title="إغلاق"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             {/* ACTION GENERATE BUTTON (STICKY BOTTOM) */}
             <div className="pt-3 border-t border-white/[0.08] shrink-0 bg-[#0B0D14]">
               <AIGenerateButton
@@ -1478,6 +1529,27 @@ export default function UnifiedVideoGenerationPage() {
                     </div>
                   </div>
 
+                </div>
+              ) : generationError ? (
+                /* Prominent Safety / Error Display */
+                <div className="flex flex-col items-center justify-center text-center p-6 sm:p-8 max-w-md space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shadow-xl">
+                    <ShieldAlert size={32} />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-sm sm:text-base font-bold text-rose-300">
+                      {generationError.isSafety ? "تم حظر الطلب من فلاتر أمان Google" : "تعذر إتمام التوليد"}
+                    </h3>
+                    <p className="text-xs text-gray-300 leading-relaxed bg-black/40 p-3.5 rounded-xl border border-white/10 text-right">
+                      {generationError.message}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setGenerationError(null)}
+                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10"
+                  >
+                    حسناً، فهمت
+                  </button>
                 </div>
               ) : (
                 /* Empty Cinema Placeholder */
