@@ -177,6 +177,8 @@ export default function UnifiedVideoGenerationPage() {
   const prevVideoRef = useRef<HTMLVideoElement>(null);
   const playbackRetryCountRef = useRef(0);
   const playbackRetryTimerRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -279,15 +281,33 @@ export default function UnifiedVideoGenerationPage() {
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchBalance();
     fetchDynamicPricing();
     fetchHistory();
     return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       if (playbackRetryTimerRef.current !== null) {
         window.clearTimeout(playbackRetryTimerRef.current);
       }
     };
   }, []);
+
+  // Prevent accidental navigation while generation is active
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isGenerating) {
+        e.preventDefault();
+        e.returnValue = "جاري إنتاج الفيديو، هل أنت متأكد من مغادرة الصفحة؟";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isGenerating]);
 
   const handleDeleteVideoItem = async (e: React.MouseEvent, id: string | number) => {
     e.stopPropagation();
@@ -523,8 +543,11 @@ export default function UnifiedVideoGenerationPage() {
         payload.last_frame = endMedia;
       }
 
+      abortControllerRef.current = new AbortController();
+
       const res = await fetch(`${apiBase || ""}/api/ai/text-to-video`, {
         method: "POST",
+        signal: abortControllerRef.current.signal,
         headers: {
           "Content-Type": "application/json",
           Authorization: getToken() as any,
@@ -534,6 +557,8 @@ export default function UnifiedVideoGenerationPage() {
       });
 
       const data = await res.json();
+      if (!isMountedRef.current) return;
+
       if (data.success && data.video_url) {
         toast.success("🎉 تم إنتاج الفيديو بنجاح!");
         playbackRetryCountRef.current = 0;
@@ -574,9 +599,14 @@ export default function UnifiedVideoGenerationPage() {
         if (data.credits_refunded) void fetchBalance();
       }
     } catch (err: any) {
+      if (err.name === 'AbortError' || !isMountedRef.current) {
+        return; // User navigated away, handle silently without crash
+      }
       toast.error(err.message || "حدث خطأ أثناء معالجة الفيديو");
     } finally {
-      setIsGenerating(false);
+      if (isMountedRef.current) {
+        setIsGenerating(false);
+      }
     }
   };
 

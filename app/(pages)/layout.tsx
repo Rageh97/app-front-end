@@ -59,8 +59,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 // clearInterval(interval);
               }
 
-              if (dataToSend) {
-                ws.send(dataToSend);
+              if (dataToSend && ws && ws.readyState === WebSocket.OPEN) {
+                try {
+                  ws.send(dataToSend);
+                } catch (sendError) {
+                  // Ignore send error when connection drops
+                }
               }
             }
           }, 5000);
