@@ -175,6 +175,8 @@ export default function UnifiedVideoGenerationPage() {
   const endFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const prevVideoRef = useRef<HTMLVideoElement>(null);
+  const playbackRetryCountRef = useRef(0);
+  const playbackRetryTimerRef = useRef<number | null>(null);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -225,12 +227,17 @@ export default function UnifiedVideoGenerationPage() {
   };
 
   // Fetch Video History
-  const fetchHistory = async () => {
+  const fetchHistory = async (optimisticItems: VideoHistoryItem[] = []) => {
     try {
       const token = getToken();
       if (token && apiBase) {
-        const res = await fetch(`${apiBase}/api/ai/user-videos?tool=video&limit=50`, {
-          headers: { Authorization: token as any, "User-Client": (global as any)?.clientId1328 }
+        const res = await fetch(`${apiBase}/api/ai/user-videos?tool=video&limit=50&_=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            Authorization: token as any,
+            "User-Client": (global as any)?.clientId1328,
+            "Cache-Control": "no-cache"
+          }
         });
         if (res.status === 401 || res.status === 403) {
           handleAuthError(res.status);
@@ -246,7 +253,15 @@ export default function UnifiedVideoGenerationPage() {
               model: v.model || 'AI Video',
               time: new Date(v.created_at || Date.now()).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })
             }));
-            setHistory(mapped);
+            const optimisticIds = new Set(optimisticItems.map(item => String(item.id)));
+            const merged = [
+              ...optimisticItems,
+              ...mapped.filter((item: VideoHistoryItem) => !optimisticIds.has(String(item.id)))
+            ];
+            setHistory(merged);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('nexus_video_history', JSON.stringify(merged));
+            }
             return;
           }
         }
@@ -267,6 +282,11 @@ export default function UnifiedVideoGenerationPage() {
     fetchBalance();
     fetchDynamicPricing();
     fetchHistory();
+    return () => {
+      if (playbackRetryTimerRef.current !== null) {
+        window.clearTimeout(playbackRetryTimerRef.current);
+      }
+    };
   }, []);
 
   const handleDeleteVideoItem = async (e: React.MouseEvent, id: string | number) => {
@@ -516,7 +536,9 @@ export default function UnifiedVideoGenerationPage() {
       const data = await res.json();
       if (data.success && data.video_url) {
         toast.success("🎉 تم إنتاج الفيديو بنجاح!");
+        playbackRetryCountRef.current = 0;
         setCurrentVideoUrl(data.video_url);
+        setCurrentView('studio');
         
         const newItem: VideoHistoryItem = {
           id: data.video_id || data.id || `v-${Date.now()}`,
@@ -526,13 +548,21 @@ export default function UnifiedVideoGenerationPage() {
           time: new Date().toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })
         };
 
-        const updatedHistory = [newItem, ...history];
-        setHistory(updatedHistory);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("nexus_video_history", JSON.stringify(updatedHistory));
-        }
+        setHistory(previousItems => {
+          const updatedHistory = [
+            newItem,
+            ...previousItems.filter(item => String(item.id) !== String(newItem.id))
+          ];
+          if (typeof window !== "undefined") {
+            localStorage.setItem("nexus_video_history", JSON.stringify(updatedHistory));
+          }
+          return updatedHistory;
+        });
 
         fetchBalance();
+        // Reconcile with the database without allowing a stale proxy response
+        // to remove the item that was just returned by the generation request.
+        void fetchHistory([newItem]);
       } else {
         const validationMessage = Array.isArray(data.errors)
           ? data.errors.map((error: any) => error?.msg).filter(Boolean).join(" — ")
@@ -600,6 +630,39 @@ export default function UnifiedVideoGenerationPage() {
     } catch (e) {
       toast.dismiss();
       toast.error("تعذر إدراج الفيديو للتعديل");
+    }
+  };
+
+  const handleCurrentVideoError = () => {
+    if (!currentVideoUrl || playbackRetryTimerRef.current !== null) return;
+    if (playbackRetryCountRef.current >= 6) {
+      toast.error("الفيديو محفوظ، لكن عرضه ما زال قيد التجهيز. ستجده في الأعمال السابقة.");
+      return;
+    }
+
+    playbackRetryCountRef.current += 1;
+    const retryNumber = playbackRetryCountRef.current;
+    playbackRetryTimerRef.current = window.setTimeout(() => {
+      playbackRetryTimerRef.current = null;
+      setCurrentVideoUrl(value => {
+        if (!value) return value;
+        try {
+          const refreshed = new URL(value, window.location.origin);
+          refreshed.searchParams.set('_play', `${Date.now()}-${retryNumber}`);
+          return refreshed.toString();
+        } catch {
+          const separator = value.includes('?') ? '&' : '?';
+          return `${value}${separator}_play=${Date.now()}-${retryNumber}`;
+        }
+      });
+    }, Math.min(1500 * retryNumber, 6000));
+  };
+
+  const handleCurrentVideoReady = () => {
+    playbackRetryCountRef.current = 0;
+    if (playbackRetryTimerRef.current !== null) {
+      window.clearTimeout(playbackRetryTimerRef.current);
+      playbackRetryTimerRef.current = null;
     }
   };
 
@@ -689,7 +752,10 @@ export default function UnifiedVideoGenerationPage() {
           </button>
 
           <button
-            onClick={() => setCurrentView('history')}
+            onClick={() => {
+              setCurrentView('history');
+              void fetchHistory(history);
+            }}
             className={`relative z-10 px-3 sm:px-4 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap flex items-center gap-1.5 ${
               currentView === 'history'
                 ? 'bg-[#0B0D14] text-white shadow-sm border border-white/[0.08]'
@@ -1315,12 +1381,16 @@ export default function UnifiedVideoGenerationPage() {
                     </button>
 
                     <video
+                      key={currentVideoUrl}
                       ref={videoRef}
                       src={currentVideoUrl}
                       controls
                       autoPlay
                       loop
                       playsInline
+                      preload="auto"
+                      onCanPlay={handleCurrentVideoReady}
+                      onError={handleCurrentVideoError}
                       onPlay={() => setIsPlaying(true)}
                       onPause={() => setIsPlaying(false)}
                       className="w-full h-full max-h-[75vh] object-contain rounded-lg shadow-2xl"
