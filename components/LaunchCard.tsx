@@ -269,68 +269,70 @@ const LaunchCard: FunctionComponent<LaunchCardProps> = ({
         }}
         className={`hidden dark:flex flex-col w-full h-full text-start bg-gradient-to-b from-[#131622] via-[#0E1018] to-[#0A0C13] border border-zinc-800/80 hover:border-emerald-500/50 rounded-2xl overflow-hidden transition-all duration-300 shadow-lg group relative ${!isStable ? "filter blur-[2px] grayscale-[0.5]" : ""}`}
       >
-        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-20" />
+        <div className="w-full h-full flex flex-col pointer-events-none">
+          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-20" />
 
-        {/* Image Container */}
-        <div className="relative w-full aspect-[16/10] overflow-hidden bg-[#141622] flex items-center justify-center p-2 border-b border-white/[0.04]">
-          <img
-            src={checkIfImageUrl(toolData?.tool_image) ? toolData?.tool_image : "/images/default_image.png"}
-            alt={toolData?.tool_name}
-            className="w-full h-full object-contain rounded-xl group-hover:scale-105 transition-transform duration-500"
-          />
-          <div className="absolute top-2.5 start-2.5 z-10">
-            {isFree ? (
-              <span className="bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {t("dashboard.free")}
-              </span>
-            ) : (
-              <span className="bg-amber-500/25 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-sm">
-                {t("dashboard.pro")}
-              </span>
+          {/* Image Container */}
+          <div className="relative w-full aspect-[16/10] overflow-hidden bg-[#141622] flex items-center justify-center p-2 border-b border-white/[0.04]">
+            <img
+              src={checkIfImageUrl(toolData?.tool_image) ? toolData?.tool_image : "/images/default_image.png"}
+              alt={toolData?.tool_name}
+              className="w-full h-full object-contain rounded-xl group-hover:scale-105 transition-transform duration-500"
+            />
+            <div className="absolute top-2.5 start-2.5 z-10">
+              {isFree ? (
+                <span className="bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {t("dashboard.free")}
+                </span>
+              ) : (
+                <span className="bg-amber-500/25 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md flex items-center gap-1 shadow-sm">
+                  {t("dashboard.pro")}
+                </span>
+              )}
+            </div>
+            {isMultiAccount && (
+              <div className="absolute top-2.5 end-2.5 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm bg-purple-500/20 text-purple-300 border border-purple-500/30 backdrop-blur-md">
+                <Users size={11} />
+                <span>{accountCount}</span>
+              </div>
             )}
           </div>
-          {isMultiAccount && (
-            <div className="absolute top-2.5 end-2.5 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm bg-purple-500/20 text-purple-300 border border-purple-500/30 backdrop-blur-md">
-              <Users size={11} />
-              <span>{accountCount}</span>
-            </div>
-          )}
-        </div>
 
-        {/* Card Info */}
-        <div className="flex flex-col justify-between flex-1 p-3.5 w-full">
-          <div>
-            <h3 className="text-white font-bold text-sm group-hover:text-emerald-400 transition-colors truncate mb-1">
-              {toolData?.tool_name}
-            </h3>
-            <div className="flex items-center gap-1.5 text-zinc-400 text-xs mt-1">
-              <Clock size={12} className="text-zinc-500 shrink-0" />
-              <span className="text-[11px] truncate">
-                {content ? content : <>ينتهي: {fullDateTimeFormat(endedAt)}</>}
-              </span>
+          {/* Card Info */}
+          <div className="flex flex-col justify-between flex-1 p-3.5 w-full">
+            <div>
+              <h3 className="text-white font-bold text-sm group-hover:text-emerald-400 transition-colors truncate mb-1">
+                {toolData?.tool_name}
+              </h3>
+              <div className="flex items-center gap-1.5 text-zinc-400 text-xs mt-1">
+                <Clock size={12} className="text-zinc-500 shrink-0" />
+                <span className="text-[11px] truncate">
+                  {content ? content : <>ينتهي: {fullDateTimeFormat(endedAt)}</>}
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Launch Button */}
-          <div className="mt-3 pt-2.5 border-t border-zinc-800/80 w-full">
-            <div className="w-full py-2 px-3 rounded-xl bg-[#00c48c] hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 group-hover:shadow-[0_4px_12px_rgba(0,196,140,0.3)]">
-              {activeApp === toolData?.tool_id && isLoaded === null ? (
-                <>
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-950 border-r-transparent"></div>
-                  <span>جاري الفتح...</span>
-                </>
-              ) : activeApp === toolData?.tool_id && isLoaded === true ? (
-                <>
-                  <img src="/images/green-check.png" className="w-3.5 h-3.5" alt="Success" />
-                  <span>تم الفتح بنجاح</span>
-                </>
-              ) : (
-                <>
-                  <span>تشغيل الأداة</span>
-                  <ChevronRight size={14} />
-                </>
-              )}
+            {/* Launch Button */}
+            <div className="mt-3 pt-2.5 border-t border-zinc-800/80 w-full">
+              <div className="w-full py-2 px-3 rounded-xl bg-[#00c48c] hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 group-hover:shadow-[0_4px_12px_rgba(0,196,140,0.3)]">
+                {activeApp === toolData?.tool_id && isLoaded === null ? (
+                  <>
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-950 border-r-transparent"></div>
+                    <span>جاري الفتح...</span>
+                  </>
+                ) : activeApp === toolData?.tool_id && isLoaded === true ? (
+                  <>
+                    <img src="/images/green-check.png" className="w-3.5 h-3.5" alt="Success" />
+                    <span>تم الفتح بنجاح</span>
+                  </>
+                ) : (
+                  <>
+                    <span>تشغيل الأداة</span>
+                    <ChevronRight size={14} />
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

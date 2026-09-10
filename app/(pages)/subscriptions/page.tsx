@@ -34,6 +34,13 @@ const Dashboard: FunctionComponent = () => {
 
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if ((globalThis as any).NT_EXT_DETECTED || localStorage.getItem("NT_EXT_DETECTED") === "true") {
+        (globalThis as any).NT_EXT_DETECTED = true;
+        setCanLaunch(true);
+      }
+    }
+
     const handleExtMessage = (event: MessageEvent) => {
       let msg = event.data;
       if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
@@ -44,16 +51,19 @@ const Dashboard: FunctionComponent = () => {
         (msg?.type === 'NT_NEW_EXT_DETECTED')
       ) {
         (globalThis as any).NT_EXT_DETECTED = true;
+        try { localStorage.setItem("NT_EXT_DETECTED", "true"); } catch (e) {}
         setCanLaunch(true);
         setIsOpenErrorEx(false);
       }
     };
     
     window.addEventListener('message', handleExtMessage);
-    if ((globalThis as any).NT_EXT_DETECTED) setCanLaunch(true);
+    if ((globalThis as any).NT_EXT_DETECTED || localStorage.getItem("NT_EXT_DETECTED") === "true") {
+      setCanLaunch(true);
+    }
 
     const interval = setInterval(() => {
-        if (!(globalThis as any).NT_EXT_DETECTED) {
+        if (!(globalThis as any).NT_EXT_DETECTED && localStorage.getItem("NT_EXT_DETECTED") !== "true") {
             window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
         }
     }, 2000);
@@ -94,17 +104,26 @@ const Dashboard: FunctionComponent = () => {
       }
 
       // Check for extension detection
-      if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
+      const isDetected = (globalThis as any).NT_EXT_DETECTED || canLaunch || localStorage.getItem("NT_EXT_DETECTED") === "true";
+      if (!isDetected) {
           window.postMessage({ type: 'CHECK_FOR_NT_EXTENSION' }, "*");
           // Wait up to 1.5s for detection
           for (let i = 0; i < 15; i++) {
-              if ((globalThis as any).NT_EXT_DETECTED || canLaunch) break;
+              if ((globalThis as any).NT_EXT_DETECTED || canLaunch || localStorage.getItem("NT_EXT_DETECTED") === "true") break;
               await new Promise(r => setTimeout(r, 100));
           }
       }
 
-      // Final check: if still not detected, just stop. Banner at top will explain why.
-      if (!(globalThis as any).NT_EXT_DETECTED && !canLaunch) {
+      const hasExt = (globalThis as any).NT_EXT_DETECTED || canLaunch || localStorage.getItem("NT_EXT_DETECTED") === "true";
+
+      // If still not detected, do NOT leave the card stuck in loading spinner!
+      if (!hasExt) {
+        setIsLoaded(false);
+        setIsOpenErrorEx(true);
+        setTimeout(() => {
+          setIsLoaded(null);
+          setActiveApp(null);
+        }, 3000);
         return;
       }
 
@@ -207,7 +226,7 @@ const Dashboard: FunctionComponent = () => {
       </div>
 
       {/* Extension Not Detected Banner */}
-      {(!canLaunch && !(globalThis as any).NT_EXT_DETECTED) && (
+      {(!canLaunch && !(globalThis as any).NT_EXT_DETECTED && (typeof window === 'undefined' || localStorage.getItem("NT_EXT_DETECTED") !== "true")) && (
         <div className="w-full my-6 animate-in fade-in slide-in-from-top duration-700">
             <div className="relative overflow-hidden p-[1px] rounded-2xl bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.15)]">
                 <div className="relative bg-[#100c24] dark:bg-[#12141F] p-5 sm:p-6 rounded-[15px] flex flex-col md:flex-row items-center justify-between gap-5 overflow-hidden">
@@ -258,9 +277,11 @@ const Dashboard: FunctionComponent = () => {
                 if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
                 if (msg && msg.type === 'EXTENSION_CHECK' && requiredExtensions.has(msg.extensionName)) {
                     window.NT_EXT_DETECTED = true;
+                    try { localStorage.setItem('NT_EXT_DETECTED', 'true'); } catch (e) {}
                 }
                 if (msg && (msg.type === 'NT_NEW_EXT_DETECTED' || (msg.type === 'FROM_EXTENSION' && msg.data && msg.data.m === "Hello from the extension!"))) {
                     window.NT_EXT_DETECTED = true;
+                    try { localStorage.setItem('NT_EXT_DETECTED', 'true'); } catch (e) {}
                 }
             });
         })();

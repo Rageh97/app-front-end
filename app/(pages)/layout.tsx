@@ -89,6 +89,21 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       connectWebDocket();
       global.checkOnline = true;
     }
+
+    const handleExtMessage = (event: MessageEvent) => {
+      let msg = event.data;
+      if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) {} }
+      if (
+        (msg && msg.type === 'EXTENSION_CHECK') ||
+        (msg?.type === 'FROM_EXTENSION' && msg?.data?.m === "Hello from the extension!") ||
+        (msg?.type === 'NT_NEW_EXT_DETECTED')
+      ) {
+        (globalThis as any).NT_EXT_DETECTED = true;
+        try { localStorage.setItem('NT_EXT_DETECTED', 'true'); } catch (e) {}
+      }
+    };
+    window.addEventListener('message', handleExtMessage);
+    return () => window.removeEventListener('message', handleExtMessage);
   }, []);
 // ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 const [lang, setLang] = useState("ar");
