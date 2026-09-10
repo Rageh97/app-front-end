@@ -54,6 +54,10 @@ const AdminTabs: FunctionComponent = () => {
           href: `/admin/users`,
         },
         {
+          label: t('admin.subscribers', 'المشتركين'),
+          href: `/admin/subscribers`,
+        },
+        {
           label: t('admin.directActivation'),
           href: `/admin/direct-activation`,
         },
@@ -126,6 +130,10 @@ const AdminTabs: FunctionComponent = () => {
           href: `/admin/users`,
         },
         {
+          label: t('admin.subscribers', 'المشتركين'),
+          href: `/admin/subscribers`,
+        },
+        {
           label: t('admin.directActivation'),
           href: `/admin/direct-activation`,
         },
@@ -181,6 +189,10 @@ const AdminTabs: FunctionComponent = () => {
           badge: unreadCount,
         },
         {
+          label: t('admin.subscribers', 'المشتركين'),
+          href: `/admin/subscribers`,
+        },
+        {
           label: t('admin.tools'),
           href: `/admin/tools`,
         },
@@ -210,6 +222,10 @@ const AdminTabs: FunctionComponent = () => {
         {
           label: t('admin.users'),
           href: `/admin/users`,
+        },
+        {
+          label: t('admin.subscribers', 'المشتركين'),
+          href: `/admin/subscribers`,
         },
         {
           label: t('admin.orders'),
