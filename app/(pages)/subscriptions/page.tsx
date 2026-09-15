@@ -11,7 +11,7 @@ import { fullDateTimeFormat } from "@/utils/timeFormatting";
 import { useModal } from "@/components/providers/ModalProvider";
 import { getDangerActionConfirmationModal } from "@/components/Modals/DangerActionConfirmation";
 import DataStatsThree from "@/components/DataStats/DataStatsThree";
-import { Clock, ShipWheel, UserRound, AlertTriangle, Download, RefreshCw } from "lucide-react";
+import { Clock, ShipWheel, UserRound, AlertTriangle, Download, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 
 const Dashboard: FunctionComponent = () => {
@@ -225,49 +225,79 @@ const Dashboard: FunctionComponent = () => {
         </h2>
       </div>
 
-      {/* Extension Not Detected Banner */}
-      {(!canLaunch && !(globalThis as any).NT_EXT_DETECTED && (typeof window === 'undefined' || localStorage.getItem("NT_EXT_DETECTED") !== "true")) && (
-        <div className="w-full my-6 animate-in fade-in slide-in-from-top duration-700">
-            <div className="relative overflow-hidden p-[1px] rounded-2xl bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.15)]">
-                <div className="relative bg-[#100c24] dark:bg-[#12141F] p-5 sm:p-6 rounded-[15px] flex flex-col md:flex-row items-center justify-between gap-5 overflow-hidden">
-                    {/* Background Glow */}
-                    <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none"></div>
-                    
-                    <div className="flex items-center gap-4 text-center md:text-start z-10">
-                        <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/30 shadow-[0_0_15px_rgba(217,119,6,0.1)] shrink-0">
-                            <AlertTriangle className="text-amber-400" size={28} />
-                        </div>
-                        <div>
-                            <h3 className="text-base md:text-lg font-bold text-amber-400">
-                                إذا لم تكن قمت بتنزيل الإضافة، يرجى تنزيلها وتثبيتها أولاً لتشغيل الأدوات
-                            </h3>
-                            <p className="text-xs text-zinc-400 mt-0.5">
-                                تتطلب بعض الأدوات إضافة المتصفح الخاصة بنا للوصول المباشر والحماية
-                            </p>
-                        </div>
-                    </div>
+      {/* Extension Download Banner - Always Visible */}
+      <div className="w-full my-6 animate-in fade-in slide-in-from-top duration-700">
+        <div className={`relative overflow-hidden p-[1px] rounded-2xl transition-all duration-300 ${
+          canLaunch
+            ? "bg-gradient-to-r from-emerald-600/70 via-[#00c48c] to-emerald-600/70 shadow-[0_0_20px_rgba(0,196,140,0.15)]"
+            : "bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.15)]"
+        }`}>
+          <div className="relative bg-[#100c24] dark:bg-[#12141F] p-5 sm:p-6 rounded-[15px] flex flex-col md:flex-row items-center justify-between gap-5 overflow-hidden">
+            {/* Background Glow */}
+            <div className={`absolute -top-24 -left-24 w-48 h-48 blur-[100px] rounded-full pointer-events-none ${
+              canLaunch ? "bg-[#00c48c]/15" : "bg-amber-500/10"
+            }`}></div>
 
-                    <div className="flex items-center gap-2.5 z-10 shrink-0">
-                        <a 
-                            href="/Nexustoolz.com.zip" 
-                            download 
-                            className="group flex items-center gap-2 px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm rounded-xl transition-all duration-300 shadow-md hover:scale-[1.03] active:scale-95"
-                        >
-                            <Download size={16} className="group-hover:animate-bounce" />
-                            <span>تنزيل الإضافة</span>
-                        </a>
-                        <button 
-                            onClick={() => window.location.reload()}
-                            className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/10"
-                            title="إعادة الفحص"
-                        >
-                            <RefreshCw size={16} className="active:rotate-180 transition-all duration-500" />
-                        </button>
-                    </div>
+            <div className="flex items-center gap-4 text-center md:text-start z-10">
+              <div className={`p-3 rounded-2xl border shadow-lg shrink-0 ${
+                canLaunch
+                  ? "bg-[#00c48c]/10 border-[#00c48c]/30 text-[#00c48c] shadow-[0_0_15px_rgba(0,196,140,0.15)]"
+                  : "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(217,119,6,0.1)]"
+              }`}>
+                {canLaunch ? <CheckCircle2 size={28} /> : <AlertTriangle size={28} />}
+              </div>
+              <div>
+                <div className="flex items-center justify-center md:justify-start gap-2 mb-1 flex-wrap">
+                  <h3 className={`text-base md:text-lg font-bold ${
+                    canLaunch ? "text-white" : "text-amber-400"
+                  }`}>
+                    {canLaunch
+                      ? "إضافة Nexus Tools للمتصفح جاهزة ومثبتة"
+                      : "إذا لم تكن قمت بتنزيل الإضافة، يرجى تنزيلها وتثبيتها أولاً لتشغيل الأدوات"}
+                  </h3>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    canLaunch
+                      ? "bg-emerald-500/10 text-[#00c48c] border-[#00c48c]/30"
+                      : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      canLaunch ? "bg-[#00c48c] animate-pulse" : "bg-amber-400"
+                    }`}></span>
+                    {canLaunch ? "مفعّلة" : "مطلوبة لتشغيل الأدوات"}
+                  </span>
                 </div>
+                <p className="text-xs text-zinc-400">
+                  {canLaunch
+                    ? "الإضافة مثبتة على هذا المتصفح. يمكنك إعادة تنزيلها في أي وقت إذا كنت تريد تثبيتها على متصفح أو جهاز آخر."
+                    : "تتطلب بعض الأدوات إضافة المتصفح الخاصة بنا للوصول المباشر والحماية."}
+                </p>
+              </div>
             </div>
+
+            <div className="flex items-center gap-2.5 z-10 shrink-0">
+              <a
+                href="/Nexustoolz.com.zip"
+                download
+                className={`group flex items-center gap-2 px-5 py-3 font-bold text-xs sm:text-sm rounded-xl transition-all duration-300 shadow-md hover:scale-[1.03] active:scale-95 ${
+                  canLaunch
+                    ? "bg-[#00c48c] hover:bg-[#00b07d] text-slate-950 shadow-[#00c48c]/20"
+                    : "bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20"
+                }`}
+              >
+                <Download size={16} className="group-hover:animate-bounce" />
+                <span>{canLaunch ? "إعادة تنزيل الإضافة" : "تنزيل الإضافة"}</span>
+              </a>
+              <button
+                onClick={() => window.location.reload()}
+                className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl transition-all border border-white/10"
+                title="إعادة الفحص"
+              >
+                <RefreshCw size={16} className="active:rotate-180 transition-all duration-500" />
+              </button>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
