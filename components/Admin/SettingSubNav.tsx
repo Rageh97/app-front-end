@@ -11,7 +11,8 @@ import {
   Tv,
   FileText,
   ShieldCheck,
-  Wrench
+  Wrench,
+  Globe
 } from 'lucide-react';
 
 export const SettingSubNav = () => {
@@ -19,13 +20,13 @@ export const SettingSubNav = () => {
   const { t } = useTranslation();
 
   const navItems = [
+    { href: '/admin/setting', label: 'الصفحة الرئيسية والصيانة', icon: Globe, exact: true },
     { href: '/admin/setting/logo', label: t('settings.logo') || 'الشعار', icon: Image },
     { href: '/admin/setting/notifications', label: t('settings.notifications') || 'الإشعارات', icon: Bell },
     { href: '/admin/setting/socialLinks', label: t('settings.socialLinks') || 'روابط التواصل', icon: Share2 },
     { href: '/admin/setting/banners', label: t('settings.banners') || 'البنرات', icon: Tv },
     { href: '/admin/setting/policy', label: t('footer.returnPolicy') || 'سياسة الاسترجاع', icon: FileText },
     { href: '/admin/setting/condition', label: t('footer.returnCondition') || 'شروط الاسترجاع', icon: ShieldCheck },
-    { href: '/admin/setting', label: 'وضع الصيانة', icon: Wrench, exact: true },
   ];
 
   return (

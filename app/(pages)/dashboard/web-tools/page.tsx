@@ -19,7 +19,11 @@ import ToolErrorExtention from "@/components/Modals/ToolErrorExtention";
 
 type Period = "month" | "year" | "day";
 
-const WebToolsPage: FunctionComponent = () => {
+type WebToolsPageProps = {
+  isHomePage?: boolean;
+};
+
+const WebToolsPage: FunctionComponent<WebToolsPageProps> = ({ isHomePage = false }) => {
   const { t } = useTranslation();
   const { data } = useMyInfo();
   const [isLoadingPage, setIsLoadingPage] = useState(true);
@@ -233,15 +237,17 @@ const WebToolsPage: FunctionComponent = () => {
     <>
       {/* Page Header with Back to AI Dashboard */}
       <div className="mt-2 mb-4 px-1 lg:px-5">
-        <div className="flex items-center gap-3 mb-4">
-          <Link 
-            href="/dashboard" 
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#12141F] dark:bg-[#12141F] border border-zinc-800/80 hover:border-[#00c48c]/40 text-zinc-300 hover:text-[#00c48c] text-sm font-bold transition-all duration-300"
-          >
-            <ArrowRight size={16} className={i18n.language === 'ar' ? '' : 'rotate-180'} />
-            <span>{t('dashboard.Dashboard')}</span>
-          </Link>
-        </div>
+        {!isHomePage && (
+          <div className="flex items-center gap-3 mb-4">
+            <Link 
+              href="/dashboard" 
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#12141F] dark:bg-[#12141F] border border-zinc-800/80 hover:border-[#00c48c]/40 text-zinc-300 hover:text-[#00c48c] text-sm font-bold transition-all duration-300"
+            >
+              <ArrowRight size={16} className={i18n.language === 'ar' ? '' : 'rotate-180'} />
+              <span>{t('dashboard.Dashboard')}</span>
+            </Link>
+          </div>
+        )}
         
         <div className="flex items-center gap-3 border-s-4 border-[#ff7702] ps-3">
           <Wrench size={22} className="text-[#ff7702]" />

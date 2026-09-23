@@ -52,22 +52,25 @@ const Header = (props: {
     fetchLogo();
   }, []);
 // ....................................................
-const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
+  const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
   const [isFontsHubEnabled, setIsFontsHubEnabled] = useState(true);
   const [isAiHubEnabled, setIsAiHubEnabled] = useState(true);
+  const [isWebToolsHome, setIsWebToolsHome] = useState(true);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const [mediaRes, fontsRes, aiRes] = await Promise.all([
-          axios.get("/api/admin/settings/media_hub_enabled"),
-          axios.get("/api/admin/settings/fonts_hub_enabled"),
-          axios.get("/api/admin/settings/ai_hub_enabled")
+        const [mediaRes, fontsRes, aiRes, homeRes] = await Promise.all([
+          axios.get("/api/admin/settings/media_hub_enabled").catch(() => ({ data: { value: 'true' } })),
+          axios.get("/api/admin/settings/fonts_hub_enabled").catch(() => ({ data: { value: 'true' } })),
+          axios.get("/api/admin/settings/ai_hub_enabled").catch(() => ({ data: { value: 'true' } })),
+          axios.get("/api/admin/settings/homepage_is_web_tools").catch(() => ({ data: { value: 'true' } }))
         ]);
         
         setIsMediaHubEnabled(String(mediaRes.data.value) !== 'false');
         setIsFontsHubEnabled(String(fontsRes.data.value) !== 'false');
         setIsAiHubEnabled(String(aiRes.data.value) !== 'false');
+        setIsWebToolsHome(String(homeRes.data.value) !== 'false');
       } catch (error) {
         console.error("Failed to fetch settings:", error);
       }
@@ -85,6 +88,8 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
           setIsFontsHubEnabled(customEvent.detail.value);
         } else if (customEvent.detail.key === 'ai_hub_enabled') {
           setIsAiHubEnabled(customEvent.detail.value);
+        } else if (customEvent.detail.key === 'homepage_is_web_tools') {
+          setIsWebToolsHome(customEvent.detail.value === true || String(customEvent.detail.value) === 'true');
         }
       }
     };
@@ -212,20 +217,21 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
   const menuItems = [
     {
       completeHref: "/dashboard",
-      name: t('dashboard.Dashboard'),
-      icon: <House size={24} />,
+      name: isWebToolsHome ? "أدوات المواقع" : t('dashboard.Dashboard'),
+      icon: isWebToolsHome ? <Globe size={24} /> : <House size={24} />,
       permission: true,
     },
     {
       completeHref: "/dashboard/web-tools",
       name: "أدوات المواقع",
       icon: <Globe size={24} />,
-      permission: true,
+      permission: !isWebToolsHome,
     },
     {
       completeHref: "/ai",
       name: "Nexus Ai",
       icon: "Ai",
+      isSoon: true,
       permission: isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
     },
     {
@@ -339,41 +345,56 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
         <div className="hidden lg:dark:flex items-center gap-1 xl:gap-2 px-4 py-1.5 bg-[#12141F]/90 border border-zinc-800/80 rounded-full shadow-md overflow-x-auto no-scrollbar">
           {menuItems.map((item) => 
             item.permission && item.completeHref !== "/profile" && item.completeHref !== "/logout" && (
-              <Link
-                key={item.completeHref}
-                href={item.completeHref}
-                className={`px-4 py-1.5 rounded-full text-xs xl:text-sm transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border relative group ${
-                  pathname === item.completeHref
-                    ? 'bg-gradient-to-b from-[#00c48c]/20 to-[#00c48c]/5 text-[#00c48c] border-[#00c48c]/30 shadow-[0_0_15px_rgba(0,196,140,0.15)] font-bold'
-                    : 'text-zinc-400 border-transparent hover:text-white hover:bg-white/5 hover:border-white/10 hover:shadow-[0_0_10px_rgba(255,255,255,0.03)] font-medium active:scale-95'
-                }`}
-              >
-                {/* Subtle top highlight for active link */}
-                {pathname === item.completeHref && (
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-[#00c48c] to-transparent opacity-70"></div>
-                )}
-                <span className="relative z-10 flex items-center gap-1.5">
-                  {item.completeHref === "/subscriptions" && hasActiveSubscription ? (
-                    <span className="relative inline-flex items-center gap-1 font-black animate-amber-shimmer">
-                      <span>{item.name}</span>
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400"></span>
-                      </span>
+              (item as any).isSoon ? (
+                <div
+                  key={item.completeHref}
+                  className="px-3.5 py-1.5 rounded-full text-xs xl:text-sm flex items-center gap-1.5 whitespace-nowrap border border-zinc-800/60 bg-white/[0.02] text-zinc-500 cursor-not-allowed opacity-65 select-none font-medium"
+                  title="قريباً"
+                >
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    <span>{item.name}</span>
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 tracking-wider">
+                      soon
                     </span>
-                  ) : item.completeHref === "/dashboard/web-tools" ? (
-                    <span className="relative inline-flex items-center gap-1 font-black animate-green-shimmer">
-                      <span>{item.name}</span>
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
-                      </span>
-                    </span>
-                  ) : (
-                    item.name
+                  </span>
+                </div>
+              ) : (
+                <Link
+                  key={item.completeHref}
+                  href={item.completeHref}
+                  className={`px-4 py-1.5 rounded-full text-xs xl:text-sm transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap border relative group ${
+                    pathname === item.completeHref
+                      ? 'bg-gradient-to-b from-[#00c48c]/20 to-[#00c48c]/5 text-[#00c48c] border-[#00c48c]/30 shadow-[0_0_15px_rgba(0,196,140,0.15)] font-bold'
+                      : 'text-zinc-400 border-transparent hover:text-white hover:bg-white/5 hover:border-white/10 hover:shadow-[0_0_10px_rgba(255,255,255,0.03)] font-medium active:scale-95'
+                  }`}
+                >
+                  {/* Subtle top highlight for active link */}
+                  {pathname === item.completeHref && (
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-[#00c48c] to-transparent opacity-70"></div>
                   )}
-                </span>
-              </Link>
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    {item.completeHref === "/subscriptions" && hasActiveSubscription ? (
+                      <span className="relative inline-flex items-center gap-1 font-black animate-amber-shimmer">
+                        <span>{item.name}</span>
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400"></span>
+                        </span>
+                      </span>
+                    ) : (item.completeHref === "/dashboard/web-tools" || (item.completeHref === "/dashboard" && isWebToolsHome)) ? (
+                      <span className="relative inline-flex items-center gap-1 font-black animate-green-shimmer">
+                        <span>{item.name}</span>
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+                        </span>
+                      </span>
+                    ) : (
+                      item.name
+                    )}
+                  </span>
+                </Link>
+              )
             )
           )}
         </div>
@@ -527,43 +548,63 @@ const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
                   <div className="flex flex-col space-y-1">
                     {menuItems.map((item) => 
                       item.permission && item.completeHref !== "/logout" && (
-                        <Link
-                          key={item.completeHref}
-                          href={item.completeHref}
-                          className={`flex items-center gap-3 text-white py-2.5 px-3 rounded-xl transition-colors ${
-                            pathname === item.completeHref
-                              ? 'bg-[#00c48c]/20 dark:bg-[#00c48c]/20 text-[#00c48c] font-bold border border-[#00c48c]/30'
-                              : 'hover:bg-white/10 dark:hover:bg-zinc-800/80 text-zinc-300'
-                          }`}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          {typeof item.icon === 'string' ? (
-                            <span className="text-[#00c48c] font-bold">{item.icon}</span>
-                          ) : (
-                            <div className="text-[#00c48c]">{item.icon}</div>
-                          )}
-                          <span className="text-sm flex items-center gap-2">
-                            {item.completeHref === "/subscriptions" && hasActiveSubscription ? (
-                              <span className="inline-flex items-center gap-1 font-black animate-amber-shimmer">
-                                <span>{item.name}</span>
-                                <span className="relative flex h-1.5 w-1.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400"></span>
-                                </span>
-                              </span>
-                            ) : item.completeHref === "/dashboard/web-tools" ? (
-                              <span className="inline-flex items-center gap-1 font-black animate-green-shimmer">
-                                <span>{item.name}</span>
-                                <span className="relative flex h-1.5 w-1.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
-                                </span>
-                              </span>
+                        (item as any).isSoon ? (
+                          <div
+                            key={item.completeHref}
+                            className="flex items-center justify-between text-zinc-500 py-2.5 px-3 rounded-xl cursor-not-allowed opacity-65 select-none bg-white/[0.02] border border-zinc-800/40"
+                            title="قريباً"
+                          >
+                            <div className="flex items-center gap-3">
+                              {typeof item.icon === 'string' ? (
+                                <span className="text-zinc-500 font-bold">{item.icon}</span>
+                              ) : (
+                                <div className="text-zinc-500">{item.icon}</div>
+                              )}
+                              <span className="text-sm text-zinc-400">{item.name}</span>
+                            </div>
+                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 tracking-wider">
+                              soon
+                            </span>
+                          </div>
+                        ) : (
+                          <Link
+                            key={item.completeHref}
+                            href={item.completeHref}
+                            className={`flex items-center gap-3 text-white py-2.5 px-3 rounded-xl transition-colors ${
+                              pathname === item.completeHref
+                                ? 'bg-[#00c48c]/20 dark:bg-[#00c48c]/20 text-[#00c48c] font-bold border border-[#00c48c]/30'
+                                : 'hover:bg-white/10 dark:hover:bg-zinc-800/80 text-zinc-300'
+                            }`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            {typeof item.icon === 'string' ? (
+                              <span className="text-[#00c48c] font-bold">{item.icon}</span>
                             ) : (
-                              item.name
+                              <div className="text-[#00c48c]">{item.icon}</div>
                             )}
-                          </span>
-                        </Link>
+                            <span className="text-sm flex items-center gap-2">
+                              {item.completeHref === "/subscriptions" && hasActiveSubscription ? (
+                                <span className="inline-flex items-center gap-1 font-black animate-amber-shimmer">
+                                  <span>{item.name}</span>
+                                  <span className="relative flex h-1.5 w-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400"></span>
+                                  </span>
+                                </span>
+                              ) : (item.completeHref === "/dashboard/web-tools" || (item.completeHref === "/dashboard" && isWebToolsHome)) ? (
+                                <span className="inline-flex items-center gap-1 font-black animate-green-shimmer">
+                                  <span>{item.name}</span>
+                                  <span className="relative flex h-1.5 w-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+                                  </span>
+                                </span>
+                              ) : (
+                                item.name
+                              )}
+                            </span>
+                          </Link>
+                        )
                       )
                     )}
                   </div>

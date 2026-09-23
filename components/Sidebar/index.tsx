@@ -146,6 +146,7 @@ type SidebarLinkProps =
     permission?: Boolean;
     badge?: string;
     hasSubscription?: boolean;
+    isSoon?: boolean;
   }
   | SidebarDropdownProps;
 
@@ -158,6 +159,28 @@ const SidebarLink: FunctionComponent<SidebarLinkProps> = ({
   ...props
 }) => {
   const pathname = usePathname();
+
+  const isSoon = 'isSoon' in props ? (props as any).isSoon : false;
+  if (isSoon) {
+    return (
+      <div
+        className="group relative flex items-center justify-start w-full px-2 h-12 gap-2 rounded-xl text-zinc-500 bg-white/[0.02] border border-zinc-800/40 cursor-not-allowed opacity-65 select-none"
+        title="قريباً"
+      >
+        <span className="relative z-10 flex-shrink-0 text-zinc-500">
+          {icon}
+        </span>
+        <div className="flex items-center justify-between overflow-hidden w-full">
+          <span className="relative z-10 font-medium whitespace-nowrap text-sm truncate text-zinc-400">
+            {name}
+          </span>
+          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 tracking-wider">
+            soon
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const isActive = getIsActive
     ? getIsActive(pathname, completeHref)
@@ -252,19 +275,22 @@ const GlobalMenu: FunctionComponent = () => {
   const [isMediaHubEnabled, setIsMediaHubEnabled] = useState(true);
   const [isFontsHubEnabled, setIsFontsHubEnabled] = useState(true);
   const [isAiHubEnabled, setIsAiHubEnabled] = useState(true);
+  const [isWebToolsHome, setIsWebToolsHome] = useState(true);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const [mediaRes, fontsRes, aiRes] = await Promise.all([
-          axios.get("/api/admin/settings/media_hub_enabled"),
-          axios.get("/api/admin/settings/fonts_hub_enabled"),
-          axios.get("/api/admin/settings/ai_hub_enabled")
+        const [mediaRes, fontsRes, aiRes, homeRes] = await Promise.all([
+          axios.get("/api/admin/settings/media_hub_enabled").catch(() => ({ data: { value: 'true' } })),
+          axios.get("/api/admin/settings/fonts_hub_enabled").catch(() => ({ data: { value: 'true' } })),
+          axios.get("/api/admin/settings/ai_hub_enabled").catch(() => ({ data: { value: 'true' } })),
+          axios.get("/api/admin/settings/homepage_is_web_tools").catch(() => ({ data: { value: 'true' } }))
         ]);
         
         setIsMediaHubEnabled(String(mediaRes.data.value) !== 'false');
         setIsFontsHubEnabled(String(fontsRes.data.value) !== 'false');
         setIsAiHubEnabled(String(aiRes.data.value) !== 'false');
+        setIsWebToolsHome(String(homeRes.data.value) !== 'false');
       } catch (error) {
         console.error("Failed to fetch settings:", error);
       }
@@ -282,6 +308,8 @@ const GlobalMenu: FunctionComponent = () => {
           setIsFontsHubEnabled(customEvent.detail.value);
         } else if (customEvent.detail.key === 'ai_hub_enabled') {
           setIsAiHubEnabled(customEvent.detail.value);
+        } else if (customEvent.detail.key === 'homepage_is_web_tools') {
+          setIsWebToolsHome(customEvent.detail.value === true || String(customEvent.detail.value) === 'true');
         }
       }
     };
@@ -322,8 +350,8 @@ const GlobalMenu: FunctionComponent = () => {
         items={[
           {
             completeHref: "/dashboard",
-            name: t('dashboard.Dashboard'),
-            icon: <House size={24} /> ,
+            name: isWebToolsHome ? "أدوات المواقع" : t('dashboard.Dashboard'),
+            icon: isWebToolsHome ? <Globe size={24} /> : <House size={24} />,
             children: "",
             permission: true,
           },
@@ -332,13 +360,13 @@ const GlobalMenu: FunctionComponent = () => {
             name: "أدوات المواقع",
             icon: <Globe size={24} />,
             children: "",
-            permission: true,
+            permission: !isWebToolsHome,
           },
           {
             completeHref: "/ai",
             name: "Nexus Ai",
             icon: <Brain size={24} />,
-            badge: "NEW",
+            isSoon: true,
             children: "",
             permission: isAiHubEnabled || data?.userRole === "admin" || data?.userRole === "manager",
           },

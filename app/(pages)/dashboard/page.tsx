@@ -20,6 +20,7 @@ import CihBankOrderDetailsInfoModal from '@/components/Modals/CihBankOrderDetail
 import TijariBankOrderDetailsInfoModal from '@/components/Modals/TijariBankOrderDetailsInfoModal';
 import ToolErrorExtention from '@/components/Modals/ToolErrorExtention';
 import ReviewModal from '@/components/Modals/ReviewModal';
+import WebToolsPage from './web-tools/page';
 
 type Period = "month" | "year" | "day";
 
@@ -79,6 +80,7 @@ export default function DashboardPage() {
   const [openReviewModal, setOpenReviewModal] = useState<boolean>(false);
   const [showExtensionModal, setShowExtensionModal] = useState<boolean>(false);
   const [period, setPeriod] = useState<Period>("month");
+  const [isWebToolsHome, setIsWebToolsHome] = useState<boolean>(true);
   const [extensionDetected, setExtensionDetected] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return !!global.freeToolsExtensionDetected;
@@ -86,6 +88,31 @@ export default function DashboardPage() {
 
   useEffect(() => {
     document.title = 'NEXUS PRO | مركز العمل الإبداعي';
+
+    const fetchHomepageSetting = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/settings/homepage_is_web_tools`);
+        if (res.ok) {
+          const setting = await res.json();
+          if (setting && setting.value !== null && setting.value !== undefined) {
+            setIsWebToolsHome(String(setting.value) !== 'false');
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch homepage setting:", err);
+      }
+    };
+    fetchHomepageSetting();
+
+    const handleSettingsChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && customEvent.detail.key === 'homepage_is_web_tools') {
+        setIsWebToolsHome(customEvent.detail.value === true || String(customEvent.detail.value) === 'true');
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('settingsChanged', handleSettingsChange);
+    }
     const fetchAssets = async () => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/settings/public/ai-assets`);
@@ -123,6 +150,9 @@ export default function DashboardPage() {
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("message", handleExtensionPing);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('settingsChanged', handleSettingsChange);
+      }
     };
   }, []);
 
@@ -163,6 +193,10 @@ export default function DashboardPage() {
   };
 
   if (isLoadingPage) return <PremiumLoader />;
+
+  if (isWebToolsHome) {
+    return <WebToolsPage isHomePage={true} />;
+  }
 
   return (
     <div className="nexus-page -mx-2 min-h-screen pb-6 sm:-mx-4 md:-mx-6 lg:-mx-8" dir="rtl">

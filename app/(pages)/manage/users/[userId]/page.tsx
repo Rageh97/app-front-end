@@ -29,9 +29,18 @@ import { useUpdateUserPlanExpiry } from "@/utils/user-plan/updateUserPlanExpiry"
 import { useUpdateUserPackExpiry } from "@/utils/user-pack/updateUserPackExpiry";
 import { getEditExpiryModal } from "@/components/Modals/EditExpiryModal";
 import PencilSquare from "@/components/icons/PencilSquare";
+import TrashIcon from "@/components/icons/TrashIcon";
 import { useImpersonateUser } from "@/utils/users/impersonateUser";
 import { toast } from "react-hot-toast";
 import { getDirectActivationModal } from "@/components/Modals/DirectActivationModal";
+import { useGetUsersPurchasedCreditsList } from "@/utils/user-credit/getUsersPurchasedCredits";
+import { useDisableUserCredit } from "@/utils/user-credit/disableUserCredit";
+import { useEnableUserCredit } from "@/utils/user-credit/enableUserCredit";
+import { useUpdateUserCreditExpiry } from "@/utils/user-credit/updateUserCreditExpiry";
+import { useDeleteUserCredit } from "@/utils/user-credit/deleteUserCredit";
+import { useDeleteUserTool } from "@/utils/user-tool/deleteUserTool";
+import { useDeleteUserPack } from "@/utils/user-pack/deleteUserPack";
+import { useDeleteUserPlan } from "@/utils/user-plan/deleteUserPlan";
 
 type Props = {
   params: { userId: string };
@@ -44,6 +53,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
   const [purchasedToolPage, setPurchasedToolPage] = useState<number>(1);
   const [purchasedPlanPage, setPurchasedPlanPage] = useState<number>(1);
   const [purchasedPackPage, setPurchasedPackPage] = useState<number>(1);
+  const [purchasedCreditPage, setPurchasedCreditPage] = useState<number>(1);
 
   const {
     data: user,
@@ -75,6 +85,14 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
     isError: isPurchasedPacksDataError,
     refetch: refetchPurchasedPacksData,
   } = useGetUsersPurchasedPacksList(purchasedPackPage, parseInt(userId));
+
+  const {
+    data: purchasedCreditsData,
+    isFetching: isPurchasedCreditsDataFetching,
+    isLoading: isPurchasedCreditsDataLoading,
+    isError: isPurchasedCreditsDataError,
+    refetch: refetchPurchasedCreditsData,
+  } = useGetUsersPurchasedCreditsList(purchasedCreditPage, parseInt(userId));
 
   const {
     mutate: disableUser,
@@ -124,6 +142,44 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
     isSuccess: isEnabledUserPack,
   } = useEnableUserPack(parseInt(userId));
 
+  const {
+    mutate: disableUserCredit,
+    isLoading: isDisablingUserCredit,
+    isSuccess: isDisabledUserCredit,
+  } = useDisableUserCredit(parseInt(userId));
+
+  const {
+    mutate: enableUserCredit,
+    isLoading: isEnablingUserCredit,
+    isSuccess: isEnabledUserCredit,
+  } = useEnableUserCredit(parseInt(userId));
+
+  const {
+    mutate: deleteUserCredit,
+    isLoading: isDeletingUserCredit,
+    isSuccess: isDeletedUserCredit,
+  } = useDeleteUserCredit(parseInt(userId));
+
+  const { mutate: updateUserCreditExpiry, isLoading: isUpdatingUserCreditExpiry } = useUpdateUserCreditExpiry();
+
+  const {
+    mutate: deleteUserTool,
+    isLoading: isDeletingUserTool,
+    isSuccess: isDeletedUserTool,
+  } = useDeleteUserTool(parseInt(userId));
+
+  const {
+    mutate: deleteUserPack,
+    isLoading: isDeletingUserPack,
+    isSuccess: isDeletedUserPack,
+  } = useDeleteUserPack(parseInt(userId));
+
+  const {
+    mutate: deleteUserPlan,
+    isLoading: isDeletingUserPlan,
+    isSuccess: isDeletedUserPlan,
+  } = useDeleteUserPlan(parseInt(userId));
+
   const { mutate: updateUserToolExpiry, isLoading: isUpdatingUserToolExpiry } = useUpdateUserToolExpiry();
   const { mutate: updateUserPlanExpiry, isLoading: isUpdatingUserPlanExpiry } = useUpdateUserPlanExpiry();
   const { mutate: updateUserPackExpiry, isLoading: isUpdatingUserPackExpiry } = useUpdateUserPackExpiry();
@@ -138,19 +194,25 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
     setTimeout(() => {
       refetchPurchasedToolsData();
     }, 1000);
-  }, [purchasedToolPage, isDisabledUserTool, isEnabledUserTool]);
+  }, [purchasedToolPage, isDisabledUserTool, isEnabledUserTool, isDeletedUserTool]);
 
   useEffect(() => {
     setTimeout(() => {
       refetchPurchasedPlansData();
     }, 1000);
-  }, [purchasedPlanPage, isDisabledUserPlan, isEnabledUserPlan]);
+  }, [purchasedPlanPage, isDisabledUserPlan, isEnabledUserPlan, isDeletedUserPlan]);
 
   useEffect(() => {
     setTimeout(() => {
       refetchPurchasedPacksData();
     }, 1000);
-  }, [purchasedPackPage, isDisabledUserPack, isEnabledUserPack]);
+  }, [purchasedPackPage, isDisabledUserPack, isEnabledUserPack, isDeletedUserPack]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      refetchPurchasedCreditsData();
+    }, 1000);
+  }, [purchasedCreditPage, isDisabledUserCredit, isEnabledUserCredit, isDeletedUserCredit]);
 
   const { open: disableModal } = useModal(
     getDangerActionConfirmationModal({
@@ -180,6 +242,13 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
     })
   );
 
+  const { open: deleteUserToolModal } = useModal(
+    getDangerActionConfirmationModal({
+      msg: t('userDetails.confirmDeleteTool'),
+      title: t('userDetails.deleteUserTool'),
+    })
+  );
+
   const { open: disableUserPlanModal } = useModal(
     getDangerActionConfirmationModal({
       msg: t('userDetails.confirmDisablePlan'),
@@ -191,6 +260,13 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
     getDangerActionConfirmationModal({
       msg: t('userDetails.confirmEnablePlan'),
       title: t('userDetails.enableUserPlan'),
+    })
+  );
+
+  const { open: deleteUserPlanModal } = useModal(
+    getDangerActionConfirmationModal({
+      msg: t('userDetails.confirmDeletePlan'),
+      title: t('userDetails.deleteUserPlan'),
     })
   );
 
@@ -208,6 +284,34 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
     })
   );
 
+  const { open: deleteUserPackModal } = useModal(
+    getDangerActionConfirmationModal({
+      msg: t('userDetails.confirmDeletePack'),
+      title: t('userDetails.deleteUserPack'),
+    })
+  );
+
+  const { open: disableUserCreditModal } = useModal(
+    getDangerActionConfirmationModal({
+      msg: t('userDetails.confirmDisableCredit'),
+      title: t('userDetails.disableUserCredit'),
+    })
+  );
+
+  const { open: enableUserCreditModal } = useModal(
+    getDangerActionConfirmationModal({
+      msg: t('userDetails.confirmEnableCredit'),
+      title: t('userDetails.enableUserCredit'),
+    })
+  );
+
+  const { open: deleteUserCreditModal } = useModal(
+    getDangerActionConfirmationModal({
+      msg: t('userDetails.confirmDeleteCredit'),
+      title: t('userDetails.deleteUserCredit'),
+    })
+  );
+
   const { open: openEditExpiryModal } = useModal(getEditExpiryModal());
 
   const { open: openDirectActivationModal } = useModal(
@@ -217,6 +321,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
         refetchPurchasedToolsData();
         refetchPurchasedPlansData();
         refetchPurchasedPacksData();
+        refetchPurchasedCreditsData();
       }
     })
   );
@@ -423,7 +528,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                       ignoreIfEmpty={true}
                       label={t('userDetails.action')}
                       value={
-                        <>
+                        <div className="flex items-center gap-2">
                           {item?.isActive === false && (
                             <button
                               style={{
@@ -447,7 +552,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                           {item?.isActive && (
                             <button
                               style={{
-                                backgroundColor: "red",
+                                backgroundColor: "#A020F0",
                               }}
                               className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
                               onClick={() => {
@@ -464,7 +569,33 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                               {t('userDetails.disable')}
                             </button>
                           )}
-                        </>
+                          <button
+                            style={{
+                              backgroundColor: "#dc2626",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center flex items-center gap-1 hover:bg-red-700 transition"
+                            onClick={() => {
+                              deleteUserPackModal({
+                                onConfirm: () => {
+                                  deleteUserPack(parseInt(item?.users_packs_id), {
+                                    onSuccess: () => {
+                                      toast.success("تم حذف اشتراك الباقة بنجاح");
+                                      refetchPurchasedPacksData();
+                                    },
+                                    onError: () => {
+                                      toast.error("فشل حذف اشتراك الباقة");
+                                    }
+                                  });
+                                },
+                              });
+                            }}
+                            disabled={isDeletingUserPack}
+                            title="حذف اشتراك الباقة"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            <span>{t('userDetails.delete')}</span>
+                          </button>
+                        </div>
                       }
                     />
                   </div>
@@ -586,7 +717,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                       ignoreIfEmpty={true}
                       label={t('userDetails.action')}
                       value={
-                        <>
+                        <div className="flex items-center gap-2">
                           {item?.isActive === false && (
                             <button
                               style={{
@@ -610,7 +741,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                           {item?.isActive && (
                             <button
                               style={{
-                                backgroundColor: "red",
+                                backgroundColor: "#A020F0",
                               }}
                               className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
                               onClick={() => {
@@ -627,7 +758,33 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                               {t('userDetails.disable')}
                             </button>
                           )}
-                        </>
+                          <button
+                            style={{
+                              backgroundColor: "#dc2626",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center flex items-center gap-1 hover:bg-red-700 transition"
+                            onClick={() => {
+                              deleteUserPlanModal({
+                                onConfirm: () => {
+                                  deleteUserPlan(parseInt(item?.users_plans_id), {
+                                    onSuccess: () => {
+                                      toast.success("تم حذف اشتراك الخطة بنجاح");
+                                      refetchPurchasedPlansData();
+                                    },
+                                    onError: () => {
+                                      toast.error("فشل حذف اشتراك الخطة");
+                                    }
+                                  });
+                                },
+                              });
+                            }}
+                            disabled={isDeletingUserPlan}
+                            title="حذف اشتراك الخطة"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            <span>{t('userDetails.delete')}</span>
+                          </button>
+                        </div>
                       }
                     />
                   </div>
@@ -751,7 +908,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                       ignoreIfEmpty={true}
                       label={t('userDetails.action')}
                       value={
-                        <>
+                        <div className="flex items-center gap-2">
                           {item?.isActive === false && (
                             <button
                               style={{
@@ -775,7 +932,7 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                           {item?.isActive && (
                             <button
                               style={{
-                                backgroundColor: "red",
+                                backgroundColor: "#A020F0",
                               }}
                               className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
                               onClick={() => {
@@ -792,7 +949,258 @@ const UserDetailsPage: FunctionComponent<Props> = ({ params: { userId } }) => {
                               {t('userDetails.disable')}
                             </button>
                           )}
-                        </>
+                          <button
+                            style={{
+                              backgroundColor: "#dc2626",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center flex items-center gap-1 hover:bg-red-700 transition"
+                            onClick={() => {
+                              deleteUserToolModal({
+                                onConfirm: () => {
+                                  deleteUserTool(parseInt(item?.users_tools_id), {
+                                    onSuccess: () => {
+                                      toast.success("تم حذف اشتراك الأداة بنجاح");
+                                      refetchPurchasedToolsData();
+                                    },
+                                    onError: () => {
+                                      toast.error("فشل حذف اشتراك الأداة");
+                                    }
+                                  });
+                                },
+                              });
+                            }}
+                            disabled={isDeletingUserTool}
+                            title="حذف اشتراك الأداة"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            <span>{t('userDetails.delete')}</span>
+                          </button>
+                        </div>
+                      }
+                    />
+                  </div>
+                ));
+              })()}
+            </div>
+          </Panel>
+          <Panel
+            title={t('userDetails.purchasedCredits')}
+            sideActions={
+              <DataNavigateItem
+                setPage={setPurchasedCreditPage}
+                data={purchasedCreditsData}
+                isFetching={isPurchasedCreditsDataFetching}
+                page={purchasedCreditPage}
+              />
+            }
+            containerClassName="px-7 py-4 bg-[linear-gradient(270deg,_#4f008c,_#190237,_#190237)]"
+          >
+            <div className="grid gap-4">
+              {(() => {
+                const uniqueCredits = new Map();
+                purchasedCreditsData?.userCreditData?.forEach((item: any) => {
+                  const key = item.plan_id || item.plan_name;
+                  const existing = uniqueCredits.get(key);
+                  if (!existing || new Date(item.endedAt) > new Date(existing.endedAt)) {
+                    uniqueCredits.set(key, item);
+                  }
+                });
+                const deduplicatedCredits = Array.from(uniqueCredits.values());
+
+                if (deduplicatedCredits.length === 0) {
+                  return <p className="text-center">{t('userDetails.noData')}</p>;
+                }
+
+                return deduplicatedCredits.map((item: any) => (
+                  <div key={item.users_credits_id} className="border rounded-md grid grid-cols-2 p-4 gap-3">
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.purchasedAt')}
+                      value={fullDateTimeFormat(item.createdAt) || "none"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.endedAt')}
+                      value={
+                        <div className="flex items-center gap-2">
+                          <span>{fullDateTimeFormat(item.endedAt) || "none"}</span>
+                          <button
+                            onClick={() => {
+                              openEditExpiryModal({
+                                title: "تعديل المدة",
+                                currentDate: item.endedAt,
+                                onConfirm: (newDate: string) => {
+                                  updateUserCreditExpiry({
+                                    userCreditId: item.users_credits_id,
+                                    endedAt: newDate
+                                  }, {
+                                    onSuccess: () => {
+                                      toast.success("تم تحديث تاريخ الانتهاء بنجاح");
+                                      refetchPurchasedCreditsData();
+                                    },
+                                    onError: () => {
+                                      toast.error("فشل تحديث تاريخ الانتهاء");
+                                    }
+                                  });
+                                },
+                                isLoading: isUpdatingUserCreditExpiry
+                              });
+                            }}
+                            className="text-primary hover:text-primary/80 cursor-pointer"
+                          >
+                            <PencilSquare className="w-6 h-6" />
+                          </button>
+                        </div>
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.planName')}
+                      value={item.plan_name || "AI Plan"}
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.remainingCredits')}
+                      value={
+                        <span className="font-semibold text-primary">
+                          {Number(item.remaining_credits || 0).toLocaleString()} / {Number(item.total_credits || 0).toLocaleString()}
+                        </span>
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.isActive')}
+                      value={
+                        (
+                          <div
+                            style={{
+                              backgroundColor:
+                                item.isActive === true
+                                  ? "green"
+                                  : item.isActive === false && "#A020F0",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {item.isActive === true ? t('userDetails.active') : t('userDetails.inactive')}
+                          </div>
+                        )
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.expired')}
+                      value={
+                        (new Date() > new Date(item.endedAt) ? (
+                          <div
+                            style={{
+                              backgroundColor: "red",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {t('userDetails.yes')}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              backgroundColor: "green",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                          >
+                            {t('userDetails.no')}
+                          </div>
+                        ))
+                      }
+                    />
+                    <DetailCell
+                      ignoreIfEmpty={true}
+                      label={t('userDetails.action')}
+                      value={
+                        <div className="flex items-center gap-2">
+                          {item?.isActive === false && (
+                            <button
+                              style={{
+                                backgroundColor: "green",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                enableUserCreditModal({
+                                  onConfirm: () => {
+                                    enableUserCredit(
+                                      parseInt(item?.users_credits_id),
+                                      {
+                                        onSuccess: () => {
+                                          toast.success("تم تفعيل باقة الـ AI بنجاح");
+                                          refetchPurchasedCreditsData();
+                                        },
+                                        onError: () => {
+                                          toast.error("فشل تفعيل باقة الـ AI");
+                                        }
+                                      }
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserCredit || isEnablingUserCredit}
+                            >
+                              {t('userDetails.enable')}
+                            </button>
+                          )}
+                          {item?.isActive && (
+                            <button
+                              style={{
+                                backgroundColor: "#A020F0",
+                              }}
+                              className="px-2 py-1 w-min rounded-lg text-white text-xs text-center"
+                              onClick={() => {
+                                disableUserCreditModal({
+                                  onConfirm: () => {
+                                    disableUserCredit(
+                                      parseInt(item?.users_credits_id),
+                                      {
+                                        onSuccess: () => {
+                                          toast.success("تم إيقاف باقة الـ AI مؤقتاً");
+                                          refetchPurchasedCreditsData();
+                                        },
+                                        onError: () => {
+                                          toast.error("فشل إيقاف باقة الـ AI");
+                                        }
+                                      }
+                                    );
+                                  },
+                                });
+                              }}
+                              disabled={isDisablingUserCredit || isEnablingUserCredit}
+                            >
+                              {t('userDetails.disable')}
+                            </button>
+                          )}
+                          <button
+                            style={{
+                              backgroundColor: "#dc2626",
+                            }}
+                            className="px-2 py-1 w-min rounded-lg text-white text-xs text-center flex items-center gap-1 hover:bg-red-700 transition"
+                            onClick={() => {
+                              deleteUserCreditModal({
+                                onConfirm: () => {
+                                  deleteUserCredit(parseInt(item?.users_credits_id), {
+                                    onSuccess: () => {
+                                      toast.success("تم حذف باقة الـ AI بنجاح");
+                                      refetchPurchasedCreditsData();
+                                    },
+                                    onError: () => {
+                                      toast.error("فشل حذف باقة الـ AI");
+                                    }
+                                  });
+                                },
+                              });
+                            }}
+                            disabled={isDeletingUserCredit}
+                            title="حذف باقة الـ AI"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            <span>{t('userDetails.delete')}</span>
+                          </button>
+                        </div>
                       }
                     />
                   </div>

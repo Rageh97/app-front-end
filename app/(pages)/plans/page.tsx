@@ -136,10 +136,15 @@ const PlansPage: FunctionComponent<Props> = ({ params: { clientId } }) => {
             باقات المواقع
           </button>
           <button 
-            onClick={() => setActiveTab('ai')}
-            className={`px-6 py-2.5 rounded-lg font-bold transition-all text-sm md:text-base ${activeTab === 'ai' ? 'bg-[#ff7702] text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            type="button"
+            disabled={true}
+            className="px-6 py-2.5 rounded-lg font-bold transition-all text-sm md:text-base text-gray-500 cursor-not-allowed opacity-60 flex items-center gap-2 select-none"
+            title="قريباً"
           >
-            باقات الذكاء الاصطناعي
+            <span>باقات الذكاء الاصطناعي</span>
+            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 tracking-wider">
+              soon
+            </span>
           </button>
         </div>
       </div>

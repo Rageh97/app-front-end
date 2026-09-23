@@ -248,8 +248,11 @@ export default function PlansPage() {
                 >
                   باقات المواقع
                 </Link>
-                <div className="px-6 py-2.5 rounded-lg font-bold transition-all text-sm md:text-base bg-[#ff7702] text-white shadow-lg cursor-default">
-                  باقات الذكاء الاصطناعي
+                <div className="px-6 py-2.5 rounded-lg font-bold transition-all text-sm md:text-base bg-[#ff7702]/80 text-white shadow-lg cursor-default flex items-center gap-2">
+                  <span>باقات الذكاء الاصطناعي</span>
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tracking-wider">
+                    soon
+                  </span>
                 </div>
               </div>
             </div>
