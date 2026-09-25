@@ -19,18 +19,18 @@ const Footer = () => {
   const staticLogoPath = "/images/nexus-logo-22.png"; // Define static path
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
   const fallbackLinks = [
-    {
-      id: "whatsapp",
-      name: "WhatsApp",
-      url: "https://wa.me/9647702930873",
-      content: (
-        <img
-          src="https://static.vecteezy.com/system/resources/previews/024/398/617/non_2x/whatsapp-logo-icon-isolated-on-transparent-background-free-png.png"
-          alt="WhatsApp"
-          className="w-8 h-8 object-contain"
-        />
-      ),
-    },
+    // {
+    //   id: "whatsapp",
+    //   name: "WhatsApp",
+    //   url: "https://wa.me/9647702930873",
+    //   content: (
+    //     <img
+    //       src="https://static.vecteezy.com/system/resources/previews/024/398/617/non_2x/whatsapp-logo-icon-isolated-on-transparent-background-free-png.png"
+    //       alt="WhatsApp"
+    //       className="w-8 h-8 object-contain"
+    //     />
+    //   ),
+    // },
     {
       id: "instagram",
       name: "Instagram",
@@ -110,7 +110,7 @@ const Footer = () => {
             </p>
             
             {/* Live Support Indicator */}
-            <a 
+            {/* <a 
               href="https://wa.me/9647702930873" 
               target="_blank" 
               rel="noopener noreferrer"
@@ -121,7 +121,7 @@ const Footer = () => {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00c48c]"></span>
               </span>
               <span>الدعم الفني المباشر (24/7)</span>
-            </a>
+            </a> */}
           </div>
 
           {/* Column 2: Platform Links */}
