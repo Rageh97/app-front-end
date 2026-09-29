@@ -85,6 +85,7 @@ export type NewToolsDto = {
   cloud_access_mode?: string;
   cloud_path_prefix?: string;
   cloud_target_url?: string;
+  cloud_proxy_url?: string;
   cloud_cookies?: string;
   cloud_daily_download_limit?: number;
   cloud_blocked_paths?: string;

@@ -57,6 +57,7 @@ const initialValues: FormType = {
   cloud_access_mode: "proxy",
   cloud_path_prefix: "",
   cloud_target_url: "",
+  cloud_proxy_url: "",
   cloud_cookies: "",
   cloud_daily_download_limit: 0,
   cloud_blocked_paths: "",
@@ -392,6 +393,7 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
           cloud_access_mode: values.cloud_access_mode,
           cloud_path_prefix: values.cloud_path_prefix,
           cloud_target_url: values.cloud_target_url,
+          cloud_proxy_url: values.cloud_proxy_url,
           cloud_cookies: values.cloud_cookies,
           cloud_daily_download_limit: Number(values.cloud_daily_download_limit || 0),
           cloud_blocked_paths: values.cloud_blocked_paths,
@@ -527,6 +529,7 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
     data.cloud_access_mode = metadata.cloud_access_mode || "proxy";
     data.cloud_path_prefix = metadata.cloud_path_prefix || "";
     data.cloud_target_url = metadata.cloud_target_url || "";
+    data.cloud_proxy_url = metadata.cloud_proxy_url || "";
     data.cloud_cookies = metadata.cloud_cookies || "";
     data.cloud_daily_download_limit = metadata.cloud_daily_download_limit || 0;
     data.cloud_blocked_paths = metadata.cloud_blocked_paths || "";
@@ -842,6 +845,19 @@ export const ToolsForm: FunctionComponent<PropsType> = ({ mode, toolId }) => {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       error={touched.cloud_target_url && errors.cloud_target_url}
+                    />
+                    
+                    <InputField
+                      className="w-full"
+                      id="cloud_proxy_url"
+                      name="cloud_proxy_url"
+                      label="بروكسي سكني خارجي (Outbound Proxy URL - اختياري)"
+                      type="text"
+                      placeholder="مثال: http://user:pass@gate.smartproxy.com:7000"
+                      value={values.cloud_proxy_url}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.cloud_proxy_url && errors.cloud_proxy_url}
                     />
                     
                     <InputField
